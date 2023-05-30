@@ -1,0 +1,21 @@
+{% extends "layout.html" %}
+{% block content %}
+  <head>
+      <meta charset="UTF-8">
+      <title>Box Plot</title>
+      <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  </head>
+  <body>
+      <div id="plot"></div>
+
+      <script>
+          var graphJSON = {{ graphJSON|safe }};
+
+          function plotGraph() {
+              Plotly.newPlot('plot', graphJSON.data, graphJSON.layout);
+          }
+
+          plotGraph();
+      </script>
+  </body>
+{% endblock content %}

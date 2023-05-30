@@ -1,0 +1,16 @@
+{% extends "layout.html" %}
+{% block content %}
+		<h1>Stats Page</h1>
+
+    </style>
+     <body>
+      <div id='chart' class='chart'”></div>
+    </body>
+
+    <script src='https://cdn.plot.ly/plotly-latest.min.js'></script>
+    <script type='text/javascript'>
+      var graphs = {{graphJSON | safe}};
+      Plotly.plot('chart',graphs,{});
+    </script>
+
+{% endblock content %}
