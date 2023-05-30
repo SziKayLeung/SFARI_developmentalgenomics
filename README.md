@@ -1,7 +1,7 @@
 ## Working branch for web development
 
 ## Aim
-**To develop a web framework written in python (Flask) for interactive plotting and visualisation of isoform dataset.**
+**To develop a web framework written in python (Flask) for interactive plotting and visualisation of isoform dataset.** 
 
 - Gene level  
   -  Box-plot of the gene expression data grouped by developmental stage (pre- and post-natal) and sex
@@ -11,7 +11,11 @@
   -  Tracks of the isoform (user can select isoform to show isoform expression)
   -  Box-plot of the isoform expression (also grouped by developmental stage and sex)
 
+All files are deposited under `0_flask` directory.
+
 ## Metadata
+To create a merged file with 6 columns: isoform, gene, sample, phenotype, sex, counts.
+
 1. demux.csv = isoform expression (full-length read counts)
     - first column = list of isoforms
     - subsequent columns = sample IDs
