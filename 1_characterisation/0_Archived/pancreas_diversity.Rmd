@@ -1,0 +1,155 @@
+---
+title: "Ailsa's pancreas dataset"
+author: "Szi Kay Leung"
+date: "`r Sys.Date()`"
+
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+suppressMessages(library("dplyr"))
+suppressMessages(library("ggplot2"))
+suppressMessages(library("stringr"))
+suppressMessages(library("kableExtra"))
+
+```
+
+
+```{r input, messages = FALSE}
+source("/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/scripts/General/5_TappAS_Differential/characterise/sqanti_general.R")
+
+ROOT_DIR = "/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARIdevelopmentalgenomics/"
+
+CHAR_DIR = "/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/scripts/General/5_TappAS_Differential/characterise"
+
+PANCREAS_DIR = "/gpfs/mrc0/projects/Research_Project-MRC148213/Rosie/Targeted/P0055_20220623_10661/AM/20220623_1515_2E_PAI82330_18b0e941/Porechop/pc_test/combined/"
+
+pancreas_targeted = paste0(PANCREAS_DIR,"Targeted_AM_SQANTI3/Targeted_AM_SQANTI3_classification.filtered_lite_classification.txt")
+
+pancreas_targeted = SQANTI_class_preparation(pancreas_targeted,"nstandard")
+
+targetgenes <- read.table(paste0(ROOT_DIR,"0_metadata/Complete_TargetGenes_TargetedSequencing.txt"))
+cat("Number of target genes:", nrow(targetgenes), "\n")
+
+# CPAT - protein coding potential
+
+cpat_input <- read.table("/gpfs/mrc0/projects/Research_Project-MRC148213/Rosie/scripts/CPAT/AM_targeted.ORF_prob.best.tsv", header = T)
+
+
+
+```
+
+# Isoform diversity {.tabset .tabset-pills}
+
+## Table 
+
+```{r pressure, echo=FALSE}
+transcript_num <- pancreas_targeted %>% 
+  filter(associated_gene %in% targetgenes$V1) %>% 
+  mutate(ntrans = ifelse(associated_transcript == "novel","novel","known")) %>%
+  group_by(associated_gene, ntrans) %>% tally() %>% 
+  tidyr::spread(., ntrans,n) %>% mutate(total = known + novel, perc_novel = novel/total * 100) %>%
+  arrange(-total)
+
+DT::datatable(transcript_num)
+```
+
+## Plot of top 10 most isoformic genes 
+```{r}
+subset_num_by_gene <- function(class.files, gene_list){
+  
+  p <- class.files %>% filter(associated_gene %in% gene_list) %>%
+    group_by(structural_category, associated_gene) %>% tally() %>% 
+    ggplot(., aes(x = reorder(associated_gene, -n), 
+                  y = n, fill = structural_category)) + geom_bar(stat = "identity") + 
+    labs(x = "Genes", y = "Number of Isoforms") + theme_classic() + 
+    theme(legend.position = "bottom") + 
+    guides(fill=guide_legend(title="Structural Category"))
+  
+  return(p)
+}
+
+subset_num_by_gene(pancreas_targeted, transcript_num$associated_gene[1:10])
+
+```
+
+# Coding Potential {.tabset .tabset-pills}
+
+```{r, message=FALSE, warning=FALSE}
+cpat_plots <- function(cpat_input, species){
+  # coding probability 
+  p1 <- ggplot(cpat_input,aes(x = Coding_prob)) + geom_histogram() + labs(x = "Coding probability (CPAT)", y = "Number of Isoforms (Thousand)") + mytheme + scale_y_continuous(labels = ks)
+  
+  if(species == "Human"){
+    coding = cpat_input %>% filter(Coding_prob >= 0.364)
+  }else if(species == "Mouse"){
+    coding = cpat_input %>% filter(Coding_prob >= 0.44)
+  }else{print("EMPTY")}
+  # orf nucleotide length 
+  p2 <- ggplot(coding,aes(x = ORF)) + geom_histogram(bins = 50) + labs(x = "Nucleotide length (bp)", y = "Number of Isoforms (Thousand)") + mytheme + 
+    scale_y_continuous(labels = ks)
+  
+  return(list(p1,p2))
+}
+
+CPAT_plots_cate <- function(class_input, cpat_input, species){
+  if(species == "Human"){
+    coding = cpat_input %>% filter(Coding_prob >= 0.364)
+  }else if(species == "Mouse"){
+    coding = cpat_input %>% filter(Coding_prob >= 0.44)
+  }
+  else{print("EMPTY")}
+  
+  merged = merge(class_input,cpat_input, by.x = "isoform", by.y = "seq_ID",all.y = TRUE)
+  p <- ggplot(merged, aes(x = ORF, y = structural_category)) + geom_violin() +
+    labs(x = "ORF nucleotide length (bp)", y = "Structural Category") + mytheme + 
+    scale_y_continuous(labels = ks)
+
+  p2 <- ggplot(merged, aes(x = Coding_prob, y = structural_category)) + geom_violin() +
+    labs(x = "ORF nucleotide length (bp)", y = "Structural Category") + mytheme + 
+    scale_y_continuous(labels = ks) 
+  
+  return(list(p,p2))
+}
+
+mytheme <- theme(axis.line = element_line(colour = "black"),
+                   panel.grid.major = element_blank(),
+                   panel.grid.minor = element_blank(),
+                   panel.border = element_blank(),
+                   panel.background = element_blank(),
+                   text=element_text(size=14,  family="ArialMT"),
+                   axis.title.x = element_text(vjust=-0.5, colour = "black"),
+                   axis.title.y = element_text(vjust=0.5, margin = margin(t = 0, r = 10, b = 0, l = 0)),
+                   legend.position = c(.90, 0.95),
+                   #legend.justification = c(1,1),
+                   legend.box.just = "right",
+                   legend.margin = margin(6, 6, 6, 6), 
+                   legend.text = element_text(size = 14,family="ArialMT"),
+                   axis.text.x= element_text(size=12,  family="ArialMT"),
+                   axis.text.y= element_text(size=12,  family="ArialMT"))
+
+ks <- function(x){ format(x/1000, big.mark=",")} 
+
+
+```
+Number of transcripts classified as protein-coding: `r nrow(cpat_input[cpat_input$Coding_prob >= 0.364,])`
+
+## Number of isoforms
+```{r, message=FALSE, warning=FALSE}
+p1 <- cpat_plots(cpat_input,"Human")
+p1[[1]]
+```
+
+## ORF length
+
+```{r}
+p1[[2]]
+```
+
+
+
