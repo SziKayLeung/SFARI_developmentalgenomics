@@ -5,6 +5,9 @@
 ##
 ## ---------------------------------
 
+suppressMessages(library("viridis"))
+suppressMessages(library("cowplot"))
+
 ## ---------- Packages -----------------
 
 LOGEN_ROOT = "/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/scripts/LOGen/"
