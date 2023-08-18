@@ -23,7 +23,7 @@ dirnames <- list(
   glob_SQ = paste0(root_dir, "/RBFetal/WholeTranscriptome/"),
   
   # targeted sequencing (Iso-Seq, ONT)
-  targ_SQ = paste0(root_dir, "RBFetal/1_SQANTI3Filtered/test/")
+  targ_SQ = paste0(root_dir, "RBFetal/1_SQANTI3/")
 
 )
 
