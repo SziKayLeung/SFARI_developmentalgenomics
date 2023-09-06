@@ -80,3 +80,33 @@ targetRate <- function(){
   
   View(offTargetExp)
 }
+
+
+## ---------- read lenths pre and post-QC -----------------
+
+
+plot_lengths <- function(postnatal, prenatal, pfpostnatal, pfprenatal){
+p1<-ggplot(rbind(postnatal, prenatal), aes(x=V2))+geom_density(aes(fill="Pre-filter"),alpha=0.5)+geom_density(aes(fill="Post-filter"), data=rbind(pfpostnatal, pfprenatal),alpha=0.5)+theme_cowplot()+xlab('Read length')+xlim(-500,65000)+ylab('Combined\ncount')+scale_y_continuous(labels = scales::scientific)
+p2<-ggplot(prenatal, aes(x=V2))+geom_density(aes(fill="Pre-filter"),alpha=0.5)+geom_density(aes(fill="Post-filter"), data=pfprenatal,alpha=0.5)+theme_cowplot()+xlab('Read length')+xlim(-500,65000)+ylab('Prenatal\ncount')+scale_y_continuous(labels = scales::scientific)
+p3<-ggplot(postnatal, aes(x=V2))+geom_density(aes(fill="Pre-filter"),alpha=0.5)+geom_density(aes(fill="Post-filter"), data=pfpostnatal,alpha=0.5)+theme_cowplot()+xlab('Read length')+xlim(-500,65000)+ylab('Postnatal\ncount')+scale_y_continuous(labels = scales::scientific)
+
+return(c(p1,p2,p3))
+
+}
+
+## ---------- age distribution -----------------
+
+ages <- function(pheno){
+
+p1<-ggplot(pheno[which(pheno$group=='Postnatal'),], aes(x=age))+geom_histogram(binwidth = 20, colour='black', fill='forestgreen')+ggtitle('Postnatal')+xlab('Age (years)')+theme_cowplot()+scale_y_continuous(limits = c(0,15), breaks=seq(0,15,5))+scale_x_continuous(breaks = seq(0,80,20))
+p2<-ggplot(pheno[which(pheno$group=='Prenatal'),], aes(x=age))+geom_histogram(binwidth = 10, colour='black', fill='goldenrod')+ggtitle('Prenatal')+xlab('Age (pcw)')+theme_cowplot()+scale_y_continuous(limits = c(0,15), breaks=seq(0,15,5))
+p2+p1
+
+p3<-ggplot(pheno[which(pheno$group=='Postnatal'),], aes(x=age, fill=sex))+geom_histogram(binwidth = 20, position = 'dodge', colour='black')+ggtitle('Postnatal')+xlab('Age (years)')+theme_cowplot()+scale_y_continuous(limits = c(0,15), breaks=seq(0,10,5))+scale_x_continuous(breaks = seq(0,80,20))
+p4<-ggplot(pheno[which(pheno$group=='Prenatal'),], aes(x=age, fill=sex))+geom_histogram(binwidth = 10, colour='black', position = 'dodge')+ggtitle('Prenatal')+xlab('Age (pcw)')+theme_cowplot()+scale_y_continuous(limits = c(0,15), breaks=seq(0,10,5))
+p4+p3
+
+return(c(p1,p2,p3,p4)
+
+}
+

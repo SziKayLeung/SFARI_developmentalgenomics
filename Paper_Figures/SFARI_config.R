@@ -30,7 +30,7 @@ dirnames <- list(
 
 ## ------------- Phenotype files -------------------
 
-
+phenotype <- fread('/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/RBFetal/00_metadata/WholeTargetedphenotype.csv', data.table=F, stringsAsFactors=F)
 
 ## -------------- Final classification files ------------- 
 class.names.files <- list(
@@ -44,3 +44,15 @@ class.names.files <- list(
   targ_SQ_fil = paste0(dirnames$targ_SQ, "SQANTI3_collapse_options_RulesFilter_result_classification.targetgenes_counts_filtered.txt")
 ) 
 class.files <- lapply(class.names.files, function(x) SQANTI_class_preparation(x,"nstandard"))
+
+
+## ----------- read lengths ----------------
+tpfpostnatal<-fread('/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/RBFetal/0_lengths/targeted_postfilter_postnatal_lengths.txt.gz', stringsAsFactors = F, data.table = F)
+tpfprenatal<-fread('/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/RBFetal/targeted_postfilter_prenatal_lengths.txt.gz', stringsAsFactors = F, data.table = F)
+tpostnatal<-fread('/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/RBFetal/targeted_postnatal_lengths.txt.gz', stringsAsFactors = F, data.table = F)
+tprenatal<-fread('/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/RBFetal/targeted_prenatal_lengths.txt.gz', stringsAsFactors = F, data.table = F)
+wpfpostnatal<-fread('/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/RBFetal/whole_postfilter_postnatal_lengths.txt.gz', stringsAsFactors = F, data.table = F)
+wpfprenatal<-fread('/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/RBFetal/whole_postfilter_prenatal_lengths.txt.gz', stringsAsFactors = F, data.table = F)
+wpostnatal<-fread('/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/RBFetal/whole_postnatal_lengths.txt.gz', stringsAsFactors = F, data.table = F)
+wprenatal<-fread('/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/RBFetal/whole_prenatal_lengths.txt.gz', stringsAsFactors = F, data.table = F)
+
