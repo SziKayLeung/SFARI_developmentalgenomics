@@ -20,6 +20,26 @@ source(paste0(LOGEN_ROOT, "compare_datasets/whole_vs_targeted.R"))
 source(paste0(LOGEN_ROOT, "merge_characterise_dataset/run_ggtranscript.R"))
 
 
+## ---------- Labels -----------------
+
+label_colour <- function(genotype){
+  if(genotype %in% c("Postnatal")){colour = wes_palette("Royal1")[1]}else{
+    if(genotype == "WT_2mos"){colour = alpha(wes_palette("Royal1")[2],0.5)}else{
+      if(genotype %in% c("Prenatal")){colour = wes_palette("Royal1")[2]}else{
+        if(genotype == "TG_2mos"){colour = alpha(wes_palette("Royal1")[1],0.5)}else{
+          if(genotype == "mouse"){colour = wes_palette("Royal1")[4]}else{
+            if(genotype == "novel"){colour = wes_palette("Darjeeling1")[4]}else{
+              if(genotype == "known"){colour = wes_palette("Darjeeling1")[5]}else{
+              }}}}}}}
+  return(colour)
+}
+
+label_group <- function(genotype){
+  if(genotype %in% c("Prenatal")){group = "Prenatal"}else{
+    if(genotype %in% c("Postnatal")){group = "Postnatal"}}
+  return(group)
+}
+
 ## ---------- numIso -----------------
 
 # Aim: plot the number of isoforms

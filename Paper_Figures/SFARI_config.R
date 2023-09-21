@@ -68,6 +68,10 @@ class.names.files <- list(
 
 class.files <- lapply(class.names.files, function(x) SQANTI_class_preparation(x,"nstandard"))
 
+# remove mono-exonic intergenic transcripts
+class.files <- lapply(class.files, function(x) x %>% mutate(structural_category_exons = paste0(structural_category,"_",exons)))
+class.files <- lapply(class.files, function(x) x %>% filter(structural_category_exons != "Intergenic_1"))
+
 # merge class.files with demux for
 class.files$glob_targ_SQ <- merge(class.files$glob_targ_SQ, demux.files$glob_targ_SQ, by = "isoform", all.x=T)
 
@@ -85,7 +89,7 @@ TargetedDESeq2 <- list(
   sex = fread(paste0(root_dir,"/RBFetal/4_deseq2/anno_targeted_sex.csv")),
   age = fread(paste0(root_dir,"/RBFetal/4_deseq2/anno_targeted_group.csv")),
   sex_age = fread(paste0(root_dir,"/RBFetal/4b_deseq2_covariate/anno_targeted_group.csv")),
-  sex_age_off = fread(paste0(root_dir,"/RBFetal/ 4b_deseq2_covariate_off/anno_targeted_group.csv"))
+  sex_age_off = fread(paste0(root_dir,"/RBFetal/4b_deseq2_covariate_off/anno_targeted_group.csv"))
 )
 
 WholeDESeq2 <- list(
