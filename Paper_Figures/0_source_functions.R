@@ -92,7 +92,6 @@ p2<-prenatal%>%filter(V2<10000)%>%ggplot(aes(x=V2))+geom_density(aes(fill="Pre-f
 p3<-postnatal%>%filter(V2<10000)%>%ggplot(aes(x=V2))+geom_density(aes(fill="Pre-filter"),alpha=0.5)+geom_density(aes(fill="Post-filter"), data=pfpostnatal,alpha=0.5)+theme_cowplot()+xlab('Read length')+xlim(-500,65000)+ylab('Postnatal\ncount')+scale_y_continuous(labels = scales::scientific)
 
 return(c(p1,p2,p3))
-
 }
 
 ## ---------- age distribution -----------------
