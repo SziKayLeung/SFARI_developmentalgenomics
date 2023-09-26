@@ -86,12 +86,15 @@ targetRate <- function(){
 ## ---------- read lenths pre and post-QC -----------------
 
 
-plot_lengths <- function(postnatal, prenatal, pfpostnatal, pfprenatal){
-p1<-bind_rows(postnatal, prenatal)%>%filter(V2<10000)%>%ggplot(aes(x=V2))+geom_density(aes(fill="Pre-filter"),alpha=0.5)+geom_density(aes(fill="Post-filter"), data=rbind(pfpostnatal, pfprenatal),alpha=0.5)+theme_cowplot()+xlab('Read length')+xlim(-500,65000)+ylab('Combined\ncount')+scale_y_continuous(labels = scales::scientific)
-p2<-prenatal%>%filter(V2<10000)%>%ggplot(aes(x=V2))+geom_density(aes(fill="Pre-filter"),alpha=0.5)+geom_density(aes(fill="Post-filter"), data=pfprenatal,alpha=0.5)+theme_cowplot()+xlab('Read length')+xlim(-500,65000)+ylab('Prenatal\ncount')+scale_y_continuous(labels = scales::scientific)
-p3<-postnatal%>%filter(V2<10000)%>%ggplot(aes(x=V2))+geom_density(aes(fill="Pre-filter"),alpha=0.5)+geom_density(aes(fill="Post-filter"), data=pfpostnatal,alpha=0.5)+theme_cowplot()+xlab('Read length')+xlim(-500,65000)+ylab('Postnatal\ncount')+scale_y_continuous(labels = scales::scientific)
+plot_lengths <- function(df){
 
-return(c(p1,p2,p3))
+
+p<-df%>%filter(V2<10000)%>%
+  ggplot(aes(x=V2, fill=V3))+geom_histogram(alpha=0.5, position = 'identity')+theme_cowplot()+xlab('Read length (bp)')+
+  ylab('Number of reads (millions)')+scale_x_log10()+scale_y_continuous(labels=function(x)x/1000000)+
+  theme(legend.title = element_blank())
+
+return(p)
 }
 
 ## ---------- age distribution -----------------
@@ -106,7 +109,7 @@ p3<-ggplot(pheno[which(pheno$group=='Postnatal'),], aes(x=age, fill=sex))+geom_h
 p4<-ggplot(pheno[which(pheno$group=='Prenatal'),], aes(x=age, fill=sex))+geom_histogram(binwidth = 10, colour='black', position = 'dodge')+ggtitle('Prenatal')+xlab('Age (pcw)')+theme_cowplot()+scale_y_continuous(limits = c(0,15), breaks=seq(0,10,5))
 p4+p3
 
-return(c(p1,p2,p3,p4)
+return(c(p1,p2,p3,p4))
 
 }
 
