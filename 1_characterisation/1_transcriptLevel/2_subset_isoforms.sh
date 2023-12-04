@@ -23,7 +23,7 @@ date -u
 
 # source config file and function script
 module load Miniconda2/4.3.21
-SC_ROOT=/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/scripts/SFARI_developmentalgenomics/1_characterisation
+SC_ROOT=/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/scripts/SFARI_developmentalgenomics/1_characterisation/1_transcriptLevel
 source $SC_ROOT/SFARI_characterisation.config
 source $SC_ROOT/01_source_functions.sh
 

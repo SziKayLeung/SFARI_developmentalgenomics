@@ -12,7 +12,7 @@
 #SBATCH --output=1_demux4.o
 #SBATCH --error=1_demux4.e
 
-SC_ROOT=/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/scripts/SFARI_developmentalgenomics/1_characterisation
+SC_ROOT=/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/scripts/SFARI_developmentalgenomics/1_characterisation/1_transcriptLevel
 LOGEN_ROOT=/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/scripts/LOGen
 TCLEANDIR=/gpfs/mrc0/projects/Research_Project-MRC148213/Rosie/WholeTargeted/BAMford
 COLLAPSED=/gpfs/mrc0/projects/Research_Project-MRC148213/Rosie/WholeTargeted/cleaned_merged_collapsed
