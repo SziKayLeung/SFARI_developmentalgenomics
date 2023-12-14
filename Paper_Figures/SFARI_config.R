@@ -7,6 +7,7 @@
 
 suppressMessages(library("data.table"))
 suppressMessages(library("dplyr"))
+suppressMessages(library("vroom"))
 
 LOGEN <- "/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/scripts/LOGen/"
 source(paste0(LOGEN,"transcriptome_stats/read_sq_classification.R"))
@@ -17,6 +18,7 @@ sapply(list.files(path = paste0(LOGEN,"longread_QC"), pattern="*.R", full = T), 
 
 
 ## ------------ directory names --------------- 
+
 root_dir <- "/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/"
 root_sfari <- "/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARIdevelopmentalgenomics/"
 root_rb_dir <- "/gpfs/mrc0/projects/Research_Project-MRC148213/Rosie/WholeTargeted/"
@@ -29,54 +31,20 @@ dirnames <- list(
   
   wholetarg_SQ = paste0(root_rb_dir,"SQANTI/"),
   
-  output = paste0(root_sfari,"/0_output")
+  output = paste0(root_sfari,"/0_output/"),
+  
+  diu = paste0(root_dir, "RBFetal/5_diu/")
 )
 
-
-TargetGene = read.table(paste0(root_sfari, "/0_metadata/Complete_TargetGenes_TargetedSequencing.txt"))[["V1"]]
-TargetGene20 = read.csv(paste0(root_sfari, "/0_metadata/20SexDifferenceTargetGenes.csv"), header = F)[["V1"]]
-
-
-## ------------- Phenotype files -------------------
-phenotype <- list(
-  WholeTargeted = read.csv(paste0(root_sfari, "/12_deseq2/WholeTargetedphenotype.csv")) %>% mutate(time = age)
-)
-
-## ------------- Demultiplex files -------------------
-
-demux.names.files <- list(
-  # targeted + whole SQANTI dataset 
-  glob_targ_SQ = paste0(dirnames$wholetarg_SQ,"WholeTargeted_demux_2reads2samples_SQANTIfiltered.csv")
-)
-
-demux.files <- lapply(demux.names.files, function(x) fread(x))
-
+TargetGene = read.table("/gpfs/mrc0/projects/Research_Project-MRC148213/vc362/fetalBrain/genes.txt")[["V1"]]
+# list of SZ and ASD genes in targeted panel 
+TargetGeneSZASD = read.csv(paste0(root_sfari,"0_metadata/TargetGeneByDisease.csv"))
 
 ## -------------- Final classification files ------------- 
-class.names.files <- list(
-  
-  # targeted + whole SQANTI dataset futher filtered by minimum 2 reads and 2 samples
-  glob_targ_SQ = paste0(dirnames$wholetarg_SQ,"WholeTargeted_cleaned_aligned_merged_collapsed_qced_RulesFilter_2reads2samples_classification.txt"),
-  
-  # whole transcriptome SQANTI dataset further filtered by minimum 2 reads and 2 samples
-  glob_SQ = paste0(dirnames$wholetarg_SQ, "WholeTargeted_cleaned_aligned_merged_collapsed_qced_RulesFilter_classification_Whole_2reads2samples.txt"),
-  
-  # targeted SQANTI dataset further filtered by minimum 2 reads and 2 samples
-  targ_SQ = paste0(dirnames$wholetarg_SQ, "WholeTargeted_cleaned_aligned_merged_collapsed_qced_RulesFilter_classification_Targeted_2reads2samples.txt")
-  
-) 
 
-class.files <- lapply(class.names.files, function(x) SQANTI_class_preparation(x,"nstandard"))
-
-# remove mono-exonic intergenic transcripts
-class.files <- lapply(class.files, function(x) x %>% mutate(structural_category_exons = paste0(structural_category,"_",exons)))
-class.files <- lapply(class.files, function(x) x %>% filter(structural_category_exons != "Intergenic_1"))
-
-# merge class.files with demux for
-class.files$glob_targ_SQ <- merge(class.files$glob_targ_SQ, demux.files$glob_targ_SQ, by = "isoform", all.x=T)
-
-# filter targeted dataset to just the target genes
-class.files$targ_SQ <- class.files$targ_SQ %>% filter(associated_gene %in% TargetGene)
+# class.files
+# list: glob_targ_SQ, glob_SQ, targ_SQ
+load(file = paste0(dirnames$wholetarg_SQ,"all_filtered_classification_2reads2samples_noMonoIntergenic.RData"))
 
 wholesamples <- colnames(class.files$glob_targ_SQ)[grepl("Whole", colnames(class.files$glob_targ_SQ))]
 targetedsamples <- colnames(class.files$glob_targ_SQ)[grepl("Targeted", colnames(class.files$glob_targ_SQ))]
@@ -84,33 +52,103 @@ matchedsamples <- intersect(gsub("^.*?Whole","",wholesamples),gsub("^.*?Targeted
 targetedmatchedsamples <- paste0("Targeted",matchedsamples)
 wholematchedsamples <- paste0("Whole",matchedsamples)
 
-## -------------- DESeq2 
-TargetedDESeq2 <- list(
-  sex = fread(paste0(root_dir,"/RBFetal/4_deseq2/anno_targeted_sex.csv")),
-  age = fread(paste0(root_dir,"/RBFetal/4_deseq2/anno_targeted_group.csv")),
-  sex_age = fread(paste0(root_dir,"/RBFetal/4b_deseq2_covariate/anno_targeted_group.csv")),
-  sex_age_off = fread(paste0(root_dir,"/RBFetal/4b_deseq2_covariate_off/anno_targeted_group.csv"))
+
+## -------------- DESeq2 ----------------
+
+# TargetedDESeq (all results)
+load(file = paste0(root_dir,"RBFetal/4_deseq2/anno_targeted_removinglateprenatal.RData"))
+# TargetedDESeqSig (sig FDR < 0.05)
+load(file = paste0(root_dir,"RBFetal/4_deseq2/anno_targeted_removinglateprenatal_sig.RData"))
+
+# WholeDESeq
+load(file = paste0(root_dir,"RBFetal/4_deseq2/anno_whole_removinglateprenatal_TEST.RData"))
+# WholeDESeqSig (sig FDR < 0.05)
+load(file = paste0(root_dir,"RBFetal/4_deseq2/anno_whole_removinglateprenatal_TEST_sig.RData"))
+
+
+## ------------- Phenotype files -------------------
+phenotype <- list(
+  WholeTargeted = fread(paste0(root_dir, "RBFetal/00_metadata/WholeTargetedphenotype_fixedsex.csv"),data.table=F, stringsAsFactors=F) %>% mutate(time = age)
+)
+phenotype$WholeTargeted <- phenotype$WholeTargeted %>% mutate(group = factor(group, levels = c("Prenatal","Postnatal")), col = paste0(sample,"_",group)) 
+
+
+## -------------- differenetial gene expression -------------
+WholeDESeqGeneSig <- list(
+  sex = as.data.frame(fread(paste0(root_dir,"RBFetal/4_deseq2/filtered_output_whole_gene_prenatalsex_removinglateprenatal.csv"))),
+  age = as.data.frame(fread(paste0(root_dir,"RBFetal/4_deseq2/filtered_output_whole_gene_group_removinglateprenatal.csv")))
 )
 
-WholeDESeq2 <- list(
-  sex = fread(paste0(root_sfari,"/12_deseq2/output_whole_sex.csv")),
-  age = fread(paste0(root_sfari,"/12_deseq2/output_whole_group.csv")),
+TargetedDESeqGeneSig <- list(
+  sex = as.data.frame(fread(paste0(root_dir,"RBFetal/4_deseq2/filtered_output_targeted_gene_prenatalsex_removinglateprenatal.csv"))),
+  age = as.data.frame(fread(paste0(root_dir,"RBFetal/4_deseq2/filtered_output_targeted_gene_group_removinglateprenatal.csv")))
 )
-WholeDESeq2 <- lapply(WholeDESeq2, function(x) merge(x, class.files$glob_targ_SQ, by = "isoform"))
 
 
-Exp <- list(
-  targeted = fread(paste0(root_dir,"RBFetal/4_deseq2/output_norm_targeted_sex.csv")),
-  whole = fread(paste0(root_sfari,"/12_deseq2/output_norm_whole_sex.csv"))
+## -------------- differential isoform usage ----------------
+
+read_DIU <- function(inputPath){
+  DIU_targeted <- list.files(path=inputPath,full.names = T, pattern = "resultDIU")
+  if(length(DIU_targeted) > 0){
+    DIU_targeted <- lapply(DIU_targeted,function(x) read.table(x)[-1,])
+    DIU_targeted <- do.call(rbind, DIU_targeted)
+    colnames(DIU_targeted) <- c("Gene","p.value","FDR","podiumChange","totalChange")
+    DIU_targeted <- DIU_targeted %>% mutate(FDR = as.numeric(as.character(FDR)))
+  }else{
+    return(NULL)
+  }
+}
+
+DIU <- list(
+  targetedAge = read_DIU(paste0(dirnames$diu,"targeted/group")),
+  targetedSex = read_DIU(paste0(dirnames$diu,"targeted/sex")),
+  wholeAge = read_DIU(paste0(dirnames$diu,"whole/group")),
+  wholeSex = read_DIU(paste0(dirnames$diu,"whole/sex"))
 )
-Exp$targeted <- merge(Exp$targeted, phenotype$WholeTargeted, by="sample")
-Exp$targeted <- merge(Exp$targeted, class.files$glob_targ_SQ, by = "isoform", all.x = T)
-Exp$wholeanno <- Exp$whole %>% filter(isoform %in% class.files$glob_targ_SQ$isoform)
-Exp$wholeanno <- merge(Exp$wholeanno, phenotype$WholeTargeted, by="sample")
-Exp$wholeanno <- merge(Exp$wholeanno, class.files$glob_targ_SQ, by = "isoform", all.x = T)
+DIUSig <- lapply(DIU, function(x) x[x$FDR <= 0.05, ])
+
+
+## -------------- normalized counts ----------------
+
+#Exp
+load(file = paste0(root_dir,"RBFetal/4_deseq2/filtered_output_norm_removinglateprenatal.RData"))
+load(file = paste0(root_dir,"RBFetal/4_deseq2/filtered_output_norm_gene_removinglateprenatal.RData"))
+load(file = paste0(root_dir,"RBFetal/4_deseq2/filtered_output_norm_gene_sig_removinglateprenatal.RData"))
+Exp <- Exp2
+
+## -------------- cpat ----------------
+
+Cpat <- list(
+  whole = data.table::fread(paste0(root_dir,"RBFetal/2_cpat_tc20bp/Whole.ORF_prob.best.tsv"))
+)
+#save(Cpat, file = paste0(root_dir,"RBFetal/2_cpat_tc20bp/Whole.ORF_prob.best.RData"))
+# keep  only the list of isoforms in the final dataset
+Cpat$whole <- Cpat$whole %>% filter(seq_ID %in% class.files$glob_SQ$isoform)
+
+## -------------- gtf ----------------
 
 gtf <- list(
-  glob_targ = rtracklayer::import(paste0(dirnames$wholetarg_SQ,"WholeTargeted_cleaned_aligned_merged_collapsed_qced_corrected_2reads2samples.gtf"))
+  glob_targ = rtracklayer::import(paste0(dirnames$wholetarg_SQ,"WholeTargeted_cleaned_aligned_merged_collapsed_qced_corrected_2reads2samples_2reads2samples_nomonointergenic.gtf"))
+  #ref = rtracklayer::import(paste0(dirnames$output,"gencode.v40.ggTransRefGenes.gtf"))
+  #ref = rtracklayer::import(paste0(dirnames$output,"refExons.gtf"))
 )
 gtf <- lapply(gtf, function(x) as.data.frame(x))
+gtf$ref <- data.table::fread(paste0(dirnames$output,"refExons.gtf")) %>% dplyr::rename("gene_id" = "gene_name") %>% mutate(type = "exon")
+gtf$merged <- rbind(gtf$glob_targ[,c("seqnames","strand","start","end","type","transcript_id","gene_id")] ,
+                         gtf$ref[,c("seqnames","strand","start","end","type","transcript_id","gene_id")])
 
+GI <- c("GRIN2A","GRIA3","SEPTIN4","RTN4","MBP","RPS4Y1","XIST","ADD3","CNTNAP2","ANKRD12")
+RefIsoforms <- lapply(GI, function(x) unique(gtf$ref[gtf$ref$gene_id == x & !is.na(gtf$ref$transcript_id), "transcript_id"]))
+names(RefIsoforms ) <-GI
+
+
+## -------------- disease list ----------------
+
+diseasegenelists <- "/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/scripts/SFARI_developmentalgenomics/0_utilities/disease_list/"
+SFARI <- read.csv(paste0(diseasegenelists,"SFARI-Gene_genes_07-17-2023release_09-26-2023export.csv"),header=T)
+SFARI_CLASS_1_2_S <- subset(SFARI$gene.symbol, SFARI$gene.score == 1 | SFARI$gene.score == 2 |SFARI$syndromic == 1)
+SFARI_CLASS_1_2 <- subset(SFARI$gene.symbol, SFARI$gene.score == 1 | SFARI$gene.score == 2)
+disease_list <- list(
+  SCHEMA = read.table(paste0(diseasegenelists,"SCHEMA_Oct2023.csv"), sep=",", header=T, stringsAsFactors = F),
+  DDG2P = read.table(paste0(diseasegenelists,"DDG2P_26_9_2023.csv"), sep=",", header=T, stringsAsFactors = F) %>% filter(confidence.category != "limited")
+)

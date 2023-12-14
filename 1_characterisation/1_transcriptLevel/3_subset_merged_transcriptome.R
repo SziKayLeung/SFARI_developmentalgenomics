@@ -56,3 +56,6 @@ class.files <- lapply(class.files, function(x) x %>% filter(structural_category_
 write.table(class.files$glob_targ_SQ$isoform,paste0(dirnames$wholetarg_SQ,"WholeTargeted_RulesFilter_2reads2samples_nomonointergenic_isoforms.txt"), quote=F,row.names=F,col.names = F)
 write.table(class.files$glob_SQ$isoform,paste0(dirnames$wholetarg_SQ,"WholeTargeted_RulesFilter_Whole_2reads2samples_nomonointergenic_isoforms.txt"), quote=F,row.names=F,col.names = F)
 
+# need FL column for downstream proteogenomics pipeline
+class.files$glob_SQ$FL <- class.files$glob_SQ %>% select(contains("Whole")) %>% apply(., 1, sum)
+write.table(dat1, paste0(dirnames$wholetarg_SQ, "/WholeTargeted_cleaned_aligned_merged_collapsed_qced_RulesFilter_Whole_2reads2samples_classification_noMonoIntergenic_modFL.txt", quote = F, row.names = F, sep = "\t"))

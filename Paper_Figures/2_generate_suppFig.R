@@ -11,12 +11,17 @@ source(paste0(SC_ROOT,"/Paper_Figures/SFARI_config.R"))
 source(paste0(SC_ROOT,"/Paper_Figures/0_source_functions.R"))
 output_dir = paste0(SC_ROOT,"/Paper_Figures/outputFigs")
 
+# age
+pAge <- ages(phenotype$WholeTargeted)
 
 # sensitivity curve of filtering in targeted dataset
 no_of_isoforms_sample(class.files$targ_SQ)
 
 # comparison of whole vs targeted datasets across matched samples
-comp = whole_vs_targeted_plots(class.files$glob_targ_SQ, wholematchedsamples, targetedmatchedsamples, TargetGene)
+comp = whole_vs_targeted_plots(classfiles=class.files$glob_targ_SQ, wholeSamples=wholematchedsamples, targetedSamples=targetedmatchedsamples, targetGene=TargetGene)
+pdf(paste0(output_dir,"/UniqueIsoformsWholeDataset.pdf"), width = 10, height = 30)
+comp[[7]]
+dev.off()
 
 plot_grid(plotlist = comp[1:6], labels = c("A","B","C","D","E","F"))
 
@@ -46,3 +51,37 @@ pIF <- list(
 )
 for(i in 1:length(pIF)){names(pIF[[i]]) <- Targeted$Genes}
 
+
+plot_grid(plotlist = pAge, labels = c("A","B","C","D"))
+
+
+# disease focus
+num_disease_focus_DTE(TargetedDESeq2Sig$age,disease_list$SCHEMA$Gene,"SCHEMA")
+TargetedDESeq2Sig$age %>% filter(associated_gene %in% disease_list$SCHEMA$Gene) %>% arrange(padj)
+
+
+## GRIA3
+pTargetedDESeq2SigAgeSchema <- list()
+count=1
+for(t in c("ONTX_7115_8288","ONTX_7115_7279","ONTX_7115_8547")){
+  pTargetedDESeq2SigAgeSchema[[count]] <- 
+    plot_grid(plot_trans_exp_individual(t,class.files$glob_targ_SQ,Exp$targeted_group,"group"),
+              plot_trans_exp_lifetime(t,class.files$glob_targ_SQ,Exp$targeted_group))
+  count = count + 1
+}
+
+RefIsoforms <- lapply(c("GRIN2A","GRIA3"), function(x) unique(gtf$ref[gtf$ref$gene_name == x & !is.na(gtf$ref$transcript_id), "transcript_id"]))
+names(RefIsoforms ) <- c("GRIN2A","GRIA3")
+pTargetedDESeq2SigAgeSchemaTracks <- ggTranPlots(gtf$merged,class.files$glob_targ_SQ,
+            isoList = c("ONTX_7115_8288","ONTX_7115_7279","ONTX_7115_8547",RefIsoforms$GRIA3),
+            colours = c(wes_palette("Cavalcanti1")[5],wes_palette("Darjeeling2")[2],wes_palette("Royal1")[4],rep("#0C0C78",length(RefIsoforms$GRIA3)+1)), 
+            lines =  c(wes_palette("Cavalcanti1")[5],wes_palette("Darjeeling2")[2],wes_palette("Royal1")[4],rep("#0C0C78",length(RefIsoforms$GRIA3)+1)), 
+            gene = "GRIN2A",simple=TRUE)
+
+pdf(paste0(output_dir,"/targeted_GRIA3.pdf"), width = 15, height = 10)
+plot_grid(plot_grid(plotlist = pTargetedDESeq2SigAgeSchema,nrow=3),pTargetedDESeq2SigAgeSchemaTracks,nrow=1,rel_widths = c(0.6,0.4))
+dev.off()
+
+pdf(paste0(output_dir,"/targeted_schema.pdf"), width = 10, height = 10)
+num_disease_focus_DTE(TargetedDESeq2Sig$age,disease_list$SCHEMA$Gene,"SCHEMA")
+dev.off()
