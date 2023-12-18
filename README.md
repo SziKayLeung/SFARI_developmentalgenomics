@@ -1,37 +1,39 @@
 ## Working branch for web development
 
 ## Aim
-**To develop a web framework written in python (Flask) for interactive plotting and visualisation of isoform dataset.** 
+**To develop a web framework written in python (Mercury) for interactive plotting and visualisation of isoform dataset.** 
 
+User can select gene (gene name) of choice:  
+- Basic summary information
+  - Number of known and novel transcripts
 - Gene level  
-  -  Box-plot of the gene expression data grouped by developmental stage (pre- and post-natal) and sex
-  -  User can select gene of choice
+  -  Scatter-plot (R ggplot) of the gene expression data across development (pre- and post-natal) and coloured by sex
+  -  Differential gene expression results
 - Transcript level  
-  -  Bar-plot of the number of FSM, ISM, NIC, NNC isoforms per gene 
-  -  Tracks of the isoform (user can select isoform to show isoform expression)
-  -  Box-plot of the isoform expression (also grouped by developmental stage and sex)
+  - Differential transcript expression results across development and between sex
+  - Scatter plots (R ggplot) of selected transcript expression data across development (pre- and post-natal) and coloured by sex
+  - Tracks of selected DTE isoform (user can select isoform to show isoform expression)
 
-All files are deposited under `0_flask` directory.
+All files are deposited under `0_mercury` directory.
+`0_flask` is redundant.
 
 ## Metadata
-To create a merged file with 6 columns: isoform, gene, sample, phenotype, sex, counts.
 
-1. demux.csv = isoform expression (full-length read counts)
-    - first column = list of isoforms
-    - subsequent columns = sample IDs
-    - such that each row is an isoform with the counts for each sample 
-
-2. manifest.csv = SQANTI annotation of the isoforms 
-    - further details for each isoform; for the purpose of this project, only refer to the `isoform`, `associated_gene` and `structural_category` column
-
-3. phenotype.csv = phenotype data of the samples
+1. phenotype.csv = phenotype data of the samples
     - sample IDs in phenotype.csv should match the sample IDs in demux.csv
 
 ## App
-The web is written in Python3 and html using Flask.   
-To run: `python main.py`
+The web is written in Python3 and html using Mercury.   
+To run: 
+```
+module load Miniconda2
+source activate mercury
+mercury add .\LR_Resource.ipynb
+mercury run LR_Resource.ipynb
+```
 
 ### Python-related libraries 
-- Flask
 - Pandas
-- Plotly
+- numpy
+- plotnine
+- scipy
