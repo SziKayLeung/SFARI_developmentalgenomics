@@ -26,8 +26,12 @@ All files are deposited under `0_mercury` directory.
 The web is written in Python3 and html using Mercury.   
 To run: 
 ```
+# activate conda environement
 module load Miniconda2
+conda env create --file mercury_environment.yml
 source activate mercury
+
+# run mercury
 mercury add .\LR_Resource.ipynb
 mercury run LR_Resource.ipynb
 ```
