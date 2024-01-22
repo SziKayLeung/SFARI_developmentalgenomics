@@ -9,7 +9,7 @@
 ## Email: S.K.Leung@exeter.ac.uk
 ##
 ## ---------- Notes -----------------
-## 
+##
 ## ont = Fetal vs adult (age only), with case-control analysis --> plots in post_tappas_age.R
 ## ont_multi = Fetal vs adult, male vs female, with multiple series time-course --> plots in post_tappas_agevssex.R
 ##
@@ -26,7 +26,7 @@ TAPPAS_INPUT_DIR = list(
   ont_multi = paste0(ROOT_DIR,"2_Results/B_FetalAdultvsSex")
 )
 
-# phenotype 
+# phenotype
 # column 1: sample; column 2: group
 TAPPAS_PHENOTYPE = list(
   ont = paste0(ROOT_DIR, "1_Input/A_FetalvsAdult/phenotype.txt"),
@@ -46,6 +46,4 @@ class.files <- SQANTI_class_preparation(class.names.files,"nstandard")
 ## ---------- Abundance -----------------
 
 # raw FL reads
-FL_reads <- read.table(paste0(ROOT_DIR, "1_Input/A_FetalvsAdult/SFARI_talon_expression.txt"), sep = "\t") 
-
-
+FL_reads <- read.table(paste0(ROOT_DIR, "1_Input/A_FetalvsAdult/SFARI_talon_expression.txt"), sep = "\t")
