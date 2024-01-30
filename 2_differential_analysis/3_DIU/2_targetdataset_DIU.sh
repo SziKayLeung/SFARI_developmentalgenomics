@@ -36,7 +36,7 @@ SQANTIClassFile=${SQANTIDIR}/WholeTargeted_cleaned_aligned_merged_collapsed_qced
 TGENETXT=/gpfs/mrc0/projects/Research_Project-MRC148213/vc362/fetalBrain/genes.txt
 METADIR=/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/RBFetal/5_diu/metadata/
   
-  TargetedGroupPhenotype=${METADIR}/TargetedDIUphenotype.csv
+TargetedGroupPhenotype=${METADIR}/TargetedDIUphenotype.csv
 TargetedGroupFactor=${METADIR}/TargetedGroupFactors.txt
 
 TargetedSexPhenotype=${METADIR}/TargetedSexPhenotype.csv
