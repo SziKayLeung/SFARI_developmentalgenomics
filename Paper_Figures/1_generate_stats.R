@@ -23,9 +23,9 @@ nrow(mono.class.files$glob_SQ)/nrow(class.files$glob_SQ)
 message("prenatal vs postnatal")
 message("Number of differentially expressed isoforms: ", nrow(WholeDESeqSig$age))
 message("Number of genes with differentially expressed isoforms: ", length(unique(WholeDESeqSig$age$associated_gene)))
-message("Number of differentially expressed FSM isoforms: ", 
+message("Number of differentially expressed FSM isoforms: ",
         nrow(WholeDESeqSig$age %>% filter(structural_category %in% c("FSM"))))
-message("Number of known genes with differentially expressed isoforms: ", 
+message("Number of known genes with differentially expressed isoforms: ",
         length(unique(WholeDESeqSig$age$associated_gene[!grepl("novel", WholeDESeqSig$age$associated_gene)])))
 
 

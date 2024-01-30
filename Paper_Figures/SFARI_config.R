@@ -17,7 +17,7 @@ sapply(list.files(path = paste0(LOGEN,"transcriptome_stats"), pattern="*.R", ful
 sapply(list.files(path = paste0(LOGEN,"longread_QC"), pattern="*.R", full = T), source,.GlobalEnv)
 
 
-## ------------ directory names --------------- 
+## ------------ directory names ---------------
 
 root_dir <- "/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/"
 root_sfari <- "/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARIdevelopmentalgenomics/"
@@ -37,10 +37,10 @@ dirnames <- list(
 )
 
 TargetGene = read.table("/gpfs/mrc0/projects/Research_Project-MRC148213/vc362/fetalBrain/genes.txt")[["V1"]]
-# list of SZ and ASD genes in targeted panel 
+# list of SZ and ASD genes in targeted panel
 TargetGeneSZASD = read.csv(paste0(root_sfari,"0_metadata/TargetGeneByDisease.csv"))
 
-## -------------- Final classification files ------------- 
+## -------------- Final classification files -------------
 
 # class.files
 # list: glob_targ_SQ, glob_SQ, targ_SQ
@@ -70,7 +70,7 @@ load(file = paste0(root_dir,"RBFetal/4_deseq2/anno_whole_removinglateprenatal_TE
 phenotype <- list(
   WholeTargeted = fread(paste0(root_dir, "RBFetal/00_metadata/WholeTargetedphenotype_fixedsex.csv"),data.table=F, stringsAsFactors=F) %>% mutate(time = age)
 )
-phenotype$WholeTargeted <- phenotype$WholeTargeted %>% mutate(group = factor(group, levels = c("Prenatal","Postnatal")), col = paste0(sample,"_",group)) 
+phenotype$WholeTargeted <- phenotype$WholeTargeted %>% mutate(group = factor(group, levels = c("Prenatal","Postnatal")), col = paste0(sample,"_",group))
 
 
 ## -------------- differenetial gene expression -------------
@@ -135,7 +135,7 @@ gtf <- list(
 gtf <- lapply(gtf, function(x) as.data.frame(x))
 gtf$ref <- data.table::fread(paste0(dirnames$output,"refExons.gtf")) %>% dplyr::rename("gene_id" = "gene_name") %>% mutate(type = "exon")
 gtf$merged <- rbind(gtf$glob_targ[,c("seqnames","strand","start","end","type","transcript_id","gene_id")] ,
-                         gtf$ref[,c("seqnames","strand","start","end","type","transcript_id","gene_id")])
+                    gtf$ref[,c("seqnames","strand","start","end","type","transcript_id","gene_id")])
 
 GI <- c("GRIN2A","GRIA3","SEPTIN4","RTN4","MBP","RPS4Y1","XIST","ADD3","CNTNAP2","ANKRD12")
 RefIsoforms <- lapply(GI, function(x) unique(gtf$ref[gtf$ref$gene_id == x & !is.na(gtf$ref$transcript_id), "transcript_id"]))
