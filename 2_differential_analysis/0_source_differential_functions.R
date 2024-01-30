@@ -1,8 +1,8 @@
 ## ---------- Script -----------------
 ##
-## Script name: 
+## Script name:
 ##
-## Purpose of script: sources functions for generating downstream plots for SFARI dataset 
+## Purpose of script: sources functions for generating downstream plots for SFARI dataset
 ##
 ## Author: Szi Kay Leung
 ##
@@ -10,10 +10,10 @@
 ##
 ## ---------- Notes -----------------
 ##
-## 
-##   
 ##
-## 
+##
+##
+##
 
 ## ---------- Packages -----------------
 
@@ -28,9 +28,9 @@ suppressMessages(library(reshape))
 suppressMessages(library(gridExtra))
 suppressMessages(library(grid))
 suppressMessages(library(dplyr))
-suppressMessages(library(stringr)) 
-suppressMessages(library(viridis)) 
-suppressMessages(library(wesanderson)) 
+suppressMessages(library(stringr))
+suppressMessages(library(viridis))
+suppressMessages(library(wesanderson))
 suppressMessages(library(extrafont))
 suppressMessages(library(tidyr))
 suppressMessages(library(purrr))
