@@ -16,12 +16,14 @@ suppressMessages(library(grid))
 
 ## ---------- Packages -----------------
 
-LOGEN_ROOT = "/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/scripts/LOGen/"
-source(paste0(LOGEN_ROOT, "aesthetics_basics_plots/pthemes.R"))
-source(paste0(LOGEN_ROOT, "transcriptome_stats/read_sq_classification.R"))
-source(paste0(LOGEN_ROOT, "compare_datasets/whole_vs_targeted.R"))
-source(paste0(LOGEN_ROOT, "merge_characterise_dataset/run_ggtranscript.R"))
-source(paste0(LOGEN_ROOT, "differential_analysis/plot_usage.R"))
+LOGEN = "/lustre/projects/Research_Project-MRC148213/lsl693/scripts/LOGen/"
+source(paste0(LOGEN, "aesthetics_basics_plots/pthemes.R"))
+source(paste0(LOGEN, "transcriptome_stats/read_sq_classification.R"))
+source(paste0(LOGEN, "compare_datasets/whole_vs_targeted.R"))
+source(paste0(LOGEN, "compare_datasets/dataset_identifer.R"))
+source(paste0(LOGEN, "merge_characterise_dataset/run_ggtranscript.R"))
+source(paste0(LOGEN, "differential_analysis/plot_usage.R"))
+source(paste0(LOGEN, "aesthetics_basics_plots/draw_venn.R"))
 
 
 ## ---------- Labels -----------------
@@ -49,9 +51,9 @@ label_group <- function(genotype){
 # Aim: plot the number of isoforms
 # Pre-requisite: SQANTI_gene_preparation() from LOGEN/read_sq_classification.R
 # Input:
-# classification file generated from SQANTI
+  # classification file generated from SQANTI
 # Output:
-# p = bar plot of the percentage of isoforms per gene
+  # p = bar plot of the percentage of isoforms per gene
 
 numIso <- function(class.files){
   
@@ -60,7 +62,7 @@ numIso <- function(class.files){
     group_by(nIsoCat, cate) %>% tally(nIso) %>%
     mutate(Perc = n/sum(n) * 100) %>%
     ggplot(., aes(x=nIsoCat,y= Perc, fill = cate)) +
-    geom_bar(stat="identity", position = position_dodge()) +
+    geom_bar(stat="identity", position = position_dodge()) + 
     labs(x ="Number of Isoforms", y = "Genes (%)", fill = "", title = "\n") +
     theme_classic()
   
@@ -73,17 +75,17 @@ numIso <- function(class.files){
 # Aim: plot the number of isoforms by structural category
 # Pre-requisite: tabulate_structural_cate() from LOGEN/read_sq_classification.R
 # Input:
-# classification file generated from SQANTI
+  # classification file generated from SQANTI
 # Output:
-# p = bar plot of the percentage of isoforms by structural category
+  # p = bar plot of the percentage of isoforms by structural category
 
 numIsoCate <- function(class.files){
   
   p <- tabulate_structural_cate(class.files) %>%
     filter(!is.na(structural_category)) %>%
-    ggplot(., aes(x = structural_category, y = perc)) +
+    ggplot(., aes(x = structural_category, y = perc)) + 
     geom_bar(stat="identity") + labs(x = "Structural Category", y = "Isoforms (%)") +
-    coord_flip()
+    coord_flip() 
   
   return(p)
   
@@ -95,11 +97,11 @@ numIsoCate <- function(class.files){
 plot_cpat <- function(cpat,classfiles){
   
   dat <- merge(cpat[,c("seq_ID","Coding_prob")],classfiles[,c("isoform","structural_category")], by.x = "seq_ID", by.y = "isoform")
-  p <- ggplot(dat, aes(x = Coding_prob, y = structural_category, fill = structural_category)) + geom_boxplot() + theme_classic() +
+  p <- ggplot(dat, aes(x = Coding_prob, y = structural_category, fill = structural_category)) + geom_boxplot() + theme_classic() + 
     labs(x = "Coding probabilty (CPAT)", y = "Structural category") +
     scale_y_discrete(limits=rev) +
-    scale_fill_manual(values = c("#32cbcf","#b5ebed","#f99189","#fcd6d3","#d9d9d9","#f2ad00","#5d1f1f","#00a08a")) +
-    theme(legend.position = "None")
+    scale_fill_manual(values = c("#32cbcf","#b5ebed","#f99189","#fcd6d3","#d9d9d9","#f2ad00","#5d1f1f","#00a08a")) + 
+    theme(legend.position = "None")  
   return(p)
 }
 
@@ -107,14 +109,14 @@ plot_cpat <- function(cpat,classfiles){
 
 targetRate <- function(){
   # on-target rate
-  expressionAll %>% rownames_to_column(., var = "isoform") %>%
-    mutate(target = ifelse(isoform %in% ClassFiles$targ$isoform,"Target","OffTarget")) %>%
+  expressionAll %>% rownames_to_column(., var = "isoform") %>% 
+    mutate(target = ifelse(isoform %in% ClassFiles$targ$isoform,"Target","OffTarget")) %>% 
     filter(isoform != "0") %>%
     group_by(target) %>% tally(total) %>% mutate(perc = n/sum(n) * 100)
   
   
   # off target expression
-  offTargetExp <- expressionAll %>% rownames_to_column(., var = "isoform") %>% mutate(target = ifelse(isoform %in% ClassFiles$targ$isoform,"Target","OffTarget")) %>%
+  offTargetExp <- expressionAll %>% rownames_to_column(., var = "isoform") %>% mutate(target = ifelse(isoform %in% ClassFiles$targ$isoform,"Target","OffTarget")) %>% 
     filter(target == "OffTarget") %>%
     left_join(., ClassFiles$all[,c("isoform","associated_gene")], by = "isoform") %>%
     filter(isoform != "0") %>%
@@ -133,37 +135,37 @@ plot_trans_exp_individual <- function(transcript=NULL, classfiles, Norm_transcou
     print(gene)
     dat <- Norm_transcounts %>% filter(associated_gene == gene) %>% mutate(group = factor(group, levels = c("Prenatal","Postnatal")))
   }
-  
-  p <- ggplot(dat, aes(x = !!rlang::sym(var), y = log10(normalised_counts), fill = !!rlang::sym(var))) + geom_boxplot(outlier.shape = NA) +
+    
+  p <- ggplot(dat, aes(x = !!rlang::sym(var), y = log10(normalised_counts), fill = !!rlang::sym(var))) + geom_boxplot(outlier.shape = NA) + 
     geom_jitter(color="black", size=0.4, alpha=0.9) +
-    labs(x = "", y = "log10 normalized counts",
-         title = paste0(gene, ": ", transcript,"")) +  theme_classic() +
-    #scale_fill_manual(values = c(label_colour(group1),label_colour(group2))) +
+    labs(x = "", y = "log10 normalized counts", 
+         title = paste0(gene, ": ", transcript,"")) +  theme_classic() + 
+    #scale_fill_manual(values = c(label_colour(group1),label_colour(group2))) + 
     theme(legend.position = "none") #+ facet_grid(~group)
   
   if(var == "sex"){
-    p <- p + labs(x = "Sex")
+    p <- p + labs(x = "Sex") 
   }
   
   return(p)
 }
 
-plot_trans_exp_lifetime <- function(transcript=NULL,classfiles,Norm_transcount,gene = NULL){
+plot_trans_exp_lifetime <- function(transcript=NULL,classfiles,Norm_transcount,gene = NULL,sex=FALSE){
   
   #library(grid)
   #library(gridExtra)
   
   if(is.null(gene)){
-    gene <- classfiles[classfiles$isoform == transcript, "associated_gene"]
-    dat <- Norm_transcount %>% filter(isoform == transcript)
+    gene <- classfiles[classfiles$isoform == transcript, "associated_gene"] 
+    dat <- Norm_transcount %>% filter(isoform == transcript) 
     inputTitle <- paste0(gene, ": ", transcript,"")
   }else{
-    dat <- Norm_transcount %>% filter(associated_gene == gene)
+    dat <- Norm_transcount %>% filter(associated_gene == gene) 
     inputTitle <- gene
   }
   
-  dat <- dat %>% mutate(group = factor(group, levels = c("Prenatal","Postnatal")))
-  
+  dat <- dat %>% mutate(group = factor(group, levels = c("Prenatal","Postnatal"))) 
+
   dat <- as.data.frame(dat)
   fetal.ages.scale <- scales::rescale(dat[which(dat$group=='Prenatal'),'age'], to = c(0, 40))
   child.ages.scale <-  scales::rescale(dat[which((dat$group=='Postnatal') & (dat$age <= 40)),'age'], to = c(41, 60))
@@ -181,14 +183,19 @@ plot_trans_exp_lifetime <- function(transcript=NULL,classfiles,Norm_transcount,g
   allBreaksSet <- c(FetalBreaksSet, AdultBreaksSet)
   allLabelsSet <- append(append(FetalLabelsSet,"40/0"),AdultLabelsSet)
   
+  dat <<- dat
+  if(!isFALSE(sex)){
+    p <- ggplot(dat, aes(x = age.rescale, y = log10(normalised_counts), colour = sex)) + geom_point(size = 3) + 
+      scale_colour_manual(values = c("pink","blue")) 
+  }else{
+    p <- ggplot(dat, aes(x = age.rescale, y = log10(normalised_counts))) + geom_point(colour = wes_palette("Royal1")[4], size = 3)
+  }
   
-  p <- dat %>%
-    #mutate(age.x = ifelse(group == "Prenatal",age/10,age)) %>%
-    ggplot(aes(x = age.rescale, y = log10(normalised_counts))) + geom_point(aes(colour = group),size = 3) +
-    #facet_grid(~group, scales = "free", labeller = my_strip_labels, switch = "both") +
+  
+  p <- p +
     theme_classic() +
     geom_smooth(method=lm, aes(color=isoform), formula = y~poly(x,3),colour="black",fill = alpha("gray",0.2)) +
-    theme(panel.spacing = unit(0, "cm", data = NULL),legend.position="top") +
+    theme(panel.spacing = unit(0, "cm", data = NULL),legend.position="top") + 
     labs(x = NULL, y = "log10 normalized counts", title = inputTitle) +
     theme(
       strip.placement = "outside",   # format to look like title
@@ -199,11 +206,13 @@ plot_trans_exp_lifetime <- function(transcript=NULL,classfiles,Norm_transcount,g
     #scale_x_continuous(breaks = dat$age.rescale[c(1,15,31,32,33,40,20)], labels = append(append(c(dat$age[c(1,15,31)]),"40/0"), c(dat$age[c(33,40,20)]))) +
     scale_x_continuous(breaks = allBreaksSet, labels = allLabelsSet) +
     geom_vline(xintercept=40, linetype="dotted", color = "black") +
-    annotate("text", x = 16, y=max(log10(dat$normalised_counts)) + 0.2, label = "Pre-natal") +
-    annotate("text", x = 70, y=max(log10(dat$normalised_counts)) + 0.2, label = "Post-natal") +
-    scale_colour_manual(values = c(wes_palette("Royal1")[4],wes_palette("Royal2")[5]))
-  
-  p <- grid.arrange(p, bottom = textGrob("Age (pcw)                                             Age (yrs)", rot = 0, vjust = 0))
+    annotate("text", x = 16, y=max(log10(dat$normalised_counts)) + 0.5, label = "Pre-natal") + 
+    annotate("text", x = 70, y=max(log10(dat$normalised_counts)) + 0.5, label = "Post-natal") #+
+    #scale_colour_manual(values = c(wes_palette("Royal1")[4],wes_palette("Royal2")[5]))
+   
+   p <- grid.arrange(p, bottom = textGrob("Age (pcw)                                             Age (yrs)", rot = 0, vjust = 0)) 
+   
+
   
   return(p)
   
@@ -211,15 +220,15 @@ plot_trans_exp_lifetime <- function(transcript=NULL,classfiles,Norm_transcount,g
 
 num_disease_focus_DTE <- function(sigResults, geneList, title=NULL){
   cate_cols <- c(alpha("#00BFC4",0.8),alpha("#00BFC4",0.3),alpha("#F8766D",0.8),alpha("#F8766D",0.3))
-  p <- sigResults %>%
+  p <- sigResults %>% 
     mutate(structural_category = factor(structural_category, levels = c("full-splice_match","incomplete-splice_match","novel_in_catalog","novel_not_in_catalog","genic"))) %>%
-    filter(associated_gene %in% geneList) %>% group_by(associated_gene, structural_category) %>% tally() %>%
+    filter(associated_gene %in% geneList) %>% group_by(associated_gene, structural_category) %>% tally() %>% 
     ggplot(., aes(x = reorder(associated_gene,-n), y = n, fill = structural_category)) + geom_bar(stat = "identity") +
     theme_classic() +
     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
     labs(x = "Target genes", y = "Number of differentially expressed transcripts", title = title) +
     theme(legend.position = c(0.8,0.8)) +
-    scale_fill_manual(name = "", values = c(cate_cols,alpha("#808080",0.3)), labels = c("FSM","ISM","NIC","NNC","Genic"))
+    scale_fill_manual(name = "", values = c(cate_cols,alpha("#808080",0.3)), labels = c("FSM","ISM","NIC","NNC","Genic")) 
   
   return(p)
 }
@@ -247,16 +256,16 @@ ages <- function(pheno){
   p4<-ggplot(pheno[which(pheno$group=='Prenatal'),], aes(x=age, fill=sex))+geom_histogram(binwidth = 10, colour='black', position = 'dodge')+ggtitle('Prenatal')+xlab('Age (pcw)')+theme_cowplot()+scale_y_continuous(limits = c(0,15), breaks=seq(0,10,5))+ylab('Number of samples')
   
   return(list(p1,p2,p3,p4))
-  
+         
 }
 
 
 pSensitivity <- function(classf){
   
-  dat <- classf %>% arrange(-nreads) %>% mutate(cumreads = cumsum(nreads), relative = prop.table(nreads), cumrel = cumsum(relative))
-  p <- ggplot(dat, aes(x = isoform, y = cumrel, label = paste0(associated_gene,", ",associated_transcript))) +
-    geom_point() +
-    aes(x = fct_reorder(isoform, cumrel)) +
+  dat <- classf %>% arrange(-nreads) %>% mutate(cumreads = cumsum(nreads), relative = prop.table(nreads), cumrel = cumsum(relative)) 
+  p <- ggplot(dat, aes(x = isoform, y = cumrel, label = paste0(associated_gene,", ",associated_transcript))) + 
+    geom_point() + 
+    aes(x = fct_reorder(isoform, cumrel)) + 
     scale_x_discrete(labels = NULL, breaks = NULL) + labs(x = "XX") +
     geom_label_repel(data          = dat[1:5,],
                      size          = 4,
@@ -278,8 +287,8 @@ pSensitivity <- function(classf){
   #}
   #class.files$targ_all$ndensity <- factor(unlist(lapply(class.files$targ_all$nreads, function(x) densityfill(x))),
   #                                        levels = c("<10","10-100","100-200",">200"))
-  #ggplot(class.files$targ_all, aes(x = associated_gene, fill = as.factor(ndensity))) +
-  #  geom_bar() + labs(x = "Target genes", y = "Number of isoforms") +
+  #ggplot(class.files$targ_all, aes(x = associated_gene, fill = as.factor(ndensity))) + 
+  #  geom_bar() + labs(x = "Target genes", y = "Number of isoforms") + 
   #  scale_fill_discrete(name = "Number of total reads") + mytheme +
   #  theme(legend.position="bottom")
   
@@ -323,35 +332,54 @@ plot_top_results <- function(diff_results, exp_results, plot_type, rank=10){
   return(retList)
 }
 
-plot_volcano <- function(diff_results,stats=FALSE,interaction="notsex"){
+plot_volcano <- function(diff_results,stats=FALSE,interaction="notsex",chromosome=NULL){
   
   #https://samdsblog.netlify.app/post/visualizing-volcano-plots-in-r/#:~:text=A%20volcano%20plot%20is%20a,tools%20like%20EdgeR%20or%20DESeq2.
   
+  if(!is.null(chromosome)){
+    # remove X and Y chromosome
+    diff_results <- diff_results %>% filter(!chrom %in% c("chrY","chrX"))
+  }
+  
   diff_results <- diff_results %>% mutate(
-    Expression = case_when(log2FoldChange >= log(2) & padj <= 0.05 ~ "Up-regulated",
-                           log2FoldChange <= -log(2) & padj <= 0.05 ~ "Down-regulated",
-                           TRUE ~ "Unchanged")
+      Expression = case_when(log2FoldChange >= log(2) & padj <= 0.05 ~ "Up-regulated",
+                             log2FoldChange <= -log(2) & padj <= 0.05 ~ "Down-regulated",
+                             TRUE ~ "Unchanged")
   )
   
   message("Number of transcripts:", nrow(diff_results[diff_results$padj < 0.05,]))
   message("Number of transcripts upregulated (red):", nrow(diff_results[diff_results$Expression == "Up-regulated",]))
   message("Number of transcripts downregulated (blue):", nrow(diff_results[diff_results$Expression == "Down-regulated",]))
   
+
   if(interaction!="sex"){
+
     Top_genes <- as.data.frame(rbind(diff_results %>% filter(Expression == "Up-regulated") %>% arrange(padj) %>% .[1:10,],
                                      diff_results %>% filter(Expression == "Down-regulated") %>% arrange(padj) %>% .[1:10,]))
+    label3 <- c("Pre-natal < Post-natal","Unchanged", "Pre-natal > Post-natal")
+    label2 <- c("Pre-natal < Post-natal", "Pre-natal > Post-natal")
+    
   }else{
-    Top_genes <- as.data.frame(rbind(diff_results %>% filter(Expression == "Up-regulated" & !chrom %in% c("chrX","chrY")) %>%
-                                       arrange(padj) %>% .[1:10,],
-                                     diff_results %>% filter(Expression == "Down-regulated" & !chrom %in% c("chrX","chrY")) %>%
-                                       arrange(padj) %>% .[1:10,]))
+    
+    if(is.null(chromosome)){
+      Top_genes <- as.data.frame(rbind(diff_results %>% filter(Expression == "Up-regulated") %>% arrange(padj) %>% .[1:10,],
+                                       diff_results %>% filter(Expression == "Down-regulated") %>% arrange(padj) %>% .[1:10,]))
+    }else{
+      Top_genes <- as.data.frame(rbind(diff_results %>% filter(Expression == "Up-regulated" & !chrom %in% c("chrX","chrY")) %>% 
+                                         arrange(padj) %>% .[1:10,],
+                                       diff_results %>% filter(Expression == "Down-regulated" & !chrom %in% c("chrX","chrY")) %>% 
+                                         arrange(padj) %>% .[1:10,]))
+    }
+
+    label3 <- c("Female < Male","Unchanged", "Female > Male")
+    label2 <- c("Female < Male", "Female > Male")
   }
-  
+
   
   options(ggrepel.max.overlaps = Inf)
   
   if(isFALSE(stats)){
-    
+
     diff_results <<- diff_results
     p <- ggplot(diff_results, aes(log2FoldChange, -log(padj,10))) + # -log10 conversion
       geom_point(aes(color = Expression), size = 3/5) +
@@ -362,12 +390,12 @@ plot_volcano <- function(diff_results,stats=FALSE,interaction="notsex"){
                                 mapping = aes(log2FoldChange, -log(padj,10), label = associated_gene),
                                 size = 4,
                                 box.padding = 1.0,    # Adjust this value to increase/decrease box padding
-                                point.padding = 1.0) + theme(legend.position = "top")
+                                point.padding = 1.0) + theme(legend.position = "top") 
     
     if(nrow(diff_results[diff_results$Expression=="Unchanged",]) == 0){
-      p <- p + scale_color_manual(values = c("dodgerblue3", "firebrick3"))
+      p <- p + scale_color_manual(values = c("dodgerblue3", "firebrick3"), label = label2) 
     }else{
-      p <- p + scale_color_manual(values = c("dodgerblue3", "gray50", "firebrick3"))
+      p <- p + scale_color_manual(values = c("dodgerblue3", "gray50", "firebrick3"), label = label3) 
     }
     
     output <- list(p, Top_genes)
@@ -379,9 +407,10 @@ plot_volcano <- function(diff_results,stats=FALSE,interaction="notsex"){
 }
 
 
-plotIFTargetedbyGene <- function(gene){
+plotIFTargetedbyGene <- function(gene, pathDIU){
   
-  Exp <- read.csv(paste0("/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/RBFetal/5_diu/targeted/group/",gene,"_normalised_expression.txt"),header=T)
+  #Exp <- read.csv(paste0("/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/RBFetal/5_diu/targeted/group/",gene,"_normalised_expression.txt"),header=T)
+  Exp <- read.csv(paste0(pathDIU,"/",gene,"_normalised_expression.txt"),header=T)
   Exp <- Exp %>% tidyr::spread(sample,normalised_counts) %>% tibble::column_to_rownames(var = "isoform")
   p <- plotIF(gene=gene,ExpInput=Exp,pheno=phenotype$WholeTargeted,cfiles=class.files$glob_targ_SQ,design="case_control",rank=5,majorIso=NULL)[[2]]
   return(p)

@@ -9,7 +9,7 @@ suppressMessages(library("data.table"))
 suppressMessages(library("dplyr"))
 suppressMessages(library("vroom"))
 
-LOGEN <- "/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/scripts/LOGen/"
+LOGEN <- "/lustre/projects/Research_Project-MRC148213/lsl693/scripts/LOGen/"
 source(paste0(LOGEN,"transcriptome_stats/read_sq_classification.R"))
 source(paste0(LOGEN,"transcriptome_stats/sample_sensitivity.R"))
 source(paste0(LOGEN,"target_gene_annotation/summarise_gene_stats.R"))
@@ -17,41 +17,31 @@ sapply(list.files(path = paste0(LOGEN,"transcriptome_stats"), pattern="*.R", ful
 sapply(list.files(path = paste0(LOGEN,"longread_QC"), pattern="*.R", full = T), source,.GlobalEnv)
 
 
-## ------------ directory names ---------------
-root_dir <- "/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/"
-root_sfari <- "/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARIdevelopmentalgenomics/"
-root_rb_dir <- "/gpfs/mrc0/projects/Research_Project-MRC148213/Rosie/WholeTargeted/"
+## ------------ directory names --------------- 
+
+root_dir <- "/lustre/projects/Research_Project-MRC148213/lsl693/"
+root_sfari <- "/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/"
+root_rb_dir <- "/lustre/projects/Research_Project-MRC148213/Rosie/SFARIdevelopmentalgenomics/"
+recovered_dir <- "/lustre/recovered/Research_Project-MRC148213/sl693/RBFetal/"
 dirnames <- list(
-  # global transcriptome (Iso-Seq, Iso-Seq + RNA-Seq)
-  glob_SQ = paste0(root_dir, "/RBFetal/WholeTranscriptome/"),
   
-  # targeted sequencing (Iso-Seq, ONT)
-  targ_SQ = paste0(root_dir,"RBFetal/1_SQANTI3/"),
+  wholetarg_SQ = paste0(root_rb_dir,"6_sqanti3/"),
   
-  wholetarg_SQ = paste0(root_rb_dir,"SQANTI/"),
+  output = paste0(root_sfari,"/0_output/"),
+  utils = paste0(root_sfari,"/0_utils/"),
+  protein = paste0(root_sfari, "/8_longReadProteogenomics/longReadProteogenomics"),
   
-  output = paste0(root_sfari,"0_output/")
+  DGE = paste0(root_sfari, "10_deseq/1_DGE/"), 
+  DTE = paste0(root_sfari, "10_deseq/2_DTE/"),
+  DIU = paste0(root_sfari, "10_deseq/3_DIU/")
 )
 
-TargetGene = read.table("/gpfs/mrc0/projects/Research_Project-MRC148213/vc362/fetalBrain/genes.txt")[["V1"]]
 
+TargetGene = read.table(paste0(root_sfari, "0_metadata/Complete_TargetGenes_TargetedSequencing.txt"))[["V1"]]
 
-## ------------- Demultiplex files -------------------
-
-demux.names.files <- list(
-  # targeted + whole SQANTI dataset
-  glob_targ_SQ = paste0(dirnames$wholetarg_SQ,"WholeTargeted_demux_2reads2samples_SQANTIfiltered.csv")
-)
-
-demux.files <- lapply(demux.names.files, function(x) fread(x))
-
-
-## ------------- Phenotype files -------------------
-phenotype <- list(
-  WholeTargeted = fread(paste0(root_dir, "RBFetal/00_metadata/WholeTargetedphenotype_fixedsex.csv"),data.table=F, stringsAsFactors=F) %>% mutate(time = age)
-)
 
 ## -------------- Final classification files -------------
+
 class.names.files <- list(
   
   # targeted + whole SQANTI dataset futher filtered by minimum 2 reads and 2 samples
@@ -66,78 +56,66 @@ class.names.files <- list(
 )
 
 class.files <- lapply(class.names.files, function(x) SQANTI_class_preparation(x,"nstandard"))
+message("Number of transcripts in whole transcriptome dataset after SQANTI filtering, 2 reads 2 samples: ", nrow(class.files$glob_SQ))
+message("Number of genes: ", length(unique(class.files$glob_SQ$associated_gene)))
 
 # remove mono-exonic intergenic transcripts
 class.files <- lapply(class.files, function(x) x %>% mutate(structural_category_exons = paste0(structural_category,"_",exons)))
-mono.class.files <- lapply(class.files, function(x) x %>% filter(structural_category_exons == "Intergenic_1"))
 class.files <- lapply(class.files, function(x) x %>% filter(structural_category_exons != "Intergenic_1"))
+message("Number of transcripts in whole transcriptome dataset after SQANTI filtering, 2 reads 2 samples, -monoexonic intergenic: ", nrow(class.files$glob_SQ))
+message("Number of genes: ", length(unique(class.files$glob_SQ$associated_gene)))
+save(class.files, file = paste0(dirnames$wholetarg_SQ,"all_filtered_classification_2reads2samples_noMonoIntergenic.RData"))
 
-# merge class.files with demux for
-class.files$glob_targ_SQ <- merge(class.files$glob_targ_SQ, demux.files$glob_targ_SQ, by = "isoform", all.x=T)
+# remove mono-exonic transcripts 
+refExonNum <- read.csv(paste0(dirnames$utils,"gencode.v40.annotation.numExon.csv"))
+exonicClass <- refExonNum %>% 
+  group_by(Gene, GeneName, GeneType) %>% 
+  dplyr::summarise(maxNumExon = max(NumExon)) %>% 
+  mutate(monoExonic = ifelse(maxNumExon == 1, TRUE, FALSE))
+
+refGeneType <- read.table(paste0(dirnames$utils,"gencode.v38.annotation.geneannotation.txt"), header = T)
+
+# identify multi-exonic genes
+multiExonicGenes <- unique(exonicClass[exonicClass$monoExonic == FALSE,][["GeneName"]])
+# TRUE = monotranscript within multi-exonic gene
+class.files <- lapply(class.files, function(x) x %>% mutate(monomulti = ifelse(exons == 1 & associated_gene %in% multiExonicGenes, TRUE,FALSE)))
+# filter FALSE to retain multi-transcripts within multi-exonic gene, and mono-transcripts within mono-exonic gene
+class.files <- lapply(class.files, function(x) x %>% filter(monomulti == FALSE))
+message("Number of transcripts in whole transcriptome dataset after SQANTI filtering, 2 reads 2 samples, -monoexonic intergenic, -monoexonic multigene: ", nrow(class.files$glob_SQ))
+message("Number of genes: ", length(unique(class.files$glob_SQ$associated_gene)))
+
+# mmExonicClass <- refExonNum[refExonNum$NumExon == 1 & refExonNum$GeneName %in% exonicClass[exonicClass$monoExonic != TRUE,][["GeneName"]],]
+# monomulti.class.files$glob_SQ[monomulti.class.files$glob_SQ$associated_gene %in% mmExonicClass$GeneName,]
 
 # filter targeted dataset to just the target genes
 class.files$targ_SQ <- class.files$targ_SQ %>% filter(associated_gene %in% TargetGene)
 
-wholesamples <- colnames(class.files$glob_targ_SQ)[grepl("Whole", colnames(class.files$glob_targ_SQ))]
-targetedsamples <- colnames(class.files$glob_targ_SQ)[grepl("Targeted", colnames(class.files$glob_targ_SQ))]
-matchedsamples <- intersect(gsub("^.*?Whole","",wholesamples),gsub("^.*?Targeted","",targetedsamples))
-targetedmatchedsamples <- paste0("Targeted",matchedsamples)
-wholematchedsamples <- paste0("Whole",matchedsamples)
-
+save(class.files, file = paste0(dirnames$wholetarg_SQ,"all_filtered_classification_2reads2samples_noMonoIntergenicAll.RData"))
+write.table(class.files$glob_SQ, paste0(dirnames$wholetarg_SQ,"WholeTargeted_cleaned_aligned_merged_collapsed_qced_RulesFilter_classification_Whole_2reads2samples_monomultirem.txt"),quote=F, sep = "\t")
+write.table(class.files$glob_targ_SQ, paste0(dirnames$wholetarg_SQ,"WholeTargeted_cleaned_aligned_merged_collapsed_qced_RulesFilter_classification_2reads2samples_monomultirem.txt"),quote=F, sep = "\t", row.names= F)
 
 ## -------------- DESeq2
-TargetedDESeq <- list(
-  sex = vroom(paste0(root_dir,"RBFetal/4_deseq2/anno_targeted_sex_removinglateprenatal.csv"),delim = ",",show_col_types = FALSE),
-  age = vroom(paste0(root_dir,"RBFetal/4_deseq2/anno_targeted_group_removinglateprenatal.csv"),delim = ",",show_col_types = FALSE),
-  prenatal_sex = vroom(paste0(root_dir,"RBFetal/4_deseq2/anno_targeted_prenatalsex_removinglateprenatal.csv"),delim = ",",show_col_types = FALSE)
-)
-TargetedDESeq <- lapply(TargetedDESeq, function(x) merge(x, class.files$glob_targ_SQ[,c("isoform","chrom")], by = "isoform"))
-save(TargetedDESeq, file = paste0(root_dir,"RBFetal/4_deseq2/anno_targeted_removinglateprenatal.RData"))
-
-TargetedDESeqSig <- list(
-  sex = as.data.frame(fread(paste0(root_dir,"RBFetal/4_deseq2/filtered_output_targeted_sex_removinglateprenatal.csv"))),
-  age = as.data.frame(fread(paste0(root_dir,"RBFetal/4_deseq2/filtered_output_targeted_group_removinglateprenatal.csv")))
-)
-TargetedDESeqSig <- lapply(TargetedDESeqSig, function(x) merge(x, class.files$glob_targ_SQ[,c("isoform","associated_gene","associated_transcript","structural_category","subcategory")], by = "isoform", all.x = T))
-save(TargetedDESeqSig, file = paste0(root_dir,"RBFetal/4_deseq2/anno_targeted_removinglateprenatal_sig.RData"))
 
 # Whole DESeq2
-WholeDESeq <- list(
-  sex = vroom(paste0(root_dir,"RBFetal/4_deseq2/anno_whole_sex_removinglateprenatal_TEST.csv"),delim = ",",show_col_types = FALSE),
-  age = vroom(paste0(root_dir,"RBFetal/4_deseq2/anno_whole_group_removinglateprenatal_TEST.csv"),delim = ",",show_col_types = FALSE)
-)
-WholeDESeq <- lapply(WholeDESeq, function(x) merge(x, class.files$glob_targ_SQ[,c("isoform","chrom")], by = "isoform"))
-save(WholeDESeq, file = paste0(root_dir,"RBFetal/4_deseq2/anno_whole_removinglateprenatal_TEST.RData"))
-
 WholeDESeqSig <- list(
-  sex = vroom(paste0(root_dir,"RBFetal/4_deseq2/filtered_output_whole_sex_removinglateprenatal_TEST.csv"),delim = ",",show_col_types = FALSE),
-  age = vroom(paste0(root_dir,"RBFetal/4_deseq2/filtered_output_whole_group_removinglateprenatal_TEST.csv"),delim = ",",show_col_types = FALSE)
+  sex = vroom(paste0(dirnames$DTE,"DESeq2_whole_transcript_sex_resSig.csv"),delim = ",",show_col_types = FALSE),
+  age = vroom(paste0(dirnames$DTE,"DESeq2_whole_transcript_development_resSig.csv"),delim = ",",show_col_types = FALSE)
 )
-WholeDESeqSig  <- lapply(WholeDESeqSig , function(x) merge(x, class.files$glob_targ_SQ[,c("isoform","associated_gene","associated_transcript","chrom","structural_category","subcategory")], by = "isoform"))
-save(WholeDESeqSig, file = paste0(root_dir,"RBFetal/4_deseq2/anno_whole_removinglateprenatal_TEST_sig.RData"))
-
 
 WholeDESeqGeneSig <- list(
   sex = as.data.frame(fread(paste0(root_dir,"RBFetal/4_deseq2/filtered_output_whole_gene_prenatalsex_removinglateprenatal.csv"))),
   age = as.data.frame(fread(paste0(root_dir,"RBFetal/4_deseq2/filtered_output_whole_gene_group_removinglateprenatal.csv")))
 )
 
-TargetedDESeqGeneSig <- list(
-  sex = as.data.frame(fread(paste0(root_dir,"RBFetal/4_deseq2/filtered_output_targeted_gene_prenatalsex_removinglateprenatal.csv"))),
-  age = as.data.frame(fread(paste0(root_dir,"RBFetal/4_deseq2/filtered_output_targeted_gene_group_removinglateprenatal.csv")))
-)
-
-
 # Expression
 Exp <- list(
-  targeted_sex = vroom(paste0(root_dir,"RBFetal/4_deseq2/filtered_output_norm_targeted_sex_removinglateprenatal.csv"),delim = ","),
-  targeted_group = vroom(paste0(root_dir,"RBFetal/4_deseq2/filtered_output_norm_targeted_group_removinglateprenatal.csv"),delim = ","),
-  whole_sex = vroom(paste0(root_dir,"RBFetal/4_deseq2/filtered_output_norm_whole_sex_removinglateprenatal_TEST.csv"),delim = ","),
-  whole_group = vroom(paste0(root_dir,"RBFetal/4_deseq2/filtered_output_norm_whole_group_removinglateprenatal_TEST.csv"),delim = ",")
+  #targeted_sex = vroom(paste0(root_dir,"RBFetal/4_deseq2/filtered_output_norm_targeted_sex_removinglateprenatal.csv"),delim = ","),
+  #targeted_group = vroom(paste0(root_dir,"RBFetal/4_deseq2/filtered_output_norm_targeted_group_removinglateprenatal.csv"),delim = ","),
+  whole_sex = vroom(paste0(dirnames$DTE,"DESeq2_whole_sex_normSig.csv"),delim = ","),
+  whole_group = vroom(paste0(dirnames$DTE,"DESeq2_whole_development_normSig.csv"),delim = ",")
 )
-Exp <- lapply(Exp, function(x) merge(x, phenotype$WholeTargeted, by="sample"))
-Exp <- lapply(Exp, function(x) merge(x, class.files$glob_targ_SQ[,c("isoform","associated_gene","structural_category")], by="isoform", all.x = T))
-save(Exp, file = paste0(root_dir,"RBFetal/4_deseq2/filtered_output_norm_removinglateprenatal.RData"))
+Exp <- lapply(Exp, function(x) merge(x, phenotype, by="sample"))
+save(Exp, file = paste0(dirnames$DTE,"DESeq2_whole_normSig.RData"))
 
 ExpGenes <- list(
   targeted_sex = fread(paste0(root_dir,"RBFetal/4_deseq2/output_norm_targeted_gene_sex_removinglateprenatal.csv")),

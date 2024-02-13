@@ -10,7 +10,7 @@
 ## fig4: Targeted dataset
 
 
-SC_ROOT = "/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/scripts/SFARI_developmentalgenomics"
+SC_ROOT = "/lustre/projects/Research_Project-MRC148213/lsl693/scripts/SFARI_developmentalgenomics"
 source(paste0(SC_ROOT,"/Paper_Figures/SFARI_config.R"))
 source(paste0(SC_ROOT,"/Paper_Figures/0_source_functions.R"))
 output_dir = paste0(SC_ROOT,"/Paper_Figures/outputFigs")
@@ -47,45 +47,51 @@ fig2Targeted <- list(
 
 
 ## ------ Figure 3: Differential expression analysis ------ 
-
-
+tCol <- wes_palette("Royal1")[4]
 fig3Diff <- list(
   # volcano plot across development
-  volGroup = plot_volcano(diff_results=WholeDESeqSig$age)[[1]],
+  volGroup = plot_volcano(diff_results=WholeDESeq$age)[[1]],
   # volcano plot across sex
-  volSex = plot_volcano(diff_results=WholeDESeqSig$sex, interaction = "sex")[[1]],
+  volSex = plot_volcano(diff_results=WholeDESeq$sex, interaction = "sex")[[1]],
+  volSexSupp = plot_volcano(diff_results=WholeDESeq$sex, interaction = "sex", chromosome = "allosomal")[[1]],
   # top-ranked scatter plot
   topRankedGroup = plot_trans_exp_lifetime("ONT18_5132_2313",class.files$glob_SQ,Exp$whole_group),
   topRankedGroupVis = ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$glob_targ_SQ,
                                    isoList = c("ONT18_5132_2313",RefIsoforms$MBP$transcript_id),
-                                   colours = c(wes_palette("Cavalcanti1")[5],"#0C0C78"), 
+                                   colours = c(wes_palette("Royal1")[4],"black"), 
                                    simple=TRUE),
   
   # top-ranked box-plot sex autosomal and allosomal chromosome
   #View(WholeDESeqSig$sex)
   #View(WholeDESeqSig$sex %>% filter(!chrom %in% c("chrY","chrX")))
-  topRankedSex1 = plot_trans_exp_individual("ONTY_67_2",class.files$glob_SQ,Exp$whole_sex,"sex"),
-  topRankedSex2 = plot_trans_exp_individual("ONTX_3476_23182",class.files$glob_SQ,Exp$whole_sex,"sex"),
-  topRankedSex3 = plot_trans_exp_individual("ONT10_4920_1919",class.files$glob_SQ,Exp$whole_sex,"sex"),
+  topRankedSex1 = plot_trans_exp_individual("ONTY_67_2",class.files$glob_SQ,Exp$whole_sex,"sex") + scale_fill_manual(values = c(tCol,tCol)),
+  topRankedSex2 = plot_trans_exp_individual("ONTX_3476_23182",class.files$glob_SQ,Exp$whole_sex,"sex") + scale_fill_manual(values = c(tCol,tCol)),
+  topRankedSex3 = plot_trans_exp_individual("ONT10_4920_1919",class.files$glob_SQ,Exp$whole_sex,"sex") + scale_fill_manual(values = c(tCol,tCol)),
+  topRankedSex4 = plot_trans_exp_individual("ONT5_1265_990",class.files$glob_SQ,Exp$whole_sex,"sex") + scale_fill_manual(values = c(tCol,tCol)), 
+  
   topRankedSex1Vis = ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$glob_targ_SQ,
               isoList = c("ONTY_67_2",RefIsoforms$RPS4Y1$transcript_id),
-              colours = c(wes_palette("Cavalcanti1")[5],"#0C0C78"),
+              colours = c(wes_palette("Royal1")[4],"black"),
               simple=TRUE), 
   topRankedSex2Vis  = ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$glob_targ_SQ,
               isoList = c("ONTX_3476_23182",RefIsoforms$XIST$transcript_id),
-              colours = c(wes_palette("Cavalcanti1")[5],"#0C0C78"),
+              colours = c(wes_palette("Royal1")[4],"black"),
               simple=TRUE), 
   topRankedSex3Vis = ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$glob_targ_SQ,
               isoList = c("ONT10_4920_1919",RefIsoforms$ADD3$transcript_id),
-              colours = c(wes_palette("Cavalcanti1")[5],"#0C0C78"),
-              simple=TRUE) 
+              colours = c(wes_palette("Royal1")[4],"black"),
+              simple=TRUE),
+  topRankedSex4Vis = ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$glob_targ_SQ,
+                                 isoList = c("ONT5_1265_990",RefIsoforms$XIST$transcript_id),
+                                 colours = c(wes_palette("Royal1")[4],"black"),
+                                 simple=TRUE) 
 )
 
 
 ## ------ Figure 4: GRIA3 ------ 
 
 Fig4Targeted <- list(
-  volGroup = plot_volcano(diff_results=TargetedDESeqSig$age %>% filter(associated_gene %in% TargetGeneSZASD$targetGene))[[1]],
+  #volGroup = plot_volcano(diff_results=TargetedDESeqSig$age %>% filter(associated_gene %in% TargetGeneSZASD$targetGene))[[1]],
   topRankedUp = plot_trans_exp_lifetime("ONT7_6418_29474",class.files$glob_SQ,Exp$targeted_group),
   topRankedUpVis = ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$glob_targ_SQ,
                                  isoList = c("ONT7_6418_29474",RefIsoforms$CNTNAP2$transcript_id),
@@ -96,11 +102,26 @@ Fig4Targeted <- list(
                                isoList = c("ONT18_407_1413",RefIsoforms$ANKRD12$transcript_id),
                                colours = c(wes_palette("Cavalcanti1")[5],"#0C0C78"),
                                simple=TRUE),
-  GRIA3DIU = plotIFTargetedbyGene("GRIA3") + scale_colour_manual(values = c(wes_palette("Royal1")[4],wes_palette("Royal2")[5])),
+  GRIA3DIU = plotIFTargetedbyGene("GRIA3", paste0(dirnames$DIU,"targeted/group")), #+ 
+    #scale_colour_manual(values = c(wes_palette("Royal1")[4],wes_palette("Royal2")[5])),
   GRIA3DGE = plot_trans_exp_lifetime(classfiles=class.files$glob_targ_SQ,Norm_transcount=ExpGenes$targeted_group,gene="GRIA3"),
   GRIA3DTE1 = plot_trans_exp_lifetime("ONTX_7115_9753",class.files$glob_targ_SQ,Exp$targeted_group),
   GRIA3DTE2 = plot_trans_exp_lifetime("ONTX_7115_973",class.files$glob_targ_SQ,Exp$targeted_group)
 )
+
+
+
+## ------ DTE across sex and development ------ 
+
+WholeDTEsexAge <- lapply(intersect(WholeDTE$sex$isoform, WholeDTE$age$isoform), function(x) plot_trans_exp_lifetime(x,class.files$glob_SQ,Exp$whole_group,sex=TRUE))
+plot_grid(plotlist = WholeDTEsexAge)
+WholeDTEsexAge2 <- lapply(intersect(WholeDTE$sex$isoform, WholeDTE$age$isoform), function(x) plot_trans_exp_individual(x,class.files$glob_SQ,Exp$whole_sex,"sex") + scale_fill_manual(values = c(tCol,tCol)))
+
+
+WholeDTEsexAge3 <- lapply(1:length(WholeDTEsexAge), function(x) plot_grid(WholeDTEsexAge[[x]],WholeDTEsexAge2[[x]], rel_widths = c(0.7,0.3)))
+plot_grid(plotlist = WholeDTEsexAge)
+plot_grid(plotlist = WholeDTEsexAge2)
+plot_grid(plotlist = WholeDTEsexAge3)
 
 
 ## ------ Output ------ 
@@ -116,7 +137,8 @@ Fig3 <- plot_grid(
           plot_grid(fig3Diff$volSex,
                     plot_grid(fig3Diff$topRankedSex1Vis, fig3Diff$topRankedSex1,rel_heights = c(0.2,0.8),ncol=1),
                     plot_grid(fig3Diff$topRankedSex2Vis, fig3Diff$topRankedSex2,rel_heights = c(0.2,0.8),ncol=1),
-                    plot_grid(fig3Diff$topRankedSex3Vis, fig3Diff$topRankedSex3,rel_heights = c(0.2,0.8),ncol=1), nrow = 1, rel_widths = c(0.4,0.2,0.2,0.2), labels = c("C","D","E","F")),
+                    plot_grid(fig3Diff$topRankedSex3Vis, fig3Diff$topRankedSex3,rel_heights = c(0.2,0.8),ncol=1),
+                    plot_grid(fig3Diff$topRankedSex3Vis, fig3Diff$topRankedSex4,rel_heights = c(0.2,0.8),ncol=1), nrow = 1, rel_widths = c(0.4,0.2,0.2,0.2), labels = c("C","D","E","F")),
           ncol = 1
 )
 
