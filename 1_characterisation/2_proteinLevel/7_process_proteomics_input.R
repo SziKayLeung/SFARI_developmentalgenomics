@@ -10,7 +10,7 @@
 
 ## ------------ packages ------------
 
-LOGEN <- "/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/scripts/LOGen/"
+LOGEN <- "/lustre/projects/Research_Project-MRC148213/lsl693/scripts/LOGen/"
 source(paste0(LOGEN, "aesthetics_basics_plots/pthemes.R"))
 source(paste0(LOGEN, "transcriptome_stats/read_sq_classification.R"))
 source(paste0(LOGEN, "transcriptome_stats/plot_basic_stats.R"))
@@ -19,11 +19,12 @@ source(paste0(LOGEN, "merge_characterise_dataset/run_ggtranscript.R"))
 
 ## ------------ directory paths ------------
 
-SC_ROOT <- "/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/scripts/SFARI_developmentalgenomics/1_characterisation"
-root_dir <- "/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/"
+SC_ROOT <- "/lustre/projects/Research_Project-MRC148213/lsl693/SFARI_developmentalgenomics/1_characterisation"
+root_sfari <- "/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/"
 dirnames <- list(
-  sqanti = "/gpfs/mrc0/projects/Research_Project-MRC148213/Rosie/WholeTargeted/SQANTI/",
-  proteomics = "/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/RBFetal/6a_longReadProteogenomics/"
+  sqanti = "/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/6_sqanti/sqanti/",
+  proteomics = "/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/8_longReadProteogenomics/longReadProteogenomics/",
+  utils = paste0(root_sfari,"/0_utils/")
 )
 
 
@@ -57,7 +58,7 @@ input$t.class.files <- merge(input$t.class.files, input$t2p.collapse, by.x = "is
 ## ------------ output ------------ 
 
 proteinInput <- input
-save(proteinInput, file = paste0(SC_ROOT,"/proteinInputWhole.RData"))
+save(proteinInput, file = paste0(dirnames$utils,"/proteinInputWhole.RData"))
 
 # aggregate sum by same peptide sequence
 pFL <- input$t.class.files %>% dplyr::select(base_acc, contains("FL."))

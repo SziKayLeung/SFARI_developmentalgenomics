@@ -168,7 +168,7 @@ classify_protein(){
 
 run_hybrid_annotation(){
   mkdir -p $WKD_ROOT/8_hybrid_annotation; cd $WKD_ROOT/8_hybrid_annotation
-  python $LREAD/make_hybrid_database/src/make_hybrid_database_ck.py \
+  python $LOGEN/make_hybrid_database.py \
   --protein_classification $WKD_ROOT/7_classified_protein/$NAME".classification_filtered.tsv" \
   --gene_lens $WKD_ROOT/3_reference_tables/gene_lens.tsv \
   --pb_fasta $WKD_ROOT/7_classified_protein/$NAME".filtered_protein.fasta" \

@@ -25,11 +25,11 @@ source /gpfs/mrc0/projects/Research_Project-MRC148213/sl693/scripts/SFARI_develo
 source /gpfs/mrc0/projects/Research_Project-MRC148213/sl693/scripts/SFARI_developmentalgenomics/1_characterisation/2_proteinLevel/0_proteomics.config
 
 echo "#************************************* Collate and prepare long-read data"
-#prepare_reference_tables
-#summarise_longread_data
+prepare_reference_tables
+summarise_longread_data
 
 echo "#************************************* Call open reading frames and classify proteins"
-#call_orf
+call_orf
 refine_calledorf
 classify_protein
 
