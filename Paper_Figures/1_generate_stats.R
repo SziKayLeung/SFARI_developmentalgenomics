@@ -8,7 +8,7 @@
 ## ------- whole transcriptome -------
 
 # number of transcripts and genes to annotated genes
-message("Number of total transcripts to annotated known genes: ", nrow(class.files$glob_SQ_annoGene))
+message("Number of total transcripts to all genes: ", nrow(class.files$glob_SQ_annoGene))
 message("Number of annotated known genes: ", length(unique((class.files$glob_SQ_annoGene$associated_gene))))
 
 # length summary
@@ -155,6 +155,7 @@ message("Percentage overlap: ",length(unique(gfftmap[gfftmap$class_code == "=","
 message("Number of differentially expressed isoforms: ", nrow(WholeDTE$age))
 message("Number of genes with differentially expressed isoforms: ", length(unique(WholeDTE$age$associated_gene)))
 message("Number of upregulated transcripts in postnatal vs prenatal: ", nrow(WholeDTE$age[WholeDTE$age$dirAcrossDev == "upregulated",]))
+table(WholeDTE$age$structural_category)
 
 # binomial test of enrichment of upregulated transcripts in post-natal
 binom <- binom.test(nrow(WholeDTE$age[WholeDTE$age$dirAcrossDev == "upregulated",]), nrow(WholeDTE$age))

@@ -24,6 +24,12 @@ DESeqColsRenamed <- c("Isoform","Chromosome", "Associated gene", "Associated tra
 WholeDESeqSigOut <- lapply(WholeDESeqSig, function(x) x %>% arrange(padj) %>% select(all_of(DESeqCols)) %>% `colnames<-`(DESeqColsRenamed))
 write.csv(WholeDESeqSigOut$sex,paste0(output_dir,"/WholeDTESex.csv"))
 write.csv(WholeDESeqSigOut$age,paste0(output_dir,"/WholeDTEGroup.csv"))
+
+WholeDTENumGene <- WholeDTE$age %>% group_by(associated_gene, dirAcrossDev) %>% tally() %>% 
+  as.data.frame() %>% reshape(., idvar = "associated_gene", timevar = "dirAcrossDev", direction = "wide")
+WholeDTENumGene[is.na(WholeDTENumGene)] <- 0
+write.csv(WholeDTENumGene,paste0(dirnames$output,"/WholeDTENumGene.csv"), quote = F)
+
 # DGE 
 DESeqGeneCols <- c("associated_gene","log2FoldChange","lfcSE","pvalue","padj")
 DESeqGeneColsRenamed <- c("Associated gene","Log2FC","lfcSE", "p-value","FDR")
@@ -48,3 +54,33 @@ DIUSigOut <- lapply(DIUSig, function(x) x %>% arrange(FDR) %>% `colnames<-`(DIUC
 write.csv(DIUSigOut$targetedSex,paste0(output_dir,"/TargetedDIUSex.csv"))
 write.csv(DIUSigOut$targetedAge,paste0(output_dir,"/TargetedDIUGroup.csv"))
 
+# number of transcripts pre- and post-natal
+class.files$glob_SQ_annoGene %>% group_by(structural_category,DevStatus) %>% tally(name = "num") %>% 
+  ggplot(., aes(x = structural_category, y = num, fill = DevStatus)) + geom_bar(stat = "identity", position="dodge") +
+  labs(x = "Structural category", y = "Number of transcripts of annotated genes") +
+  scale_fill_discrete(label = c("Both","Post-natal only", "Pre-natal only"), name = NULL) +
+  theme_classic() + theme(legend.position = "top")
+
+uniquePrenatalTranscripts <- class.files$glob_SQ_annoGene %>% filter(DevStatus == "prenatal")
+uniquePrenatalGenes <- unique(class.files$glob_SQ_annoGene %>% filter(DevStatus == "prenatal") %>% select(associated_gene))
+write.table(uniquePrenatalGenes, paste0(dirnames$output,"uniquePrenatalGenes.txt"), row.names = F, col.names = F, quote = F)
+
+# ratio of prenatal vs postnatal
+TallyNumNovelKnown <- as.data.frame(class.files$glob_SQ_annoGene %>% dplyr::group_by(novelTranscript, associated_gene) %>% tally())
+TallyNumNovelKnown <- reshape(TallyNumNovelKnown, idvar = "associated_gene", timevar = "novelTranscript", direction = "wide")
+geneNum <- Reduce(function(...) merge(..., all=T, by = "associated_gene"), 
+                  list(class.files$glob_SQ_annoGene %>% dplyr::group_by(associated_gene) %>% tally(name = "totalNumTranscripts"),
+                       TallyNumNovelKnown,
+                       class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$preReads >= 1,] %>% group_by(associated_gene) %>% tally(name = "prenatalTranscripts"),
+                       class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$postReads >= 1,] %>% group_by(associated_gene) %>% tally(name = "postnatalTranscripts")))
+geneNum  <- geneNum %>% mutate(ratioPrevsPost = prenatalTranscripts/postnatalTranscripts, ratioPostvsPre = postnatalTranscripts/prenatalTranscripts)
+geneNum  <- geneNum %>% mutate(DiffGeneExp = ifelse(associated_gene %in% WholeDESeqGeneSig$age$associated_gene,TRUE,FALSE))
+WholeDESeqGeneSig$age$associated_gene
+colnames(geneNum)[1:4] <- c("associated_gene","totalTranscripts","totalNovelTranscripts","totalKnownTranscripts")
+write.csv(geneNum, paste0(dirnames$output,"NumberofTranscriptsPrevsPost.csv"), quote=F, row.names = F)
+
+write.csv(DIUSig$wholeAllAge, paste0(dirnames$output,"DIUSigWholeDevelopment.csv"), quote=F, row.names = F)
+write.csv(DIUSig$wholeAllSex, paste0(dirnames$output,"DIUSigWholeSex.csv"), quote=F, row.names = F)
+
+# SQANTI output table
+write.table(class.files$glob_SQ, paste0(dirnames$output,"SQANTI_WholeTranscriptomeDataset_Finalized.txt"), quote = F, sep  = "\t")

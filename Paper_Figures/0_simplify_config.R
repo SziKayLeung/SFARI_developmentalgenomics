@@ -64,7 +64,6 @@ class.files <- lapply(class.files, function(x) x %>% mutate(structural_category_
 class.files <- lapply(class.files, function(x) x %>% filter(structural_category_exons != "Intergenic_1"))
 message("Number of transcripts in whole transcriptome dataset after SQANTI filtering, 2 reads 2 samples, -monoexonic intergenic: ", nrow(class.files$glob_SQ))
 message("Number of genes: ", length(unique(class.files$glob_SQ$associated_gene)))
-save(class.files, file = paste0(dirnames$wholetarg_SQ,"all_filtered_classification_2reads2samples_noMonoIntergenic.RData"))
 
 # remove mono-exonic transcripts 
 refExonNum <- read.csv(paste0(dirnames$utils,"gencode.v40.annotation.numExon.csv"))

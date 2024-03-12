@@ -31,6 +31,13 @@ plot_cupcake_collapse_sensitivity(class.files$targ_SQ,"All target genes")
 ggplot(geneNum, aes(x = prenatalTranscripts, y = postnatalTranscripts)) + geom_point() +
   theme_classic() + labs(x = "Number of transcripts: prenatal", y = "Number of transcripts: postnatal")
 
+# Number of DTEs in development by structural category
+WholeDTE$age %>% group_by(structural_category, dirAcrossDev) %>% tally() %>% 
+  filter(structural_category != "NA") %>%
+  ggplot(., aes(x = reorder(structural_category,n), y = n, fill = dirAcrossDev)) + geom_bar(stat = "identity",position = position_dodge()) + 
+  coord_flip() +
+  theme_classic() + labs(y = "Number of transcripts", x = "Structural category") +
+  scale_fill_discrete(name = "Direction across development") + theme(legend.position = "top")
 
 # sensitivity plots
 #pSensitivity(class.files$targ_SQ)
@@ -45,17 +52,6 @@ devVennNums <- twovenndiagrams(class.files$glob_SQ_annoGene[class.files$glob_SQ_
                                class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$postReads >= 1,"isoform"],"Pre-natal","Post-natal")
 grid.draw(devVennNums)
 
-class.files$glob_SQ$DevStatus <- apply(class.files$glob_SQ, 1, function(x) identify_dataset_by_counts(x[["postReads"]], x[["preReads"]], "postnatal","prenatal"))
-class.files$glob_SQ_annoGene %>% group_by(structural_category,DevStatus) %>% tally(name = "num") %>% 
-  ggplot(., aes(x = structural_category, y = num, fill = DevStatus)) + geom_bar(stat = "identity", position="dodge") +
-  labs(x = "Structural category", y = "Number of transcripts of annotated genes") +
-  scale_fill_discrete(label = c("Both","Post-natal only", "Pre-natal only"), name = NULL) +
-  theme_classic() + theme(legend.position = "top")
-
-class.files$glob_SQ_annoGene %>% filter(DevStatus == "prenatal") %>% arrange(-preReads)
-class.files$glob_SQ_annoGene %>% filter(DevStatus == "postnatal") %>% arrange(-postReads)
-uniquePrenatalGenes <- unique(class.files$glob_SQ_annoGene %>% filter(DevStatus == "prenatal") %>% select(associated_gene))
-write.table(uniquePrenatalGenes, paste0(dirnames$output,"uniquePrenatalGenes.txt"), row.names = F, col.names = F, quote = F)
 
 
 pIF <- list(
@@ -93,6 +89,23 @@ for(t in c("ONTX_7115_8288","ONTX_7115_7279","ONTX_7115_8547")){
               plot_trans_exp_lifetime(t,class.files$glob_targ_SQ,Exp$targeted_group))
   count = count + 1
 }
+
+## --- Comparison between PacBio and fetal dataset 
+
+DetectedBoth <- unique(gfftmap[gfftmap$class_code == "=","qry_id"])
+Unique <- setdiff(unique(gfftmap[gfftmap$class_code != "=","qry_id"]),unique(gfftmap[gfftmap$class_code == "=","qry_id"]))
+
+PacBioWhole <- rbind(
+  humanCTX[humanCTX$isoform %in% DetectedBoth,c("structural_category","totalFL","exons","length")] %>% mutate(Dataset = "Detected"),
+  humanCTX[humanCTX$isoform %in% Unique,c("structural_category","totalFL","exons","length")] %>% mutate(Dataset = "Unique")
+) 
+pPacBioWhole <- list(
+  ggplot(PacBioWhole, aes(x = Dataset, y = log10(totalFL))) + geom_boxplot() + theme_classic() + labs(x = "", y = "log10 FL read count"),
+  ggplot(PacBioWhole, aes(x = Dataset, y = exons)) + geom_boxplot() + theme_classic() + labs(x = "", y = "Number of exons"),
+  ggplot(PacBioWhole, aes(x = Dataset, y = length)) + geom_boxplot() + theme_classic() + labs(x = "", y = "Length (bp)")
+)
+
+plot_grid(plotlist = pPacBioWhole, labels = c("A","B","C"))
 
 RefIsoforms <- lapply(c("GRIN2A","GRIA3"), function(x) unique(gtf$ref[gtf$ref$gene_name == x & !is.na(gtf$ref$transcript_id), "transcript_id"]))
 names(RefIsoforms ) <- c("GRIN2A","GRIA3")

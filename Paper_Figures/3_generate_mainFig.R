@@ -20,16 +20,16 @@ output_dir = paste0(SC_ROOT,"/Paper_Figures/outputFigs")
 
 fig1Whole <- list(
   # number of isoforms 
-  numIso = total_num_iso(class.files$glob_SQ, input_title = "", glimit = 10),
+  #numIso = total_num_iso(class.files$glob_SQ, input_title = "", glimit = 10),
   # number of genes
   # class.files$glob_SQ %>% group_by(associated_gene) %>% tally()
-  numIsogene = numIsoGene(class.files$glob_SQ %>% filter(novelGene == "Annotated Genes")),
+  #numIsogene = numIsoGene(class.files$glob_SQ %>% filter(novelGene == "Annotated Genes")),
   # number of isoforms by category
-  numIsoCate = plot_structural_cate(class.files$glob_SQ,rotate=TRUE) + theme(axis.title.y=element_blank(),
+  numIsoCate = plot_structural_cate(class.files$glob_SQ_annoGene,rotate=TRUE) + theme(axis.title.y=element_blank(),
                                                                              axis.text.y=element_blank(),
-                                                                             axis.ticks.y=element_blank()),
+                                                                             axis.ticks.y=element_blank())
   # cpat
-  cpat = plot_cpat(Cpat$whole, class.files$glob_SQ)
+  #cpat = plot_cpat(Cpat$whole, class.files$glob_SQ)
 )
 
 
@@ -56,10 +56,21 @@ fig3Diff <- list(
   volSexSupp = plot_volcano(diff_results=WholeDESeq$sex, interaction = "sex", chromosome = "allosomal")[[1]],
   # top-ranked scatter plot
   topRankedGroup = plot_trans_exp_lifetime("ONT18_5132_2313",class.files$glob_SQ,Exp$whole_group),
-  topRankedGroupVis = ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$glob_targ_SQ,
+  topRankedGroupVis = ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$glob_SQ,
                                    isoList = c("ONT18_5132_2313",RefIsoforms$MBP$transcript_id),
                                    colours = c(wes_palette("Royal1")[4],"black"), 
                                    simple=TRUE),
+  topRankedGroup3 = plot_trans_exp_lifetime("ONT18_5132_2319",class.files$glob_SQ,Exp$whole_group),
+  topRankedGroupVis3 = ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$glob_SQ,
+                                  isoList = c("ONT18_5132_2319",RefIsoforms$MBP$transcript_id),
+                                  colours = c(wes_palette("Royal1")[4],"black"), 
+                                  simple=TRUE),
+  # top ranked antisense scatter plot 
+  topRankedGroup2 = plot_trans_exp_lifetime("ONT8_3512_1715",class.files$glob_SQ,Exp$whole_group),
+  topRankedGroup2Vis = ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$glob_SQ,
+                                  isoList = c("ONT8_3512_1715",RefIsoforms$VXN$transcript_id),
+                                  colours = c(wes_palette("Royal1")[4],"black"), 
+                                  simple=TRUE),
   
   # top-ranked box-plot sex autosomal and allosomal chromosome
   #View(WholeDESeqSig$sex)

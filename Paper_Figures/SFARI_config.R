@@ -12,9 +12,11 @@ suppressMessages(library("vroom"))
 LOGEN <- "/lustre/projects/Research_Project-MRC148213/lsl693/scripts/LOGen/"
 source(paste0(LOGEN,"transcriptome_stats/read_sq_classification.R"))
 source(paste0(LOGEN,"transcriptome_stats/sample_sensitivity.R"))
-source(paste0(LOGEN,"target_gene_annotation/summarise_gene_stats.R"))
+source(paste0(LOGEN,"compare_datasets/dataset_identifer.R"))
+source(paste0(LOGEN,"merge_characterise_dataset/run_ggtranscript.R"))
 sapply(list.files(path = paste0(LOGEN,"transcriptome_stats"), pattern="*.R", full = T), source,.GlobalEnv)
 sapply(list.files(path = paste0(LOGEN,"longread_QC"), pattern="*.R", full = T), source,.GlobalEnv)
+sapply(list.files(path = paste0(LOGEN,"target_gene_annotation"), pattern="*summarise*", full = T), source,.GlobalEnv)
 
 
 ## ------------ directory names --------------- 
@@ -34,6 +36,8 @@ dirnames <- list(
   DGE = paste0(root_sfari, "10_deseq//1_DGE/"), 
   DTE = paste0(root_sfari, "10_deseq//2_DTE/"),
   DIU = paste0(root_sfari, "10_deseq//3_DIU/"),
+  
+  ficle = "/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/15_ficle/TargetGenes",
   
   # Leung et al. 2021 PacBio HumanCTX dataset
   humanPacBio = "/lustre/projects/Research_Project-MRC148213/lsl693/PacBioPaper/SQANTI2/HumanCTX"
@@ -58,6 +62,7 @@ preWhole <- phenotype[phenotype$group == "Prenatal" & grepl("Whole",phenotype$sa
 # class.files
 # list: glob_targ_SQ, glob_SQ, targ_SQ
 load(file = paste0(dirnames$wholetarg_SQ,"all_filtered_classification_2reads2samples_noMonoIntergenicAll.RData"))
+class.files$protein_filtered = fread(paste0(dirnames$protein,"/7_classified_protein/Whole.sqanti_protein_classification.tsv"),data.table = F)
 
 # subset by number of FL reads
 femaleReads <- class.files$glob_SQ %>% select(all_of(femaleWhole)) %>% apply(., 1, sum)
@@ -65,9 +70,11 @@ maleReads <- class.files$glob_SQ %>% select(all_of(maleWhole)) %>% apply(., 1, s
 postReads <- class.files$glob_SQ %>% select(all_of(postWhole)) %>% apply(., 1, sum)
 preReads <- class.files$glob_SQ %>% select(all_of(preWhole)) %>% apply(., 1, sum)
 class.files$glob_SQ <- class.files$glob_SQ %>% mutate(FReads = femaleReads, MReads = maleReads, preReads = preReads, postReads = postReads)
+class.files$glob_SQ$DevStatus <- apply(class.files$glob_SQ, 1, function(x) identify_dataset_by_counts(x[["postReads"]], x[["preReads"]], "postnatal","prenatal"))
 
 # annotated genes 
 class.files$glob_SQ_annoGene <- class.files$glob_SQ %>% filter(!grepl("novelGene", associated_gene))
+class.files$glob_SQ_annoGene <- class.files$glob_SQ_annoGene %>% mutate(novelTranscript = ifelse(associated_transcript == "novel","Novel","Known"))
 
 wholesamples <- colnames(class.files$glob_targ_SQ)[grepl("Whole", colnames(class.files$glob_targ_SQ))]
 targetedsamples <- colnames(class.files$glob_targ_SQ)[grepl("Targeted", colnames(class.files$glob_targ_SQ))]
@@ -94,27 +101,7 @@ WholeDESeqGeneSig <- list(
 
 ## -------------- differential isoform usage ----------------
 
-read_DIU <- function(inputPath){
-  DIU_targeted <- list.files(path=inputPath,full.names = T, pattern = "resultDIU")
-  if(length(DIU_targeted) > 0){
-    DIU_targeted <- lapply(DIU_targeted,function(x) read.table(x)[-1,])
-    DIU_targeted <- do.call(rbind, DIU_targeted)
-    colnames(DIU_targeted) <- c("Gene","p.value","FDR","podiumChange","totalChange")
-    DIU_targeted <- DIU_targeted %>% mutate(FDR = as.numeric(as.character(FDR)))
-  }else{
-    return(NULL)
-  }
-}
-
-DIU <- list(
-  #targetedAge = read_DIU(paste0(dirnames$DIU,"targeted/group")),
-  #targetedSex = read_DIU(paste0(dirnames$DIU,"targeted/sex")),
-  #wholeAge = read_DIU(paste0(dirnames$DIU,"whole/group")),
-  #wholeSex = read_DIU(paste0(dirnames$DIU,"whole/sex")),
-  wholeAllAge = read_DIU(paste0(dirnames$DIU,"whole/allGroup")),
-  wholeAllSex = read_DIU(paste0(dirnames$DIU,"whole/allSex"))
-)
-DIUSig <- lapply(DIU, function(x) x[x$FDR <= 0.05, ])
+load(file = paste0(dirnames$output,"DIUSig.RData"))
 
 
 ## -------------- normalized counts ----------------
@@ -122,7 +109,7 @@ DIUSig <- lapply(DIU, function(x) x[x$FDR <= 0.05, ])
 #Exp
 load(file = paste0(dirnames$DTE,"DESeq2_whole_normSig.RData"))
 load(file = paste0(dirnames$DGE,"filtered_output_norm_gene_removinglateprenatal.RData"))
-load(file = paste0(irnames$DGE,"filtered_output_norm_gene_sig_removinglateprenatal.RData"))
+load(file = paste0(dirnames$DGE,"filtered_output_norm_gene_sig_removinglateprenatal.RData"))
 
 # raw counts 
 rawCounts <- read.table(paste0(root_sfari, "/4_transcriptClean/cluster_report_counts.txt"), col.names = c("counts","file")) 
@@ -139,7 +126,8 @@ Cpat <- list(
 )
 #save(Cpat, file = paste0(root_dir,"RBFetal/2_cpat_tc20bp/Whole.ORF_prob.best.RData"))
 # keep  only the list of isoforms in the final dataset
-Cpat$whole <- Cpat$whole %>% filter(seq_ID %in% class.files$glob_SQ$isoform)
+Cpat$whole <- Cpat$whole %>% filter(seq_ID %in% class.files$glob_SQ$isoform) %>% mutate(coding_status = ifelse(Coding_prob >= 0.364, "Coding","Non_Coding"))
+Cpat$whole_noORF <- read.table(paste0(dirnames$protein,"/5_calledOrfs/Whole.no_ORF.txt")) %>% mutate(coding_status = "No_ORF") %>% `colnames<-`(c("seq_ID", "coding_status"))
 
 ## -------------- gtf ----------------
 
@@ -153,9 +141,9 @@ gtf$ref <- data.table::fread(paste0(dirnames$utils,"refExons.gtf")) %>% dplyr::r
 gtf$merged <- rbind(gtf$glob_targ[,c("seqnames","strand","start","end","type","transcript_id","gene_id")] ,
                          gtf$ref[,c("seqnames","strand","start","end","type","transcript_id","gene_id")])
 
-GI <- c("GRIN2A","GRIA3","SEPTIN4","RTN4","MBP","RPS4Y1","XIST","ADD3","CNTNAP2","ANKRD12")
+GI <- c("GRIN2A","GRIA3","SEPTIN4","RTN4","MBP","RPS4Y1","XIST","ADD3","CNTNAP2","ANKRD12","VXN")
 RefIsoforms <- lapply(GI, function(x) unique(gtf$ref[gtf$ref$gene_id == x & !is.na(gtf$ref$transcript_id), "transcript_id"]))
-names(RefIsoforms ) <-GI
+names(RefIsoforms ) <- GI
 
 
 ## -------------- disease list ----------------
@@ -183,20 +171,26 @@ proteinInput$t2p.collapse <- proteinInput$t2p.collapse %>% filter(pb_accs %in% c
 
 proteinInput$filtered <- read.table(paste0(dirnames$protein,"/7_classified_protein/Whole.classification_filtered.tsv"), sep = "\t", header = T)
 
+ProteinInput = list(
+  cpat = read.table(paste0(dirnames$mprotein,"5_calledOrfs/all_iso_ont.ORF_prob.best.tsv"), sep ="\t", header = T),
+  cpat_best = read.table(paste0(dirnames$mprotein,"5_calledOrfs/all_iso_ont_best_orf.tsv"), sep ="\t", header = T),
+  mapped = read.table(paste0(dirnames$mprotein,"5_calledOrfs/all_orfs_mapped.tsv"), sep ="\t", header = T),
+  noORF = read.table(paste0(dirnames$mprotein,"5_calledOrfs/all_iso_ont.no_ORF.txt"), sep ="\t", header = F),
+  t2p.collapse = read.table(paste0(dirnames$mprotein,"6_refined_database/all_iso_ont_orf_refined.tsv"), sep = "\t", header = T),
+  t2p.collapse.refined = read.table(paste0(dirnames$mprotein,"6_refined_database/all_iso_ont_orf_refined_collapsed.tsv"))
+)
+
+
 
 ## -------------- prenatal vs postnatal ----------------
 
 class.files$glob_SQ_annoGene_prenatal <- class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$preReads >= 1,]
 class.files$glob_SQ_annoGene_postnatal <- class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$postReads >= 1,]
-geneNum <- merge(class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$preReads >= 1,] %>% group_by(associated_gene) %>% tally(name = "prenatalTranscripts"),
-                 class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$postReads >= 1,] %>% group_by(associated_gene) %>% tally(name = "postnatalTranscripts"), 
-                 by = "associated_gene")
-geneNum  <- geneNum %>% mutate(ratioPrevsPost = prenatalTranscripts/postnatalTranscripts, ratioPostvsPre = postnatalTranscripts/prenatalTranscripts)
-write.csv(geneNum, paste0(dirnames$output,"NumberofTranscriptsPrevsPost.csv"), quote=F, row.names = F)
 
 
 ## -------------- comparison with Leung et al.(2021) dataset ----------------
 
 # gffcompare output 
 gfftmap <- data.table::fread(paste0(root_sfari,"14_OverlapPacBio/sfariPacBio.HumanCTX.collapsed_classification.filtered_lite.gtf.tmap"), data.table = FALSE)
-humanCTX <- read.table(paste0(dirnames$humanPacBio, "/HumanCTX.collapsed_classification.filtered_lite_classification.txt"))
+humanCTX <- read.table(paste0(dirnames$humanPacBio, "/HumanCTX.collapsed_classification.filtered_lite_classification.txt"), header = TRUE)
+humanCTX$totalFL <- humanCTX %>% dplyr::select(contains("FL.")) %>% apply(.,1,sum)
