@@ -1,6 +1,7 @@
 #!/bin/bash
 #SBATCH --export=ALL # export all environment variables to the batch job
 #SBATCH -D . # set working directory to .
+#SBATCH --mem=250G # specify bytes memory to reserve 
 #SBATCH -p mrcq # submit to the parallel queue
 #SBATCH --time=100:00:00 # maximum walltime for the job
 #SBATCH -A Research_Project-MRC148213 # research project to submit under
@@ -8,6 +9,8 @@
 #SBATCH --ntasks-per-node=16 # specify number of processors per node
 #SBATCH --mail-type=END # send email at job completion
 #SBATCH --mail-user=sl693@exeter.ac.uk # email address
+#SBATCH --output=9_massSpectrometry.o
+#SBATCH --error=9_massSpectrometry.e
 
 #wget https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz
 #wget https://zenodo.org/record/5076056/files/Task1SearchTaskconfig_orf.toml
@@ -42,6 +45,8 @@ lower_cpm=3
 module load Miniconda2 
 source activate mercury
 export PATH=$PATH:/lustre/home/sl693/.dotnetexport PATH=$PATH:/lustre/home/sl693/.dotnet
+protein_data=(${mass_spec}/20210108_AD_1.raw ${mass_spec}/20210108_AD_2.raw)
+
 
 # run_metamorpheus <input_fasta>
 run_metamorpheus(){
@@ -68,7 +73,9 @@ run_metamorpheus(){
 
 Part1WKD=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/8_longReadProteogenomics/longReadProteogenomics
 Part2WKD=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/13_massSpec
-run_metamorpheus $Part1WKD/7_classified_protein/$name".filtered_protein.fasta" $mass_spec $Part2WKD $name"_filtered"
+mkdir -p ${Part2WKD}/input_massspec 
+for i in ${protein_data[@]};do cp $i ${Part2WKD}/input_massspec/ ;done 
+run_metamorpheus $Part1WKD/7_classified_protein/$name".filtered_protein.fasta" ${Part2WKD}/input_massspec $Part2WKD $name"_filtered"
 #run_metamorpheus $protein_wkd/$name".protein_refined.fasta" $protein_dir $protein_wkd/All $name"_refined"
 #run_metamorpheus $protein_wkd/$name"_hybrid.fasta" $protein_dir $protein_wkd/All $name"_hybrid"
 #run_metamorpheus $WKD/gencode_protein.fasta $protein_dir $protein_wkd/All Gencode

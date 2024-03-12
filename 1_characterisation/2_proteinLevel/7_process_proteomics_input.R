@@ -31,29 +31,33 @@ dirnames <- list(
 ## ------------ input ------------
 
 input <- list(
-  # transcript SQANTI3 classification file
   t.class.files = SQANTI_class_preparation(paste0(dirnames$sqanti,"WholeTargeted_cleaned_aligned_merged_collapsed_qced_RulesFilter_Whole_2reads2samples_classification_noMonoIntergenic_modFL.txt"),"ns"),
-  # protein unfiltered long-read proteogenomics classification file
-  #pUnfiltered.class.files = pSQANTI_class_preparation(paste0(dirnames$proteomics,"7_classified_protein/ADBDR_unfiltered.protein_classification.tsv")),
-  # protein filtered long-read proteogeonomics classification file
-  #Filtered.class.files = pSQANTI_class_preparation(paste0(dirnames$root,"7_classified_protein/ADBDR.sqanti_protein_classification.tsv")),
-  # list of transcripts collapsed by protein reading frame
-  t2p.collapse = fread(paste0(dirnames$proteomics,"6_refined_database/Whole_orf_refined.tsv")),
-  # gtf of aligned peptide ORF
-  #peptide_orf = paste0(dirnames$root, "5_calledOrfs/ADBDR.gtf"),
-  # cpat
-  cpat_output = fread(paste0(dirnames$proteomics,"5_calledOrfs/Whole.ORF_prob.best.tsv")),
-  no_cpat_orf = fread(paste0(dirnames$proteomics, "5_calledOrfs/Whole.no_ORF.txt"),header = F)
+  cpat = fread(paste0(dirnames$proteomics,"5_calledOrfs/Whole.ORF_prob.best.tsv"), data.table = F, header = T),
+  cpat_best = fread(paste0(dirnames$proteomics,"5_calledOrfs/Whole_best_orf.tsv"), data.table = F, header = T),
+  mapped = fread(paste0(dirnames$proteomics,"5_calledOrfs/all_orfs_mapped.tsv"), data.table = F, header = T),
+  no_orf = fread(paste0(dirnames$proteomics, "5_calledOrfs/Whole.no_ORF.txt"), header = F),
+  t2p.collapse = fread(paste0(dirnames$proteomics,"6_refined_database/Whole_orf_refined.tsv"), header = T)
 )
 
 
 # number of RNA transcripts collapsed by protein sequence
-input$t2p.collapse <- input$t2p.collapse %>% mutate(numtxCollapsed = count.fields(textConnection(pb_accs), sep = "|"))
-char <- strsplit(as.character(input$t2p.collapse$pb_accs), '|', fixed = T)
-t2p.collapse.dissected <- data.frame(pb_accs=unlist(char), base_acc=rep(input$t2p.collapse$base_acc, sapply(char, FUN=length)))
-input$t2p.collapse <- merge(t2p.collapse.dissected,input$t2p.collapse[,c("base_acc","numtxCollapsed")])
-input$t.class.files <- merge(input$t.class.files, input$t2p.collapse, by.x = "isoform", by.y = "pb_accs")
+input$t2p.collapse.refined <- input$t2p.collapse %>% mutate(numtxCollapsed = count.fields(textConnection(pb_accs), sep = "|"))
+char <- strsplit(as.character(input$t2p.collapse.refined$pb_accs), '|', fixed = T)
+t2p.collapse.dissected <- data.frame(pb_accs=unlist(char), base_acc=rep(input$t2p.collapse.refined$base_acc, sapply(char, FUN=length)))
+input$t2p.collapse.refined <- merge(t2p.collapse.dissected,input$t2p.collapse.refined[,c("base_acc","numtxCollapsed")])
 
+## re-determine representative colalsped isoform: using ONT abundance (sum across all samples) rather than arbitrary (G.Shenkyman pipeline)
+# take the ONT_sum read counts from the classification file
+# max = grouping by the base_acc (i.e. the previously selected isoform), select the rows with the maximum ONT FL reads
+# create an index to remap and create a "corrected_acc" column with the corresponding isoform that has the highest number of ONT FL reads
+input$t2p.collapse.refined <- merge(input$t2p.collapse.refined,input$t.class.files[,c("isoform","FL")],by.x = "pb_accs", by.y = "isoform", all.x = TRUE)
+max = input$t2p.collapse.refined %>% group_by(base_acc) %>% filter(FL == max(FL))
+idx <- match(input$t2p.collapse.refined$base_acc, max$base_acc)
+input$t2p.collapse.refined = transform(input$t2p.collapse.refined , corrected_acc = ifelse(!is.na(idx), as.character(max$pb_accs[idx]), base_acc))
+
+## include in the original classification file the collapsed PB.ID 
+input$t.class.files <- merge(input$t.class.files, input$t2p.collapse.refined[,c("pb_accs","numtxCollapsed","base_acc","corrected_acc")], by.x = "isoform", by.y = "pb_accs", all.x = TRUE)
+ 
 
 ## ------------ output ------------ 
 
