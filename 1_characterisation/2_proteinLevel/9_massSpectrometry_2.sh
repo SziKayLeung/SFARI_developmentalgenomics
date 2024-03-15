@@ -8,8 +8,8 @@
 #SBATCH --ntasks-per-node=16 # specify number of processors per node
 #SBATCH --mail-type=END # send email at job completion
 #SBATCH --mail-user=sl693@exeter.ac.uk # email address
-#SBATCH --output=9_massSpectrometry.o
-#SBATCH --error=9_massSpectrometry.e
+#SBATCH --output=9_massSpectrometry_2.o
+#SBATCH --error=9_massSpectrometry_2.e
 
 #wget https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz
 #wget https://zenodo.org/record/5076056/files/Task1SearchTaskconfig_orf.toml
@@ -83,10 +83,10 @@ protein_data=(
   ${mass_spec}/20210324_AD_35.raw
 )
 
-for SLURM_ARRAY_TASK_ID in {0..10}; do 
+for SLURM_ARRAY_TASK_ID in {11..20}; do 
   echo $SLURM_ARRAY_TASK_ID
-
-
+  
+  
   protein=${protein_data[${SLURM_ARRAY_TASK_ID}]}
   echo $protein
   
@@ -139,7 +139,7 @@ for SLURM_ARRAY_TASK_ID in {0..10}; do
   
   export SOFTDIR=/lustre/projects/Research_Project-MRC148213/lsl693/software
   export LREAD=${SOFTDIR}/Long-Read-Proteogenomics/modules/
-  GENOME_GTF=/lustre/projects/Research_Project-MRC148213/lsl693/references/annotation/gencode.v40.annotation.gtf
+    GENOME_GTF=/lustre/projects/Research_Project-MRC148213/lsl693/references/annotation/gencode.v40.annotation.gtf
   
   mkdir -p visualisation novel_peptides
   cd visualisation

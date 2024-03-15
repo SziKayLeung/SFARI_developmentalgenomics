@@ -66,6 +66,7 @@ novelMean <- annoGenesStats$novelTrans %>% select(contains("Whole")) %>% apply(.
 knownMean <- annoGenesStats$annoTrans %>% select(contains("Whole")) %>% apply(., 1, mean) 
 dat <- rbind(reshape2::melt(novelMean) %>% mutate(associated_transcript = "novel"), reshape2::melt(knownMean) %>% mutate(associated_transcript = "known"))
 t.test(value ~ associated_transcript, data = dat)
+class.files$glob_SQ_annoGene %>% filter(structural_category %in% c("NIC","NNC")) %>% mutate(FL = preReads + postReads) %>% arrange(-FL)
 
 # proteogenomics pipeline
 proteinInput$t2p.collapse.AnnoGenes <- proteinInput$t2p.collapse %>% filter(base_acc %in% class.files$glob_SQ_annoGene$isoform)
@@ -132,7 +133,9 @@ message("% of all postnatal detected: ", length(commonDevTranscripts)/length(cla
 message("Number of transcripts unique to postnatal:", length(setdiff(class.files$glob_SQ_annoGene_postnatal$isoform, class.files$glob_SQ_annoGene_prenatal$isoform)))
 message("Number of transcripts unique to prenatal:", length(setdiff(class.files$glob_SQ_annoGene_prenatal$isoform, class.files$glob_SQ_annoGene_postnatal$isoform)))
 
-
+# most abundant transcript in prenatal and not in postnatal
+class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$postReads == 0,] %>% arrange(-preReads) %>% .[1,]
+class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$preReads == 0,] %>% arrange(-postReads) %>% .[1,]
 
 message("Number of differentially expressed genes: ", length(unique(WholeDESeqGeneSig$age$associated_gene)))
 

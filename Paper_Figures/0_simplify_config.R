@@ -108,22 +108,20 @@ WholeDESeqGeneSig <- list(
 
 # Expression
 Exp <- list(
-  #targeted_sex = vroom(paste0(root_dir,"RBFetal/4_deseq2/filtered_output_norm_targeted_sex_removinglateprenatal.csv"),delim = ","),
-  #targeted_group = vroom(paste0(root_dir,"RBFetal/4_deseq2/filtered_output_norm_targeted_group_removinglateprenatal.csv"),delim = ","),
-  whole_sex = vroom(paste0(dirnames$DTE,"DESeq2_whole_sex_normSig.csv"),delim = ","),
-  whole_group = vroom(paste0(dirnames$DTE,"DESeq2_whole_development_normSig.csv"),delim = ",")
+  whole_group = vroom(paste0(dirnames$DTE,"DESeq2_whole_development_normSig.csv"),delim = ","),
+  ns1 = read.csv(paste0(dirnames$DTE,"ONT15_1709_8237_whole_normAll.csv"), header = F)
 )
+colnames(Exp$ns1) <- colnames(Exp$whole_group)
+Exp$whole_group <- rbind(Exp$whole_group,Exp$ns1)
 Exp <- lapply(Exp, function(x) merge(x, phenotype, by="sample"))
 save(Exp, file = paste0(dirnames$DTE,"DESeq2_whole_normSig.RData"))
 
 ExpGenes <- list(
-  targeted_sex = fread(paste0(root_dir,"RBFetal/4_deseq2/output_norm_targeted_gene_sex_removinglateprenatal.csv")),
-  targeted_group = fread(paste0(root_dir,"RBFetal/4_deseq2/output_norm_targeted_gene_group_removinglateprenatal.csv")),
-  whole_sex = fread(paste0(root_dir,"RBFetal/4_deseq2/output_norm_whole_gene_sex_removinglateprenatal.csv")),
-  whole_group = fread(paste0(root_dir,"RBFetal/4_deseq2/output_norm_whole_gene_group_removinglateprenatal.csv"))
+  whole_sex = fread(paste0(dirnames$DGE,"DESeq2_whole_sex_normAll.csv")),
+  whole_group = fread(paste0(dirnames$DGE,"DESeq2_whole_development_normAll.csv"))
 )
-ExpGenes <- lapply(ExpGenes, function(x) merge(x,phenotype$WholeTargeted,by="sample",all.x=T))
-save(ExpGenes, file = paste0(root_dir,"RBFetal/4_deseq2/filtered_output_norm_gene_removinglateprenatal.RData"))
+ExpGenes <- lapply(ExpGenes, function(x) merge(x,phenotype,by="sample",all.x=T))
+save(ExpGenes, file = paste0(dirnames$DGE,"DESeq2_whole_normAll.RData"))
 
 ExpGenesSig <- list(
   targeted_sex =  ExpGenes$targeted_sex %>% filter(associated_gene %in% TargetedDESeqGeneSig$sex$associated_gene),

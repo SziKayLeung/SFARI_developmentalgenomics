@@ -1,0 +1,13 @@
+*.Rproj*
+*log*
+.Rhistory
+.RData
+.Ruserdata
+*ipynb_checkpoints*
+*.o*
+*.e*
+*pdf*
+*outputFigs*
+*png*
+
+.Rproj.user

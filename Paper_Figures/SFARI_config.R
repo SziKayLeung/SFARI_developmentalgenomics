@@ -92,6 +92,11 @@ WholeDTE <- list(
 )
 WholeDTE <- lapply(WholeDTE, function(x) x %>% mutate(dirAcrossDev = ifelse(log2FoldChange < 0 , "upregulated", "downregulated")))
 
+normWhole <- fread(paste0(dirnames$DTE,"DESeq2_whole_development_normAll.csv"))
+WholePreNorm <- normWhole %>% filter(sample %in% preWhole) %>% group_by(isoform) %>% tally(normalised_counts)
+WholePostNorm <- normWhole %>% filter(sample %in% postWhole) %>% group_by(isoform) %>% tally(normalised_counts)
+normWholeIsoform <- merge(WholePreNorm %>% `colnames<-`(c("isoform", "normPre")) , WholePostNorm %>% `colnames<-`(c("isoform", "normPost")), by = "isoform")
+
 ## -------------- differenetial gene expression -------------
 WholeDESeqGeneSig <- list(
   sex = as.data.frame(fread(paste0(dirnames$DGE,"DESeq2_whole_gene_sex_resSig.csv"))),
@@ -102,14 +107,16 @@ WholeDESeqGeneSig <- list(
 ## -------------- differential isoform usage ----------------
 
 load(file = paste0(dirnames$output,"DIUSig.RData"))
+DIUSig$wholeAllAge <- DIUSig$wholeAllAge %>% mutate(DGE_Dev = ifelse(Gene %in% WholeDESeqGeneSig$age$associated_gene,TRUE,FALSE),
+                                                    DGE_Sex = ifelse(Gene %in% WholeDESeqGeneSig$sex$associated_gene,TRUE,FALSE))
 
 
 ## -------------- normalized counts ----------------
 
 #Exp
 load(file = paste0(dirnames$DTE,"DESeq2_whole_normSig.RData"))
-load(file = paste0(dirnames$DGE,"filtered_output_norm_gene_removinglateprenatal.RData"))
-load(file = paste0(dirnames$DGE,"filtered_output_norm_gene_sig_removinglateprenatal.RData"))
+load(file = paste0(dirnames$DTE,"DESeq2_whole_normAll.RData"))
+load(file = paste0(dirnames$DGE,"DESeq2_whole_normAll.RData"))
 
 # raw counts 
 rawCounts <- read.table(paste0(root_sfari, "/4_transcriptClean/cluster_report_counts.txt"), col.names = c("counts","file")) 
@@ -141,7 +148,7 @@ gtf$ref <- data.table::fread(paste0(dirnames$utils,"refExons.gtf")) %>% dplyr::r
 gtf$merged <- rbind(gtf$glob_targ[,c("seqnames","strand","start","end","type","transcript_id","gene_id")] ,
                          gtf$ref[,c("seqnames","strand","start","end","type","transcript_id","gene_id")])
 
-GI <- c("GRIN2A","GRIA3","SEPTIN4","RTN4","MBP","RPS4Y1","XIST","ADD3","CNTNAP2","ANKRD12","VXN")
+GI <- c("GRIN2A","GRIA3","SEPTIN4","RTN4","MBP","RPS4Y1","XIST","ADD3","CNTNAP2","ANKRD12","VXN","PKM")
 RefIsoforms <- lapply(GI, function(x) unique(gtf$ref[gtf$ref$gene_id == x & !is.na(gtf$ref$transcript_id), "transcript_id"]))
 names(RefIsoforms ) <- GI
 

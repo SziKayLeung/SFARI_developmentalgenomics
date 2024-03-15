@@ -245,3 +245,37 @@ ggsave(file="TargetedDeSeq2Sex.png", dpi=400)
 
 plotTargetedAge <- plot_volcano(diff_results=TargetedDESeq2$age)
 plot_grid(plotTargetedAge[[1]])
+
+
+DIUSig$wholeAllAge <- DIUSig$wholeAllAge %>% mutate(DGE_Dev = ifelse(Gene %in% WholeDESeqGeneSig$age$associated_gene,TRUE,FALSE),
+                                                    DGE_Sex = ifelse(Gene %in% WholeDESeqGeneSig$sex$associated_gene,TRUE,FALSE))
+
+head(DIUSig$wholeAllAge %>% filter(DGE_Dev == FALSE, podiumChange == TRUE) %>% dplyr::arrange(FDR, -as.numeric(totalChange)))
+message("Number of genes with significant DIU across development: ", nrow(DIUSig$wholeAllAge))
+message("Number of genes with significant DIU across development and podium Change: ", nrow(DIUSig$wholeAllAge %>% filter(podiumChange == TRUE)))
+message("Number of genes with significant DIU across development and not podium Change: ", nrow(DIUSig$wholeAllAge %>% filter(podiumChange == FALSE)))
+message("Number of genes with significant DIU across development and DGE: ", nrow(DIUSig$wholeAllAge %>% filter(DGE_Dev == TRUE)))
+
+
+DIU <- na.omit(DIUSig$wholeAllAge$Gene)
+DGE <- na.omit(DIUSig$wholeAllAge[DIUSig$wholeAllAge$DGE_Dev == TRUE,"Gene"])
+Podium <- na.omit(DIUSig$wholeAllAge[DIUSig$wholeAllAge$podiumChange == TRUE,"Gene"])
+
+
+suppressMessages(library(VennDiagram))
+futile.logger::flog.threshold(futile.logger::ERROR, name = "VennDiagramLogger")
+
+threevenndiagrams <- function(set1, set2,set3, name1, name2, name3){
+  p <- venn.diagram(x = list(set1,set2, set3), 
+                    label_alpha = 0, category.names = c(name1,name2, name3),filename = NULL, output=TRUE, lwd = 0.2,lty = 'blank', 
+                    fill = c("#B3E2CD", "#FDCDAC","red"), main = "\n", cex = 1,fontface = "bold",fontfamily = "ArialMT",
+                    print.mode = "raw")
+  return(p)
+}
+
+p <- threevenndiagrams(DIU,DGE,Podium,"DIU","DGE","Major Isoform Switch")
+plot_grid(grobTree(p))
+
+
+
+

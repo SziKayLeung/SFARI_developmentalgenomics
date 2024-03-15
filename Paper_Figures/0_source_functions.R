@@ -416,3 +416,13 @@ plotIFTargetedbyGene <- function(gene, pathDIU){
   return(p)
   
 }
+
+plotIFWholebyGene <- function(gene, pathDIU){
+
+  iExp <- fread(paste0(pathDIU,"/whole/allGroup/",gene,"_normalised_expression.txt"), data.table = F)
+  iExp <- iExp %>% tidyr::spread(sample,normalised_counts) %>% tibble::column_to_rownames(var = "isoform") %>% select(contains("Whole"))
+  p <- plotIF(gene=gene,ExpInput=iExp,pheno=phenotype,cfiles=class.files$glob_targ_SQ,design="case_control",rank=5,majorIso=NULL)[[2]]
+  return(p)
+  
+}
+
