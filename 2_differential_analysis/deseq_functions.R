@@ -49,6 +49,7 @@ opt = parse_args(opt_parser)
 # phenotype
 message("Read in: ", opt$phenotype)
 phenotype <- read.csv(opt$phenotype) 
+phenotype <- phenotype[grepl("Whole", phenotype$sample),]
 nrow(phenotype)
 # remove early postnatal samples
 removePhenotype <- phenotype[phenotype$group == "Postnatal" & phenotype$age < 1,]

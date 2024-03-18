@@ -150,7 +150,11 @@ plot_trans_exp_individual <- function(transcript=NULL, classfiles, Norm_transcou
   return(p)
 }
 
-plot_trans_exp_lifetime <- function(transcript=NULL,classfiles,Norm_transcount,gene = NULL,sex=FALSE){
+plot_trans_exp_lifetime <- function(transcript=NULL,classfiles,Norm_transcount,gene = NULL,sex=FALSE, colpoints=NULL){
+  
+  if(is.null(colpoints)){
+    colpoints = wes_palette("Royal1")[4]
+  }
   
   #library(grid)
   #library(gridExtra)
@@ -188,7 +192,7 @@ plot_trans_exp_lifetime <- function(transcript=NULL,classfiles,Norm_transcount,g
     p <- ggplot(dat, aes(x = age.rescale, y = log10(normalised_counts), colour = sex)) + geom_point(size = 3) + 
       scale_colour_manual(values = c("pink","blue")) 
   }else{
-    p <- ggplot(dat, aes(x = age.rescale, y = log10(normalised_counts))) + geom_point(colour = wes_palette("Royal1")[4], size = 3)
+    p <- ggplot(dat, aes(x = age.rescale, y = log10(normalised_counts))) + geom_point(colour = colpoints, size = 3)
   }
   
   
@@ -421,7 +425,7 @@ plotIFWholebyGene <- function(gene, pathDIU){
 
   iExp <- fread(paste0(pathDIU,"/whole/allGroup/",gene,"_normalised_expression.txt"), data.table = F)
   iExp <- iExp %>% tidyr::spread(sample,normalised_counts) %>% tibble::column_to_rownames(var = "isoform") %>% select(contains("Whole"))
-  p <- plotIF(gene=gene,ExpInput=iExp,pheno=phenotype,cfiles=class.files$glob_targ_SQ,design="case_control",rank=5,majorIso=NULL)[[2]]
+  p <- plotIF(gene=gene,ExpInput=iExp,pheno=phenotype,cfiles=class.files$glob_targ_SQ,design="case_control",rank=5,majorIso=NULL)
   return(p)
   
 }

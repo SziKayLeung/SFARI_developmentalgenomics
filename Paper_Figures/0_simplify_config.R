@@ -109,10 +109,12 @@ WholeDESeqGeneSig <- list(
 # Expression
 Exp <- list(
   whole_group = vroom(paste0(dirnames$DTE,"DESeq2_whole_development_normSig.csv"),delim = ","),
-  ns1 = read.csv(paste0(dirnames$DTE,"ONT15_1709_8237_whole_normAll.csv"), header = F)
+  ns1 = read.csv(paste0(dirnames$DTE,"ONTX_6127_19264_whole_normAll.csv"), header = F),
+  ns2 = read.csv(paste0(dirnames$DTE,"ONTX_6127_19264_whole_normAll.csv"), header = F)
 )
 colnames(Exp$ns1) <- colnames(Exp$whole_group)
-Exp$whole_group <- rbind(Exp$whole_group,Exp$ns1)
+colnames(Exp$ns2) <- colnames(Exp$whole_group)
+Exp$whole_group <- rbind(Exp$whole_group,Exp$ns1,Exp$ns2)
 Exp <- lapply(Exp, function(x) merge(x, phenotype, by="sample"))
 save(Exp, file = paste0(dirnames$DTE,"DESeq2_whole_normSig.RData"))
 

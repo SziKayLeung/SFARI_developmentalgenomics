@@ -180,7 +180,7 @@ TopRankedTargetedDESeq2AgeTracks <- list(
   
   SEPTIN4 = ggTranPlots(gtf$merged,class.files$glob_targ_SQ,
                                                   isoList = c("ONT17_1642_18247","ONT17_1642_18271",c("ENST00000583114.5","ENST00000672673.2","ENST00000580791.1")),
-                                                  colours = c(wes_palette("Cavalcanti1")[5],wes_palette("Cavalcanti1")[4],rep("#0C0C78",length(RefIsoforms$SEPTIN4)+1)), 
+                                                  colours = c(wes_palette("Darjeeling2")[2],wes_palette("Darjeeling2")[3],rep("#0C0C78",length(RefIsoforms$SEPTIN4)+1)), 
                                                   lines =  c(wes_palette("Cavalcanti1")[5],wes_palette("Cavalcanti1")[4],rep("#0C0C78",length(RefIsoforms$SEPTIN4)+1)), 
                                                   gene = "SEPTIN4",simple=TRUE)
   
@@ -254,7 +254,7 @@ head(DIUSig$wholeAllAge %>% filter(DGE_Dev == FALSE, podiumChange == TRUE) %>% d
 message("Number of genes with significant DIU across development: ", nrow(DIUSig$wholeAllAge))
 message("Number of genes with significant DIU across development and podium Change: ", nrow(DIUSig$wholeAllAge %>% filter(podiumChange == TRUE)))
 message("Number of genes with significant DIU across development and not podium Change: ", nrow(DIUSig$wholeAllAge %>% filter(podiumChange == FALSE)))
-message("Number of genes with significant DIU across development and DGE: ", nrow(DIUSig$wholeAllAge %>% filter(DGE_Dev == TRUE)))
+message("Number of genes with significant DIU across development and not DGE: ", nrow(DIUSig$wholeAllAge %>% filter(DGE_Dev == FALSE)))
 
 
 DIU <- na.omit(DIUSig$wholeAllAge$Gene)
@@ -303,23 +303,25 @@ ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$glob_SQ,
             isoList = c(as.character(DLGAP5Iso$Isoform)),
             selfDf = DLGAP5Iso, gene = "DLGAP5")
 
-PKM <- list(
-  IF = plotIFWholebyGene("PKM",dirnames$DIU),
-  GeneExp = plot_trans_exp_lifetime(classfiles=class.files$glob_targ_SQ,Norm_transcount=ExpGenes$whole_group,gene="PKM"),
-  T1Exp = plot_trans_exp_lifetime("ONT15_1709_8230",class.files$glob_targ_SQ,Exp$whole_group),
-  T2Exp = plot_trans_exp_lifetime("ONT15_1709_8237",class.files$glob_targ_SQ,Exp$whole_group),
+dat <- DIUSig$wholeAllAge %>% mutate(totalChange = as.numeric(totalChange)) %>% filter(DGE_Dev == FALSE, podiumChange == TRUE) %>% dplyr::arrange(FDR, as.numeric(totalChange))
+MORF4L2 <- list(
+  IF = plotIFWholebyGene("MORF4L2",dirnames$DIU)[[1]] + labs(title = NULL),
+  GeneExp = plot_trans_exp_individual(classfiles=class.files$glob_targ_SQ,Norm_transcount=ExpGenes$whole_group,gene="MORF4L2",var="group") +
+    scale_fill_manual(values = c(label_colour("Prenatal"),label_colour("Postnatal"))) + labs(title = NULL) ,
+  T1Exp = plot_trans_exp_lifetime("ONTX_6127_19264",class.files$glob_targ_SQ,Exp$whole_group,colpoints = wes_palette("Darjeeling1")[2]),
+  T2Exp = plot_trans_exp_lifetime("ONTX_6127_19265",class.files$glob_targ_SQ,Exp$whole_group,colpoints = wes_palette("Darjeeling2")[3]),
   Track = ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$glob_targ_SQ,
-                      isoList = c("ONT15_1709_8230","ONT15_1709_8237",RefIsoforms$PKM$transcript_id),
-                      colours = c(wes_palette("Cavalcanti1")[5],wes_palette("Cavalcanti1")[2],"#0C0C78"),
+                      isoList = c("ONTX_6127_19264","ONTX_6127_19265","ONTX_6127_19267","ONTX_6127_19269","ONTX_6127_19273",RefIsoforms$MORF4L2$transcript_id),
+                      colours = c(wes_palette("Darjeeling1")[2],wes_palette("Darjeeling2")[3], rep("gray",3),"#0C0C78"),
                       simple=TRUE)
 )
 
-pdf("PKM_DIU.pdf", width = 12, height = 14)
+pdf("MOR4L2_DIU.pdf", width = 12, height = 14)
 plot_grid(
-  plot_grid(PKM$IF,PKM$GeneExp, labels = c("i","ii")),
-  plot_grid(PKM$Track, labels = c("iii")),
-  plot_grid(PKM$T1Exp,PKM$T2Exp, labels = c("iv","v")),
-  ncol = 1, rel_heights = c(0.5,0.1,0.3)
+  plot_grid(MORF4L2$Track, labels = c("i")),
+  plot_grid(MORF4L2$IF,MORF4L2$GeneExp, labels = c("ii","iii")),
+  plot_grid(MORF4L2$T1Exp,MORF4L2$T2Exp, labels = c("iv","v")),
+  ncol = 1, rel_heights = c(0.2,0.5,0.3)
 )
 dev.off()
 
