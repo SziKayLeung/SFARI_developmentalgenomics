@@ -278,4 +278,48 @@ plot_grid(grobTree(p))
 
 
 
+plot_dendro_Tgene(dirnames$ficle,"DLGAP5")
+DLGAP5ES <- input_FICLE_splicing_results(paste0(dirnames$ficle,"/DLGAP5"),"ES_events_counts.csv") %>% arrange(-numEvents) 
+DLGAP5NE <- input_FICLE_splicing_results(paste0(dirnames$ficle,"/DLGAP5"),"NE_transcript_counts.csv") %>% arrange(-numNovelExons) 
+DLGAP5IR <- input_FICLE_splicing_results(paste0(dirnames$ficle,"/DLGAP5"),"IR_events_counts.csv") %>% arrange(-numEvents) 
+
+table(FICLE_class_final_exp)
+
+
+DLGAP5Prenatal <- class.files$glob_SQ[class.files$glob_SQ$associated_gene == "DLGAP5" & class.files$glob_SQ$DevStatus == "prenatal",] %>% arrange(-preReads)
+DLGAP5Iso <- data.frame(
+  Isoform = unlist(DLGAP5Iso <- list(
+    Reference = as.character(unique(gtf$ref[gtf$ref$gene_id == "DLGAP5","transcript_id"])),
+    `Pre-Top` = DLGAP5Prenatal[["isoform"]][1:10],
+    `Pre-ES` = as.character(DLGAP5ES[,c("transcriptID")][1:5]),
+    `Pre-NE` = as.character(DLGAP5NE[,c("transcriptID")][1:5]),
+    `Pre-IR` = as.character(DLGAP5IR$transcriptID)
+  )),
+  Category = rep(names(DLGAP5Iso), lengths(DLGAP5Iso))
+)
+DLGAP5Iso$colour <- NA
+
+ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$glob_SQ,
+            isoList = c(as.character(DLGAP5Iso$Isoform)),
+            selfDf = DLGAP5Iso, gene = "DLGAP5")
+
+PKM <- list(
+  IF = plotIFWholebyGene("PKM",dirnames$DIU),
+  GeneExp = plot_trans_exp_lifetime(classfiles=class.files$glob_targ_SQ,Norm_transcount=ExpGenes$whole_group,gene="PKM"),
+  T1Exp = plot_trans_exp_lifetime("ONT15_1709_8230",class.files$glob_targ_SQ,Exp$whole_group),
+  T2Exp = plot_trans_exp_lifetime("ONT15_1709_8237",class.files$glob_targ_SQ,Exp$whole_group),
+  Track = ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$glob_targ_SQ,
+                      isoList = c("ONT15_1709_8230","ONT15_1709_8237",RefIsoforms$PKM$transcript_id),
+                      colours = c(wes_palette("Cavalcanti1")[5],wes_palette("Cavalcanti1")[2],"#0C0C78"),
+                      simple=TRUE)
+)
+
+pdf("PKM_DIU.pdf", width = 12, height = 14)
+plot_grid(
+  plot_grid(PKM$IF,PKM$GeneExp, labels = c("i","ii")),
+  plot_grid(PKM$Track, labels = c("iii")),
+  plot_grid(PKM$T1Exp,PKM$T2Exp, labels = c("iv","v")),
+  ncol = 1, rel_heights = c(0.5,0.1,0.3)
+)
+dev.off()
 

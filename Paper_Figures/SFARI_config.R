@@ -201,3 +201,21 @@ class.files$glob_SQ_annoGene_postnatal <- class.files$glob_SQ_annoGene[class.fil
 gfftmap <- data.table::fread(paste0(root_sfari,"14_OverlapPacBio/sfariPacBio.HumanCTX.collapsed_classification.filtered_lite.gtf.tmap"), data.table = FALSE)
 humanCTX <- read.table(paste0(dirnames$humanPacBio, "/HumanCTX.collapsed_classification.filtered_lite_classification.txt"), header = TRUE)
 humanCTX$totalFL <- humanCTX %>% dplyr::select(contains("FL.")) %>% apply(.,1,sum)
+
+
+## -------------- comparison with Leung et al.(2021) dataset ----------------
+
+protein_coding_genes = read.table("/lustre/home/vc362/protein-coding-genes.txt")
+FICLE_class <- fread("/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/15_ficle/TargetGenes/all_final_transcript_classifications.csv", data.table = F)
+FICLE_class <- FICLE_class[!duplicated(FICLE_class), ]
+FICLE_class <- FICLE_class %>% select(-isoform)
+FICLE_class_final <- FICLE_class %>% filter(isoform %in% class.files$glob_SQ_annoGene$isoform)
+protein_coding_genes_isoforms <- class.files$glob_SQ[class.files$glob_SQ$associated_gene %in% protein_coding_genes$V1,"isoform"]
+setdiff(rownames(FICLE_class_final$isoform), protein_coding_genes_isoforms)
+FICLENotProcessed <- setdiff(protein_coding_genes_isoforms, rownames(FICLE_class_final$isoform))
+FICLEProcessedGenes <- unique(class.files$glob_SQ[class.files$glob_SQ$isoform %in% FICLE_class_final$isoform,"associated_gene"])
+FICLENotProcessedGenes <- unique(class.files$glob_SQ[class.files$glob_SQ$isoform %in% FICLENotProcessed,"associated_gene"])
+unique(setdiff(FICLENotProcessedGenes,FICLEProcessedGenes))
+
+FICLE_class_final_exp <- merge(FICLE_class_final[,c("isoform","A5A3","ES","IR","NE_All")], class.files$glob_SQ[,c("isoform","preReads","postReads")], by = "isoform")
+FICLE_class_final_exp <- merge(FICLE_class_final_exp, normWholeIsoform, by = "isoform", all.x = T)
