@@ -125,7 +125,7 @@ targetRate <- function(){
   View(offTargetExp)
 }
 
-plot_trans_exp_individual <- function(transcript=NULL, classfiles, Norm_transcounts, var, gene=NULL){
+plot_trans_exp_individual <- function(transcript=NULL, classfiles, Norm_transcounts, var, gene=NULL, sqrt=FALSE, colourdots="black"){
   
   if(!is.null(transcript)){
     print(transcript)
@@ -135,13 +135,25 @@ plot_trans_exp_individual <- function(transcript=NULL, classfiles, Norm_transcou
     print(gene)
     dat <- Norm_transcounts %>% filter(associated_gene == gene) %>% mutate(group = factor(group, levels = c("Prenatal","Postnatal")))
   }
-    
-  p <- ggplot(dat, aes(x = !!rlang::sym(var), y = log10(normalised_counts), fill = !!rlang::sym(var))) + geom_boxplot(outlier.shape = NA) + 
-    geom_jitter(color="black", size=0.4, alpha=0.9) +
-    labs(x = "", y = "log10 normalized counts", 
-         title = paste0(gene, ": ", transcript,"")) +  theme_classic() + 
+  
+  if(var == "sex"){
+    dat <- dat %>% mutate(sex = ifelse(sex == "F", "Female", "Male"))
+  }
+  
+  if(isTRUE(sqrt)){
+    p <- ggplot(dat, aes(x = !!rlang::sym(var), y = normalised_counts, colour = transcript)) + geom_boxplot(outlier.shape = NA) + scale_y_sqrt() +
+      labs(x = "", y = "Normalized counts", title = paste0(gene, ": ", transcript,"")) +
+      scale_colour_manual(values = colourdots)
+  }else{
+    p <- ggplot(dat, aes(x = !!rlang::sym(var), y = log10(normalised_counts), fill = !!rlang::sym(var))) + geom_boxplot(outlier.shape = NA) +
+      labs(x = "", y = "log10 normalized counts", 
+           title = paste0(gene, ": ", transcript,"")) 
+  }
+
+  p <- p + geom_jitter(color=colourdots, size=2, alpha=0.9) +  theme_classic() + 
     #scale_fill_manual(values = c(label_colour(group1),label_colour(group2))) + 
     theme(legend.position = "none") #+ facet_grid(~group)
+  
   
   if(var == "sex"){
     p <- p + labs(x = "Sex") 
@@ -389,7 +401,9 @@ plot_volcano <- function(diff_results,stats=FALSE,interaction="notsex",chromosom
       geom_point(aes(color = Expression), size = 3/5) +
       xlab(expression("log"[2]*"FC")) +
       ylab(expression("-log"[10]*"FDR")) +
-      guides(colour = guide_legend(override.aes = list(size=2))) + mytheme  +
+      mytheme +
+      guides(colour = guide_legend(override.aes = list(size=2,fill=NA))) +
+      theme(legend.key = element_rect(colour = NA, fill = NA)) +
       ggrepel::geom_label_repel(data = Top_genes,
                                 mapping = aes(log2FoldChange, -log(padj,10), label = associated_gene),
                                 size = 4,
@@ -421,11 +435,15 @@ plotIFTargetedbyGene <- function(gene, pathDIU){
   
 }
 
-plotIFWholebyGene <- function(gene, pathDIU){
-
-  iExp <- fread(paste0(pathDIU,"/whole/allGroup/",gene,"_normalised_expression.txt"), data.table = F)
+plotIFWholebyGene <- function(gene, pathDIU,facetTranscriptsFeature,sexFeature){
+  
+  if(isFALSE(sex)){
+    iExp <- fread(paste0(pathDIU,"/whole/allGroup/",gene,"_normalised_expression.txt"), data.table = F)
+  }else{
+    iExp <- fread(paste0(pathDIU,"/whole/allSex/",gene,"_normalised_expression.txt"), data.table = F)
+  }
   iExp <- iExp %>% tidyr::spread(sample,normalised_counts) %>% tibble::column_to_rownames(var = "isoform") %>% select(contains("Whole"))
-  p <- plotIF(gene=gene,ExpInput=iExp,pheno=phenotype,cfiles=class.files$glob_targ_SQ,design="case_control",rank=5,majorIso=NULL)
+  p <- plotIF(gene=gene,ExpInput=iExp,pheno=phenotype,cfiles=class.files$glob_targ_SQ,design="case_control",rank=5,majorIso=NULL,facetTranscripts=facetTranscriptsFeature,sex=sexFeature)
   return(p)
   
 }

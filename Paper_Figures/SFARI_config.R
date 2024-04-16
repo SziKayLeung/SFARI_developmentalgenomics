@@ -50,7 +50,9 @@ TargetGene = read.table(paste0(root_sfari, "0_metadata/Complete_TargetGenes_Targ
 
 ## ------------- Phenotype files -------------------
 phenotype <- fread(paste0(root_sfari, "0_metadata/WholeTargetedphenotype_fixedsex.csv"),data.table=F, stringsAsFactors=F) %>% mutate(time = age)
-phenotype <- phenotype %>% mutate(group = factor(group, levels = c("Prenatal","Postnatal")), col = paste0(sample,"_",group)) 
+phenotype <- phenotype %>% mutate(group = factor(group, levels = c("Prenatal","Postnatal")), 
+                                  col = paste0(sample,"_",group),
+                                  sex = factor(sex, levels = c("M","F"))) 
 femaleWhole <- phenotype[phenotype$sex == "F" & grepl("Whole",phenotype$sample),][["sample"]]
 maleWhole <- phenotype[phenotype$sex == "M" & grepl("Whole",phenotype$sample),][["sample"]]
 postWhole <- phenotype[phenotype$group == "Postnatal" & grepl("Whole",phenotype$sample),][["sample"]]
@@ -63,6 +65,9 @@ preWhole <- phenotype[phenotype$group == "Prenatal" & grepl("Whole",phenotype$sa
 # list: glob_targ_SQ, glob_SQ, targ_SQ
 load(file = paste0(dirnames$wholetarg_SQ,"all_filtered_classification_2reads2samples_noMonoIntergenicAll.RData"))
 class.files$protein_filtered = fread(paste0(dirnames$protein,"/7_classified_protein/Whole.sqanti_protein_classification.tsv"),data.table = F)
+class.files$glob_targ_SQ_counts = fread(paste0(dirnames$wholetarg_SQ,"WholeTargeted_cleaned_aligned_merged_collapsed_qced_RulesFilter_2reads2samples_classification_noMonoIntergenic_counts.txt"), data.table = F)
+class.files$glob_targ_SQ_counts <- class.files$glob_targ_SQ_counts %>% filter(isoform %in% class.files$glob_targ_SQ$isoform)
+
 
 # subset by number of FL reads
 femaleReads <- class.files$glob_SQ %>% select(all_of(femaleWhole)) %>% apply(., 1, sum)
@@ -91,6 +96,12 @@ WholeDTE <- list(
   age = vroom(paste0(dirnames$DTE,"DESeq2_whole_transcript_development_resSig.csv"),delim = ",",show_col_types = FALSE)
 )
 WholeDTE <- lapply(WholeDTE, function(x) x %>% mutate(dirAcrossDev = ifelse(log2FoldChange < 0 , "upregulated", "downregulated")))
+WholeDTE$sex <- merge(WholeDTE$sex, class.files$glob_targ_SQ[,c("isoform","chrom")],by.x="isoform",all.x=T)
+
+WholeDTEAll <- list(
+  sex = vroom(paste0(dirnames$DTE,"DESeq2_whole_transcript_sex_resAll.csv"),delim = ",",show_col_types = FALSE)
+)
+WholeDTEAll$sex <- merge(WholeDTEAll$sex, class.files$glob_targ_SQ[,c("isoform","chrom")],by.x="isoform",all.x=T)
 
 normWhole <- fread(paste0(dirnames$DTE,"DESeq2_whole_development_normAll.csv"))
 WholePreNorm <- normWhole %>% filter(sample %in% preWhole) %>% group_by(isoform) %>% tally(normalised_counts)
@@ -103,12 +114,20 @@ WholeDESeqGeneSig <- list(
   age = as.data.frame(fread(paste0(dirnames$DGE,"DESeq2_whole_gene_development_resSig.csv")))
 )
 
+notDGE <- setdiff(class.files$glob_targ_SQ$associated_gene, WholeDESeqGeneSig$age)
+notDGE[!grepl("novelGene",notDGE)]
+write.table(notDGE[!grepl("novelGene",notDGE)],"NotDGEList.csv",row.names=F,col.names = F, sep = ",",quote=F)
+
 
 ## -------------- differential isoform usage ----------------
 
 load(file = paste0(dirnames$output,"DIUSig.RData"))
 DIUSig$wholeAllAge <- DIUSig$wholeAllAge %>% mutate(DGE_Dev = ifelse(Gene %in% WholeDESeqGeneSig$age$associated_gene,TRUE,FALSE),
                                                     DGE_Sex = ifelse(Gene %in% WholeDESeqGeneSig$sex$associated_gene,TRUE,FALSE))
+
+DIUSig$wholeAllSex <- DIUSig$wholeAllSex %>% mutate(DGE_Dev = ifelse(Gene %in% WholeDESeqGeneSig$age$associated_gene,TRUE,FALSE),
+                                                    DGE_Sex = ifelse(Gene %in% WholeDESeqGeneSig$sex$associated_gene,TRUE,FALSE))
+
 
 
 ## -------------- normalized counts ----------------
@@ -148,7 +167,7 @@ gtf$ref <- data.table::fread(paste0(dirnames$utils,"refExons.gtf")) %>% dplyr::r
 gtf$merged <- rbind(gtf$glob_targ[,c("seqnames","strand","start","end","type","transcript_id","gene_id")] ,
                          gtf$ref[,c("seqnames","strand","start","end","type","transcript_id","gene_id")])
 
-GI <- c("GRIN2A","GRIA3","SEPTIN4","RTN4","MBP","RPS4Y1","XIST","ADD3","CNTNAP2","ANKRD12","VXN","PKM","MORF4L2")
+GI <- c("GRIN2A","GRIA3","SEPTIN4","RTN4","MBP","RPS4Y1","XIST","ADD3","CNTNAP2","ANKRD12","VXN","PKM","MORF4L2","GNAS","RSP27A")
 RefIsoforms <- lapply(GI, function(x) unique(gtf$ref[gtf$ref$gene_id == x & !is.na(gtf$ref$transcript_id), "transcript_id"]))
 names(RefIsoforms ) <- GI
 

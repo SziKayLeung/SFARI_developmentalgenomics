@@ -52,6 +52,15 @@ devVennNums <- twovenndiagrams(class.files$glob_SQ_annoGene[class.files$glob_SQ_
                                class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$postReads >= 1,"isoform"],"Pre-natal","Post-natal")
 grid.draw(devVennNums)
 
+class.files$glob_SQ_annoGene %>% group_by(structural_category, DevStatus) %>% tally() %>% 
+  mutate(DevStatus = factor(DevStatus,levels = c("prenatal","postnatal","Both"))) %>%
+  ggplot(., aes(x = structural_category, y = n, fill = DevStatus)) + 
+  geom_bar(stat="identity", position = position_dodge()) +
+  mytheme + scale_fill_manual(name = "", 
+                                labels = c("Prenatal","Postnatal","Both"), 
+                                values = c(wes_palette("Royal1")[2],wes_palette("Royal1")[1],wes_palette("Royal1")[4])) +
+  labs(x = "Structural category", y = "Number of transcripts of annotated genic features") +
+  theme(legend.position = "top")
 
 
 pIF <- list(

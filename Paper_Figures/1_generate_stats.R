@@ -133,6 +133,13 @@ message("% of all postnatal detected: ", length(commonDevTranscripts)/length(cla
 message("Number of transcripts unique to postnatal:", length(setdiff(class.files$glob_SQ_annoGene_postnatal$isoform, class.files$glob_SQ_annoGene_prenatal$isoform)))
 message("Number of transcripts unique to prenatal:", length(setdiff(class.files$glob_SQ_annoGene_prenatal$isoform, class.files$glob_SQ_annoGene_postnatal$isoform)))
 
+totalTranscripts = unique(c(class.files$glob_SQ_annoGene_postnatal$isoform,class.files$glob_SQ_annoGene_prenatal$isoform,commonDevTranscripts))
+length(totalTranscripts) == nrow(class.files$glob_SQ_annoGene)
+message("% of unique postnatal to all: ",
+        length(setdiff(class.files$glob_SQ_annoGene_postnatal$isoform, class.files$glob_SQ_annoGene_prenatal$isoform))/length(totalTranscripts) * 100)
+message("% of unique prenatal to all: ",
+        length(setdiff(class.files$glob_SQ_annoGene_prenatal$isoform, class.files$glob_SQ_annoGene_postnatal$isoform))/length(totalTranscripts) * 100)
+
 # most abundant transcript in prenatal and not in postnatal
 class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$postReads == 0,] %>% arrange(-preReads) %>% .[1,]
 class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$preReads == 0,] %>% arrange(-postReads) %>% .[1,]
@@ -149,8 +156,10 @@ WholeDTE$age %>% group_by(structural_category) %>% tally()
 
 # number of overlaps between Leung et al. 2021 and whole dataset
 message("Number overlap: ",length(unique(gfftmap[gfftmap$class_code == "=","qry_id"])))
+length(unique(gfftmap[gfftmap$class_code == "=","ref_id"]))
 message("Percentage overlap: ",length(unique(gfftmap[gfftmap$class_code == "=","qry_id"]))/nrow(humanCTX))
-
+nrow(humanCTX) - length(unique(gfftmap[gfftmap$class_code == "=","qry_id"]))
+length(class.files$glob_SQ$isoform) - length(unique(gfftmap[gfftmap$class_code == "=","qry_id"]))
 
 ## ------- differential transcript expression -------
 

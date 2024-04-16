@@ -50,7 +50,32 @@ fig2Targeted <- list(
 tCol <- wes_palette("Royal1")[4]
 fig3Diff <- list(
   # volcano plot across development
-  volGroup = plot_volcano(diff_results=WholeDESeq$age)[[1]],
+  volGroup = plot_volcano(diff_results=WholeDTE$age)[[1]],
+  # top-ranked box-plot
+  topRankedGroup = plot_trans_exp_individual("ONT18_5132_2319",class.files$glob_SQ,Exp$whole_group,"group", sqrt=TRUE, colourdots = alpha("#F8766D",0.3)),
+  topRankedGroup2 = plot_trans_exp_individual("ONT18_5132_2313",class.files$glob_SQ,Exp$whole_group,"group", sqrt=TRUE, colourdots = "#00BFC4"),
+  ##structuralcategory: class.files$glob_SQ[class.files$glob_SQ$isoform == "ONT18_5132_2319",]
+  topRankedGroupVis = ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$glob_SQ,
+              isoList = c("ONT18_5132_2319",RefIsoforms$MBP$transcript_id),
+              colours = c(alpha("#F8766D",0.3),"black"), 
+              simple=TRUE),
+  topRankedGroupVis2 = ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$glob_SQ,
+                                  isoList = c("ONT18_5132_2313",RefIsoforms$MBP$transcript_id),
+                                  colours = c("#00BFC4","black"), 
+                                  simple=TRUE),
+  volSex = plot_volcano(diff_results=WholeDTEAll$sex,interaction = "sex", chromosome = "allosomal")[[1]]
+)
+
+Add3Exp <- plot_trans_exp_individual("ONT10_4920_1919",class.files$glob_SQ,Exp$whole_group,"sex", sqrt=TRUE, colourdots = "#00BFC4")
+##structuralcategory: class.files$glob_SQ[class.files$glob_SQ$isoform == "ONT18_5132_2319",]
+Add3Vis <- ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$glob_SQ,
+                                isoList = c("ONT10_4920_1919",RefIsoforms$ADD3$transcript_id),
+                                colours = c("#00BFC4","black"), 
+                                simple=TRUE)
+
+fig3Diff <- list(
+  # volcano plot across development
+  volGroup = plot_volcano(diff_results=WholeDTE$age)[[1]],
   # volcano plot across sex
   volSex = plot_volcano(diff_results=WholeDESeq$sex, interaction = "sex")[[1]],
   volSexSupp = plot_volcano(diff_results=WholeDESeq$sex, interaction = "sex", chromosome = "allosomal")[[1]],
@@ -220,9 +245,24 @@ fig2Targeted$numIso
 fig2Targeted$numIsoCate
 dev.off()
 
-png(paste0(output_dir,"/Fig3Volcano.png"), width=350, height=350)
+pdf("DevelopmentVolcano.pdf", width = 8, height=6)
 fig3Diff$volGroup
+dev.off()
+
+pdf("SexVolcano.pdf", width = 8, height=6)
 fig3Diff$volSex
+dev.off()
+
+pdf("DevelopmentTopRanked.pdf", width = 6, height=6)
+plot_grid(fig3Diff$topRankedGroupVis,fig3Diff$topRankedGroup,ncol=1, rel_heights = c(0.4,0.6))
+dev.off()
+
+pdf("DevelopmentTopRanked2.pdf", width = 6, height=6)
+plot_grid(fig3Diff$topRankedGroupVis2, fig3Diff$topRankedGroup2,ncol=1, rel_heights = c(0.4,0.6))
+dev.off()
+
+pdf("SexTopRanked.pdf", width = 6, height=6)
+plot_grid(Add3Vis,Add3Exp,ncol=1, rel_heights = c(0.4,0.6))
 dev.off()
 
 pdf(paste0(output_dir,"/targeted_DTE_group.pdf"), width = 20, height = 10)
@@ -282,46 +322,69 @@ plot_dendro_Tgene(dirnames$ficle,"DLGAP5")
 DLGAP5ES <- input_FICLE_splicing_results(paste0(dirnames$ficle,"/DLGAP5"),"ES_events_counts.csv") %>% arrange(-numEvents) 
 DLGAP5NE <- input_FICLE_splicing_results(paste0(dirnames$ficle,"/DLGAP5"),"NE_transcript_counts.csv") %>% arrange(-numNovelExons) 
 DLGAP5IR <- input_FICLE_splicing_results(paste0(dirnames$ficle,"/DLGAP5"),"IR_events_counts.csv") %>% arrange(-numEvents) 
+DLGAP5A5A3 <- input_FICLE_splicing_results(paste0(dirnames$ficle,"/DLGAP5"), "DLGAP5_A5A3_transcript_counts.csv") %>% arrange(-numEvents)
+DLGAP5All <- read.csv(paste0(dirnames$ficle,"/DLGAP5/Stats/", "DLGAP5_final_transcript_classifications.csv"))
+DLGAP5AF <- DLGAP5All[DLGAP5All$AF == 1,"isoform"]
+DLGAP5AT <- DLGAP5All[DLGAP5All$AT == 1,"isoform"]
+
 
 table(FICLE_class_final_exp)
 
-
+# DLGAP5
 DLGAP5Prenatal <- class.files$glob_SQ[class.files$glob_SQ$associated_gene == "DLGAP5" & class.files$glob_SQ$DevStatus == "prenatal",] %>% arrange(-preReads)
+DLGAP5Prenatal[DLGAP5Prenatal$isoform %in%  c("ONT14_1685_3519","ONT14_1685_3465","ONT14_1685_3463", "ONT14_1685_3452", "ONT14_1685_3439"),]
+intersect(DLGAP5Prenatal$isoform,DLGAP5A5A3$transcriptID)
 DLGAP5Iso <- data.frame(
   Isoform = unlist(DLGAP5Iso <- list(
     Reference = as.character(unique(gtf$ref[gtf$ref$gene_id == "DLGAP5","transcript_id"])),
-    `Pre-Top` = DLGAP5Prenatal[["isoform"]][1:10],
-    `Pre-ES` = as.character(DLGAP5ES[,c("transcriptID")][1:5]),
-    `Pre-NE` = as.character(DLGAP5NE[,c("transcriptID")][1:5]),
-    `Pre-IR` = as.character(DLGAP5IR$transcriptID)
+    `Pre-ES` = as.character(DLGAP5ES[,c("transcriptID")][1:4]),
+    `Pre-NE` = as.character(DLGAP5NE[,c("transcriptID")][2:5]),
+    `Pre-IR` = as.character(DLGAP5IR$transcriptID),
+    `Pre-AF` = c("ONT14_1685_3519","ONT14_1685_3255","ONT14_1685_3463", "ONT14_1685_3439", "ONT14_1685_3180"),
+    `Pre-AT` = c("ONT14_1685_3369", "ONT14_1685_3371", "ONT14_1685_3465","ONT14_1685_3273", "ONT14_1685_3190")
   )),
   Category = rep(names(DLGAP5Iso), lengths(DLGAP5Iso))
 )
 DLGAP5Iso$colour <- NA
 
-ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$glob_SQ,
+DLGAP5ggTransFig <- ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$glob_SQ,
             isoList = c(as.character(DLGAP5Iso$Isoform)),
             selfDf = DLGAP5Iso, gene = "DLGAP5")
 
+pdf("DLGAP5.pdf", width = 10, height = 6)
+DLGAP5ggTransFig
+dev.off()
+
+
 dat <- DIUSig$wholeAllAge %>% mutate(totalChange = as.numeric(totalChange)) %>% filter(DGE_Dev == FALSE, podiumChange == TRUE) %>% dplyr::arrange(FDR, as.numeric(totalChange))
 MORF4L2 <- list(
-  IF = plotIFWholebyGene("MORF4L2",dirnames$DIU)[[1]] + labs(title = NULL),
-  GeneExp = plot_trans_exp_individual(classfiles=class.files$glob_targ_SQ,Norm_transcount=ExpGenes$whole_group,gene="MORF4L2",var="group") +
-    scale_fill_manual(values = c(label_colour("Prenatal"),label_colour("Postnatal"))) + labs(title = NULL) ,
-  T1Exp = plot_trans_exp_lifetime("ONTX_6127_19264",class.files$glob_targ_SQ,Exp$whole_group,colpoints = wes_palette("Darjeeling1")[2]),
-  T2Exp = plot_trans_exp_lifetime("ONTX_6127_19265",class.files$glob_targ_SQ,Exp$whole_group,colpoints = wes_palette("Darjeeling2")[3]),
+  IF = plotIFWholebyGene("MORF4L2",dirnames$DIU,facetTranscripts=TRUE)[[1]],
+  #GeneExp = plot_trans_exp_individual(classfiles=class.files$glob_targ_SQ,Norm_transcount=ExpGenes$whole_group,gene="MORF4L2",var="group") +
+  #  scale_fill_manual(values = c(label_colour("Prenatal"),label_colour("Postnatal"))) + labs(title = NULL) ,
+  #T1Exp = plot_trans_exp_lifetime("ONTX_6127_19264",class.files$glob_targ_SQ,Exp$whole_group,colpoints = wes_palette("Darjeeling1")[2]),
+  #T2Exp = plot_trans_exp_lifetime("ONTX_6127_19265",class.files$glob_targ_SQ,Exp$whole_group,colpoints = wes_palette("Darjeeling2")[3]),
   Track = ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$glob_targ_SQ,
-                      isoList = c("ONTX_6127_19264","ONTX_6127_19265","ONTX_6127_19267","ONTX_6127_19269","ONTX_6127_19273",RefIsoforms$MORF4L2$transcript_id),
-                      colours = c(wes_palette("Darjeeling1")[2],wes_palette("Darjeeling2")[3], rep("gray",3),"#0C0C78"),
+                      isoList = c("ONTX_6127_19273","ONTX_6127_19269","ONTX_6127_19267","ONTX_6127_19265","ONTX_6127_19264",RefIsoforms$MORF4L2$transcript_id),
+                      colours = c(rep("#00BFC4",2),alpha("#F8766D",0.5),rep("#00BFC4",2),"black"),
                       simple=TRUE)
 )
 
-pdf("MOR4L2_DIU.pdf", width = 12, height = 14)
-plot_grid(
-  plot_grid(MORF4L2$Track, labels = c("i")),
-  plot_grid(MORF4L2$IF,MORF4L2$GeneExp, labels = c("ii","iii")),
-  plot_grid(MORF4L2$T1Exp,MORF4L2$T2Exp, labels = c("iv","v")),
-  ncol = 1, rel_heights = c(0.2,0.5,0.3)
+DIUSummarySex <- DIUSig$wholeAllSex %>% mutate(totalChange = as.numeric(totalChange)) %>% filter(DGE_Sex == FALSE, podiumChange == TRUE) %>% dplyr::arrange(FDR, as.numeric(totalChange))
+DIUSummarySex[DIUSummarySex$DGE_Dev == FALSE & DIUSummarySex$DGE_Sex == FALSE,]
+
+GNAS_IF <- list(
+  IF = plotIFWholebyGene("GNAS",dirnames$DIU,facetTranscriptsFeature=TRUE,sexFeature=TRUE)[[1]],
+  vis = ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$glob_SQ,
+              isoList = rev(c("ENST00000371085.8","ONT20_3069_10858","ONT20_3069_7102","ONT20_3069_9130","ONT20_3069_11037","ONT20_3069_10787")),
+              colours = rev(c("black",alpha("#00BFC4",0.3),rep("#00BFC4",2),rep(alpha("#00BFC4",0.3),2))), 
+              simple=TRUE)
 )
+
+pdf("SexDIU.pdf", width = 12, height = 10)
+plot_grid(GNAS_IF$vis, GNAS_IF$IF, ncol = 1, rel_heights = c(0.4,0.6))
+dev.off()
+
+pdf("DevelopmentDIU.pdf", width = 12, height = 10)
+plot_grid(MORF4L2$Track, MORF4L2$IF, ncol = 1, rel_heights = c(0.4,0.6))
 dev.off()
 
