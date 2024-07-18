@@ -125,7 +125,19 @@ targetRate <- function(){
   View(offTargetExp)
 }
 
-plot_trans_exp_individual <- function(transcript=NULL, classfiles, Norm_transcounts, var, gene=NULL, sqrt=FALSE, colourdots="black"){
+plot_trans_exp_individual <- function(transcript=NULL, classfiles, Norm_transcounts, var, gene=NULL, sqrt=FALSE, colourdots=NULL){
+  
+  if(is.null(colourdots)){
+    transStru <- classfiles[classfiles$isoform == transcript, "structural_category"]
+    structural_colours <- rbind(
+      data.frame(
+        structural_category = c("Ref","FSM", "ISM", "NIC", "NNC", "Genic_Genomic",  "Antisense", "Fusion","Intergenic", "Genic_Intron","coding","non-coding","noORF", "ORF"),
+        structural_col = c("black","#00BFC4",alpha("#00BFC4",0.3),"#F8766D",alpha("#F8766D",0.3),"grey1","gray","grey3","grey4","grey5",wes_palette("Darjeeling1")[2],wes_palette("Royal1")[2],"black","gray")
+      )
+    )
+    colourdots = structural_colours[structural_colours$structural_category == as.character(transStru), "structural_col"]
+    print(colourdots)
+  }
   
   if(!is.null(transcript)){
     print(transcript)
@@ -136,23 +148,31 @@ plot_trans_exp_individual <- function(transcript=NULL, classfiles, Norm_transcou
     dat <- Norm_transcounts %>% filter(associated_gene == gene) %>% mutate(group = factor(group, levels = c("Prenatal","Postnatal")))
   }
   
-  if(var == "sex"){
-    dat <- dat %>% mutate(sex = ifelse(sex == "F", "Female", "Male"))
-  }
+  dat <- dat %>% mutate(sex = ifelse(sex == "F", "Female", "Male"))
   
-  if(isTRUE(sqrt)){
-    p <- ggplot(dat, aes(x = !!rlang::sym(var), y = normalised_counts, colour = transcript)) + geom_boxplot(outlier.shape = NA) + scale_y_sqrt() +
+  if(var == "both"){
+    p <- ggplot(dat, aes(x = group, y = normalised_counts, colour = transcript)) + 
+      geom_boxplot(outlier.shape = NA) + scale_y_sqrt() +
       labs(x = "", y = "Normalized counts", title = paste0(gene, ": ", transcript,"")) +
-      scale_colour_manual(values = colourdots)
+      scale_colour_manual(values = colourdots) + facet_grid(~sex)
+    
   }else{
-    p <- ggplot(dat, aes(x = !!rlang::sym(var), y = log10(normalised_counts), fill = !!rlang::sym(var))) + geom_boxplot(outlier.shape = NA) +
-      labs(x = "", y = "log10 normalized counts", 
-           title = paste0(gene, ": ", transcript,"")) 
+    if(isTRUE(sqrt)){
+      p <- ggplot(dat, aes(x = !!rlang::sym(var), y = normalised_counts, colour = transcript)) + 
+        geom_boxplot(outlier.shape = NA) + scale_y_sqrt() +
+        labs(x = "", y = "Normalized counts", title = paste0(gene, ": ", transcript,"")) +
+        scale_colour_manual(values = colourdots)
+    }else{
+      p <- ggplot(dat, aes(x = !!rlang::sym(var), y = log10(normalised_counts), fill = !!rlang::sym(var))) + geom_boxplot(outlier.shape = NA) +
+        labs(x = "", y = "log10 normalized counts", 
+             title = paste0(gene, ": ", transcript,"")) 
+    }
   }
 
   p <- p + geom_jitter(color=colourdots, size=2, alpha=0.9) +  theme_classic() + 
+    theme(strip.background=element_rect(colour="white", fill="white")) +
     #scale_fill_manual(values = c(label_colour(group1),label_colour(group2))) + 
-    theme(legend.position = "none") #+ facet_grid(~group)
+    theme(legend.position = "none") #+ facet_grid(~group) 
   
   
   if(var == "sex"){
@@ -165,7 +185,15 @@ plot_trans_exp_individual <- function(transcript=NULL, classfiles, Norm_transcou
 plot_trans_exp_lifetime <- function(transcript=NULL,classfiles,Norm_transcount,gene = NULL,sex=FALSE, colpoints=NULL){
   
   if(is.null(colpoints)){
-    colpoints = wes_palette("Royal1")[4]
+    transStru <- classfiles[classfiles$isoform == transcript, "structural_category"]
+    structural_colours <- rbind(
+      data.frame(
+        structural_category = c("Ref","FSM", "ISM", "NIC", "NNC", "Genic_Genomic",  "Antisense", "Fusion","Intergenic", "Genic_Intron","coding","non-coding","noORF", "ORF"),
+        structural_col = c("black","#00BFC4",alpha("#00BFC4",0.3),"#F8766D",alpha("#F8766D",0.3),"grey1","grey","grey3","grey4","grey5",wes_palette("Darjeeling1")[2],wes_palette("Royal1")[2],"black","gray")
+      )
+    )
+    colpoints = structural_colours[structural_colours$structural_category == transStru, structural_col]
+    
   }
   
   #library(grid)
