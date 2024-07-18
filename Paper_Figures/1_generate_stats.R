@@ -21,7 +21,6 @@ numIsogeneTally = class.files$glob_SQ_annoGene %>% group_by(associated_gene) %>%
 message("Most isomorphic gene: ")
 #numIsogeneTally %>% arrange(-n)
 message("Mean number of isoforms (sd): ", round(mean(numIsogeneTally$n),2)," (", round(sd(numIsogeneTally$n),2),")")
-message("Min - max number of isoforms: ", round(min(numIsogeneTally$n),2)," - ", round(max(numIsogeneTally$n),2))
 nrow(numIsogeneTally[numIsogeneTally$n >= 10,])
 nrow(numIsogeneTally[numIsogeneTally$n >= 10,])/length(unique(numIsogeneTally$associated_gene))
 
@@ -32,13 +31,6 @@ message("Mean number of exons for any given gene (sd): ", round(mean(meanExonGen
 
 # number of novel and known transcripts
 message("Number of total transcripts to annotated known genes: ", nrow(class.files$glob_SQ_annoGene))
-
-annoGenesStats <- list(
-  novelTrans = class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$associated_transcript == "novel",],
-  annoTrans = class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$associated_transcript != "novel",],
-  NIC = class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$structural_category == "NIC",],
-  NNC = class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$structural_category == "NNC",]
-)
 
 message("Number of novel transcripts to annotated known genes: ", nrow(annoGenesStats$novelTrans), "( ", 
         round(nrow(annoGenesStats$novelTrans)/nrow(class.files$glob_SQ_annoGene) * 100,2), "%)")
@@ -65,7 +57,8 @@ message("Number of NNC transcripts to annotated known genes: ", nrow(annoGenesSt
 novelMean <- annoGenesStats$novelTrans %>% select(contains("Whole")) %>% apply(., 1, mean) 
 knownMean <- annoGenesStats$annoTrans %>% select(contains("Whole")) %>% apply(., 1, mean) 
 dat <- rbind(reshape2::melt(novelMean) %>% mutate(associated_transcript = "novel"), reshape2::melt(knownMean) %>% mutate(associated_transcript = "known"))
-t.test(value ~ associated_transcript, data = dat)
+res <- t.test(value ~ associated_transcript, data = dat)
+res$p.value
 class.files$glob_SQ_annoGene %>% filter(structural_category %in% c("NIC","NNC")) %>% mutate(FL = preReads + postReads) %>% arrange(-FL)
 
 # proteogenomics pipeline
@@ -160,6 +153,22 @@ length(unique(gfftmap[gfftmap$class_code == "=","ref_id"]))
 message("Percentage overlap: ",length(unique(gfftmap[gfftmap$class_code == "=","qry_id"]))/nrow(humanCTX))
 nrow(humanCTX) - length(unique(gfftmap[gfftmap$class_code == "=","qry_id"]))
 length(class.files$glob_SQ$isoform) - length(unique(gfftmap[gfftmap$class_code == "=","qry_id"]))
+
+DetectedBoth <- unique(gfftmap[gfftmap$class_code == "=","qry_id"])
+DetectedBothRB <- unique(gfftmap[gfftmap$qry_id %in% DetectedBoth,"ref_id"])
+Unique <- setdiff(unique(gfftmap[gfftmap$class_code != "=","qry_id"]),unique(gfftmap[gfftmap$class_code == "=","qry_id"]))
+UniqueRB <- class.files$glob_SQ[!class.files$glob_SQ$isoform %in% DetectedBothRB,]
+CommonRB <- class.files$glob_SQ[class.files$glob_SQ$isoform %in% DetectedBothRB,]
+
+ExpressionDiffPacBio <- rbind(UniqueRB %>% mutate(dataset = "Unique") %>% select(nreads, dataset),
+                              CommonRB %>% mutate(dataset = "Common") %>% select(nreads, dataset))
+res <- wilcox.test(nreads ~ dataset, ExpressionDiffPacBio, exact = FALSE)
+res
+res$p.value
+format(res$p.value, scientific = TRUE)
+
+
+
 
 ## ------- differential transcript expression -------
 
@@ -307,3 +316,43 @@ class.files$targ_filtered %>% filter(isoform %in% ORFCorrectedCollapsedID) %>% g
 
 class.files$protein_filtered_final <- class.files$protein_filtered[class.files$protein_filtered$pb %in% GSselectedcollapsedID,]
 message("Number of protein products after filtering: ", nrow(class.files$protein_filtered_final))
+
+## ---------- Mass spectrometry ----------
+
+# All peptides
+peptides <- lapply(list.files(path = "/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/13_massSpec", pattern = "AllPeptides.psmtsv", recursive = T, full.names = T), function(x) data.table::fread(x))
+peptidesFiltered <- lapply(peptides, function(x) x %>% dplyr::select('Base Sequence', 'Full Sequence', 'Protein Accession'))
+peptidesFiltered <- dplyr::bind_rows(peptidesFiltered)
+
+# remove duplicated rows (due to merging samples)
+peptidesFiltered <- peptidesFiltered %>% distinct()
+message("Total number of peptides:", length(unique(peptidesFiltered$`Base Sequence`)))
+#do not use nrows for peptide counts #peptidesFiltered[peptidesFiltered$`Base Sequence` == "AADAEAEVASLNR",]
+
+# determine number of transcripts validated in terms of splicce junction (split protein accession column)
+accession_split <- lapply(peptidesFiltered[["Protein Accession"]], function(x) strsplit(x, "|", fixed = TRUE)[[1]])
+accession_split <- unique(unlist(accession_split))
+
+# remove decoy protein accession
+accession_split <- accession_split[!grepl("DECOY", accession_split)]
+accession_split <- accession_split[grepl("ONT", accession_split)]
+message("Total number of trancripts with mass-spec validation:", nrow(class.files$glob_SQ[class.files$glob_SQ$isoform %in% accession_split,]))
+message("Total number of novel trancripts with mass-spec validation:", nrow(class.files$glob_SQ[class.files$glob_SQ$isoform %in% accession_split,] %>% filter(!structural_category %in% c("FSM", "ISM"))))
+
+## novel peptides
+novelPeptides <- list.files(path = dirnames$massspec, pattern = "SFARI.pacbio.novel_peptides.tsv", recursive = T, full.names = T)
+novelPeptides <- lapply(novelPeptides, function(x) read.table(x, header = T))                         
+novelPeptides <- bind_rows(novelPeptides)
+
+novelPeptides <- novelPeptides[novelPeptides$acc %in% class.files$glob_SQ$isoform,] %>% select(gene, acc, seq)
+novelPeptides <- novelPeptides %>% distinct()
+#novelPeptides[novelPeptides$acc == "ONT12_1620_26499",]
+
+novelPeptides <- novelPeptides %>% mutate(length = nchar(as.character(seq)))
+novelPeptidesunique <- novelPeptides %>% group_by(acc) %>% top_n(1, length)
+colnames(novelPeptides) <- c("gene","isoform","protein_seq")
+novelPeptides <- merge(novelPeptides,class.files$glob_SQ, by = "isoform") %>% select(isoform, associated_gene, structural_category, protein_seq)
+novelPeptidesTranscripts <- novelPeptides[!novelPeptides$structural_category %in% c("FSM","ISM"),]
+write.table(novelPeptidesTranscripts, paste0(dirnames$output,"novelTranscriptsPeptides.txt"), sep = "\t", quote = F)
+
+

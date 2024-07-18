@@ -79,6 +79,10 @@ WholeDESeqGeneSig$age$associated_gene
 colnames(geneNum)[1:4] <- c("associated_gene","totalTranscripts","totalNovelTranscripts","totalKnownTranscripts")
 write.csv(geneNum, paste0(dirnames$output,"NumberofTranscriptsPrevsPost.csv"), quote=F, row.names = F)
 
+# number of genes unique to prenatal and postnatal
+nrow(geneNum[is.na(geneNum$prenatalTranscripts),])/nrow(geneNum) * 100
+nrow(geneNum[is.na(geneNum$postnatalTranscripts),])/nrow(geneNum) * 100
+
 write.csv(DIUSig$wholeAllAge, paste0(dirnames$output,"DIUSigWholeDevelopment.csv"), quote=F, row.names = F)
 write.csv(DIUSig$wholeAllSex, paste0(dirnames$output,"DIUSigWholeSex.csv"), quote=F, row.names = F)
 
@@ -108,3 +112,27 @@ dat <- dat %>% mutate(DGEGroup = ifelse(WholeDGEGroup == TargetedDGEGroup, TRUE,
 
 
 write.csv(dat,paste0(output_dir,"/TargetGenesDEAnalysis.csv"))
+
+# FICLE analysis: number of events per transcript
+
+finalTranscriptClassification <- distinct(fread(paste0(dirnames$ficle,"/all_final_transcript_classifications.csv"), data.table = F))
+finalTranscriptClassification$isoform <- as.factor(finalTranscriptClassification$isoform)
+finalTranscriptClassification <- finalTranscriptClassification %>% mutate_if(is.character, as.numeric)
+finalTranscriptClassification$isoform <- as.character(finalTranscriptClassification$isoform)
+
+finalTranscriptClassification <- finalTranscriptClassification %>% filter(isoform %in% class.files$glob_SQ$isoform)
+finalTranscriptClassification <- merge(class.files$glob_SQ[,c("isoform", "associated_gene")], finalTranscriptClassification, by = "isoform")
+
+finalTranscriptClassificationGene <- aggregate(. ~ associated_gene, finalTranscriptClassification %>% select(-isoform), sum)
+write.csv(finalTranscriptClassificationGene, "FICLEASEventsPerGene.csv", row.names = F)
+
+dat <- reshape2::melt(finalTranscriptClassificationGene, variable.name = "AS", value.name = "Frequency", id = "associated_gene")
+dat <- na.omit(dat)
+dat$AS <- as.character(dat$AS)
+dat[dat$AS == "NE_1st", "AS"] <- "NE_First"
+options(scipen=999)
+dat %>% group_by(AS) %>% tally(Frequency) %>% 
+  filter(AS %in% c("Matching", "SomeMatch", "A5A3", "AF", "AT", "ES", "IR", "NE_First", "NE_Int", "NE_Last")) %>%
+  ggplot(.,aes(x = reorder(AS, -n), y = n)) + geom_bar(stat = "identity") +
+  labs(x = "AS events", y = "Frequency") + 
+  mytheme
