@@ -1,0 +1,253 @@
+---
+title: "Optimise SQANTI filtering"
+author: "Szi Kay Leung"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library("cowplot")
+```
+
+## Aim
+
+**Observe the effects of altering SQANTI filtering parameters**   
+
+Default (reduced coverage):  
+1. Keep FSM if percentage A downstream < 60%  
+2. Keep rest of isoforms if A downstream < 60%, junctions are all canonical and if not RT switching  
+(Note: difference from default parameters where does not require minimum 3 RNA-Seq reads if non-FSM isoforms have non-canonical junctions)  
+\
+Relaxed parameters:  
+1. Keep FSM if percentage A downstream < 60%   
+2. Keep rest of isoforms if A downstream < 60% and if not RT switching (Keep isoforms with non-canonical junctions!)  
+ 
+Pilot with EMX1 gene only in RB Targeted datasets 
+
+
+```{r input, results='hide'}
+
+# directory paths
+dir = "/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/RBFetal/"
+LOGEN = "/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/scripts/LOGen/"
+sapply(list.files(path = paste0(LOGEN,"transcriptome_stats"), pattern="*.R", full = T), source,.GlobalEnv)
+
+# SQANTI classification file
+filteredClassFiles <- list(
+  default=paste0(dir,"EMX1Default_RulesFilter_result_classification.txt"),
+  reducedCoverage=paste0(dir,"EMX1ReducedCoverage_RulesFilter_result_classification.txt"),
+  relaxed=paste0(dir,"EMX1Relaxed_RulesFilter_result_classification.txt"),
+  defaultIntropolis=paste0(dir,"EMX1DefaultIntropolis_RulesFilter_result_classification.txt"),
+  reducedIntropolis=paste0(dir,"EMX1ReducedIntropolis_RulesFilter_result_classification.txt"),
+  relaxedIntropolis=paste0(dir,"EMX1RelaxedIntropolis_RulesFilter_result_classification.txt")
+)
+filteredClassAll = lapply(filteredClassFiles, function(x) read.table(x, sep = "\t", as.is = T, header = T))
+filteredClass = lapply(filteredClassFiles, function(x) SQANTI_class_preparation(x,"ns"))
+
+# SQANTI reason for filtering file
+reasonFiles <- list(
+  reducedCoverage=paste0(dir,"EMX1ReducedCoverage_filtering_reasons.txt"),
+  relaxed=paste0(dir,"EMX1Relaxed_filtering_reasons.txt")
+) %>% lapply(., function(x) read.table(x, sep = "\t", header = T))
+
+# SQANTI junction file
+junctions <- read.table(paste0(dir,"EMX1_junctions.txt"), header = T)
+
+# demultiplexed expression
+expression <- read.csv(paste0(dir,"EMX1_demux_fl_count.csv"), row.names = "isoform")
+expression$total = apply(expression, 1, sum)
+
+
+#### All (default coverage)
+targetedDir = "/gpfs/mrc0/projects/Research_Project-MRC148213/Rosie/Targeted/P0059_20220813_10780/Batch1/20220813_1259_3G_PAM33351_84e820b3/cupcake/Rerun/"
+TGenes = read.table("/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARIdevelopmentalgenomics/0_metadata/Complete_TargetGenes_v40annotation.txt", header = T)
+expressionAll = read.csv(paste0(targetedDir,"demux_fl_count.csv"), row.names = "id")
+expressionAll$total = apply(expressionAll, 1, sum)
+
+ClassFiles = list(
+  all = SQANTI_class_preparation(paste0(targetedDir,"SQANTI3_targeted_rerun_RulesFilter_result_classification.txt"), "all")
+)
+ClassFiles$all = ClassFiles$all %>% mutate(Target = ifelse(associated_gene %in% TGenes$gene_id,"Target","Off-Target"))
+
+# Targets
+ClassFiles$targ <- merge(ClassFiles$all, TGenes[,c("gene_name","gene_id")] %>% distinct(), by.x = "associated_gene", by.y = "gene_id", all.y = T)
+ClassFiles$targIso <- ClassFiles$targ %>% filter(filter_result == "Isoform")
+ClassFiles$targArti <- ClassFiles$targ %>% filter(filter_result == "Artifact")
+
+# Off targets
+ClassFiles$nonTarg <- ClassFiles$all %>% filter(Target == "Off-Target")
+ClassFiles$nonTargIso <- ClassFiles$nonTarg %>% filter(filter_result == "Isoform")
+ClassFiles$nonTargArti <- ClassFiles$nonTarg %>% filter(filter_result == "Artifact")
+
+reasonFilesAll = read.table(paste0(targetedDir,"SQANTI3_targeted_rerun_filtering_reasons.txt"), sep = "\t", header = T) 
+
+
+```
+
+## EMX1 Output {.tabset .tabset-pills}
+
+Number of isoforms pre-filtered: `r length(filteredClassAll$reducedCoverage$isoform)`
+Difference in number of isoforms at pre-filtered stage:  `r length(setdiff(filteredClassAll$reducedCoverage$isoform,filteredClassAll$relaxed$isoform))`
+
+Number of isoforms filtered with default coverage: `r length(filteredClass$reducedCoverage$isoform)`
+Number of isoforms filtered with relaxed filters: `r length(filteredClass$relaxed$isoform)`
+
+Isoforms kept in relaxed but removed under default parameters: `r setdiff(filteredClass$relaxed$isoform,filteredClass$reducedCoverage$isoform)`
+Isoforms kept in default but removed under relaxed parameters: `r setdiff(filteredClass$reducedCoverage$isoform,filteredClass$relaxed$isoform)`
+
+
+### Discarded {.tabset .tabset-pills}
+
+#### Table
+
+Below is a table of the isoforms that are removed under the default parameters, but retained under the relaxed parameters
+
+```{r discardedTable}
+discardedIso=setdiff(filteredClass$relaxed$isoform,filteredClass$reducedCoverage$isoform)
+
+# reason for removed
+knitr::kable(reasonFiles$reducedCoverage %>% filter(isoform %in% discardedIso))
+```
+
+#### Plot
+
+Shown are the number of isoforms filtered by reason using (A) default parameters, and (B) relaxed parameters
+
+```{r discardedPlot}
+plot_grid(plot_sqanti_filtered_reasons(reasonFiles$reducedCoverage), plot_sqanti_filtered_reasons(reasonFiles$relaxed), labels = c("A","B"))
+
+# downstream expression
+annoExpression <- merge(filteredClassAll$reducedCoverage[,c("isoform","structural_category")], 
+                        expression %>% rownames_to_column(., var = "isoform") %>% .[,c("isoform","total")]) %>% 
+  mutate(status = ifelse(isoform %in% discardedIso, "Discarded","Retained")) 
+```
+
+### Intropolis
+
+```{r}
+discardedIso=setdiff(filteredClass$relaxed$isoform,filteredClass$reducedCoverage$isoform)
+
+setdiff(filteredClass$defaultIntropolis$isoform,filteredClass$reducedCoverage$isoform)
+setdiff(filteredClass$relaxed$isoform,filteredClass$defaultIntropolis$isoform)
+
+# reason for removed
+knitr::kable(reasonFiles$reducedCoverage %>% filter(isoform %in% discardedIso))
+
+setdiff(filteredClass$defaultIntropolis$isoform,filteredClass$default$isoform)
+
+
+
+```
+
+### Expression
+
+Below shown is a figure of the expression (sum of FL reads across all the samples) of the isoforms that were retained and discarded using the default paramaters. Note all the isoforms are retained using the relaxed parameters.
+
+Highlights: 
+- most isoforms removed, with the exception of one genic isoform (`r annoExpression %>% filter(status == "Discarded") %>% .[.$total > 2,"isoform"]`), has 1 read
+- one NNC isoform removed using default paramaters (`r annoExpression %>% filter(status == "Discarded") %>% .[.$structural_category != "genic","isoform"]`), but only detected 1 read
+
+
+```{r expression, echo=FALSE}
+ggplot(annoExpression, aes(x = structural_category, y = total, colour = structural_category)) + geom_jitter() + facet_grid(~status, scales = "free_x") +
+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + 
+labs(x = "Structural Category", y = "FL Reads") + theme(legend.position = "None") 
+```
+
+### Removed NNC
+
+NNC isoform removed has a non-canonical first junction
+
+```{r junction, echo=FALSE}
+DT::datatable(junctions %>% filter(isoform == "PB.20140.8"))
+```
+
+## All {.tabset .tabset-pills}
+
+Number of target genes: `r length(unique(TGenes$gene_id))`  
+Number of detected target genes: `r length(unique(ClassFiles$targ$associated_gene))`  
+Number of target isoforms: `r nrow(ClassFiles$targ)`, (`r round(nrow(ClassFiles$targ)/nrow(ClassFiles$all) * 100,2)`%)   
+Number of non-target isoforms: `r nrow(ClassFiles$nonTarg)`, (`r round(nrow(ClassFiles$nonTarg)/nrow(ClassFiles$all) * 100,2)`%) 
+
+Number of target isoforms, retained: `r nrow(ClassFiles$targIso)`, (`r round(nrow(ClassFiles$targIso)/nrow(ClassFiles$targ) * 100,2)`%)   
+Number of non-target isoforms, retained: `r nrow(ClassFiles$nonTargIso)`, (`r round(nrow(ClassFiles$nonTargIso)/nrow(ClassFiles$nonTarg) * 100,2)`%) 
+
+
+### Filtering {.tabset .tabset-pills}
+
+#### Reasons
+
+Shown are figures of the number of isoforms filtered under default parameters, of isoforms associated with (A) target genes and (B) off-target genes.
+
+Number of isoforms filtered `r length(reasonFilesAll$isoform)` (`r round(length(reasonFilesAll$isoform)/length(ClassFiles$all$isoform)*100,2)`%)   
+
+Number of isoforms filtered due to non-canonical usage: `r length(reasonFilesAll[reasonFilesAll$reasons == "Out all_canonical","isoform"])` (`r round(length(reasonFilesAll[reasonFilesAll$reasons == "Out all_canonical","isoform"])/length(reasonFilesAll$isoform)*100,2)`%)  
+ 
+
+Number of target isoforms filtered due to non-canonical usage: `r length(intersect(ClassFiles$targ$isoform, reasonFilesAll[reasonFilesAll$reasons == "Out all_canonical","isoform"]))` (`r round(length(intersect(ClassFiles$targ$isoform, reasonFilesAll[reasonFilesAll$reasons == "Out all_canonical","isoform"]))/length(ClassFiles$targ$isoform) * 100,2)`%)
+
+Number of non-target isoforms filtered due to non-canonical usage: `r length(intersect(ClassFiles$nonTarg$isoform, reasonFilesAll[reasonFilesAll$reasons == "Out all_canonical","isoform"]))` (`r  round(length(intersect(ClassFiles$nonTarg$isoform, reasonFilesAll[reasonFilesAll$reasons == "Out all_canonical","isoform"]))/length(ClassFiles$nonTarg$isoform) * 100,2)`%)
+
+
+```{r}
+plot_grid(
+   plot_sqanti_filtered_reasons(reasonFilesAll %>% filter(isoform %in% ClassFiles$targArti$isoform)),
+   plot_sqanti_filtered_reasons(reasonFilesAll %>% filter(isoform %in% ClassFiles$nonTargArti$isoform))
+)
+
+```
+
+#### Category
+
+```{r}
+
+ClassFiles$all %>% group_by(filter_result, Target, structural_category) %>% tally %>% mutate(perc = n/nrow(ClassFiles$all)*100) %>%
+  ggplot(., aes(x = structural_category, y = perc, fill = filter_result)) + geom_bar(stat="identity") + 
+  facet_grid(~Target, scales = "free_x") +
+  labs(x = "Structural Category", y = "Percentage of Isoforms")
+
+```
+
+#### Expression {.tabset .tabset-pills}
+
+###### All filtering
+
+```{r}
+merge(ClassFiles$targArti[,c("isoform","structural_category","associated_transcript","associated_gene","gene_name")],
+      expressionAll %>% rownames_to_column(., var = "isoform") %>% select(isoform, total), all.x = T) %>% 
+  group_by(structural_category, total) %>% tally() %>% 
+  ggplot(., aes(log10(n), colour = structural_category)) + geom_density()
+```
+
+###### filtering only by non-canonical junctions
+
+```{r message=FALSE}
+
+ClassFiles$targ %>% filter(isoform %in% intersect(ClassFiles$targ$isoform, reasonFilesAll[reasonFilesAll$reasons == "Out all_canonical","isoform"])) %>% 
+  select("isoform","structural_category","associated_transcript","associated_gene","gene_name") %>%
+  left_join(., expressionAll %>% rownames_to_column(., var = "isoform") %>% select(isoform, total)) %>% 
+  group_by(structural_category, total) %>% tally() %>% 
+  ggplot(., aes(log10(n+1), colour = structural_category)) + geom_density()
+
+```
+
+#### Number of isoforms filtered per gene
+
+Filtered using default paramaters with non-canonical junctions
+
+```{r}
+ClassFiles$targ %>% filter(isoform %in% intersect(ClassFiles$targ$isoform, reasonFilesAll[reasonFilesAll$reasons == "Out all_canonical","isoform"])) %>% group_by(gene_name, structural_category) %>% tally() %>%
+  DT::datatable(.)
+
+
+```
+
+```{r}
+ClassFiles$targIso %>% group_by(gene_name, structural_category) %>% tally() %>%
+  DT::datatable(.)
+
+```

@@ -1,0 +1,70 @@
+---
+title: "Intergenic"
+author: "Szi Kay Leung"
+date: "06/09/2023"
+output:
+  rmdformats::robobook:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+## Aim
+
+With over 40% of transcripts in the whole transciptome dataset annotated as "Intergenic", this rmd aims to investigate further the features of these transcripts.
+
+```{r input}
+suppressMessages(library("data.table"))
+suppressMessages(library("ggplot2"))
+suppressMessages(library("stringr"))
+suppressMessages(library("dplyr"))
+
+LOGEN <- "/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/scripts/LOGen/"
+source(paste0(LOGEN,"transcriptome_stats/read_sq_classification.R"))
+
+input.file <- "/gpfs/mrc0/projects/Research_Project-MRC148213/Rosie/WholeTargeted/SQANTI/WholeTargeted_cleaned_aligned_merged_collapsed_qced_RulesFilter_2reads2samples_classification.txt"
+input.file <- SQANTI_class_preparation(input.file,"nstandard")
+
+```
+
+## Structural categories
+
+SQANTI annotates transcripts using the following categories:  
+`r unique(input.file$structural_category)`.  
+
+Of note, transcripts that are between genes but are antisense to a known gene with potential regulatory functions are classified as "antisense". Conversely, transcripts that are between genes are classified as "intergenic".
+
+## Exploration {.tabset .tabset-fade}
+
+```{r intergenic}
+Intergenic <- input.file[input.file$structural_category == "Intergenic",1:10]
+monoIntergenic <- Intergenic[Intergenic$exons == 1,]
+```
+
+### Mono-exons
+Vast majority of intergenic are mono-exonic: `r nrow(monoIntergenic)` (`r round(nrow(monoIntergenic)/nrow(Intergenic) * 100,2)`%)
+
+```{r intergenic1}
+Intergenic %>% group_by(exons) %>% tally() %>% ggplot(.,aes(x=exons,y=n)) + geom_bar(stat="identity") +
+  labs(x = "Exon number", y = "Number of transcripts")
+```
+
+### Mono-exons by length
+
+Of these mono-exonic intergenic transcripts, two-thirds are less than 1kb: `r nrow(Intergenic[Intergenic$length < 1000,])` (`r round(nrow(Intergenic[Intergenic$length < 1000,])/nrow(monoIntergenic) * 100,2)`%)
+
+```{r intergenic2}
+ggplot(Intergenic,aes(length)) + geom_histogram(bins=40) + labs(x = "Length (bp)", y = "Number of transcripts")
+```
+
+### Distribution aross genome
+
+The distribution of these mono-exonic transcripts are not uniform across the genome, with notably enrichment in chromosome 1 and 2.
+
+```{r}
+Intergenic %>% mutate(chrom = str_remove(chrom,"chr")) %>% group_by(chrom) %>% tally() %>% ggplot(.,aes(x=reorder(chrom,-n),y=n)) + geom_bar(stat="identity") + labs(x = "Chromosome", y = "Number of transcripts")
+```
+
