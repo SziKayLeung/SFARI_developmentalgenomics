@@ -9,8 +9,8 @@ library(stringr)
 source("/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARIdevelopmentalgenomics/12_deseq2/run_DESeq2.R")
 
 #Phenotype file
-phenotype=read.csv("/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/RBFetal/00_metadata/WholeTargetedphenotype_fixedsex.csv")
-phenotype=phenotype[which(startsWith(phenotype$sample, 'Whole')),]
+phenotype=read.csv("/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/0_metadata/WholeTargetedphenotype_fixedsex.csv")
+phenotype=phenotype[grepl("Whole", phenotype$sample),]
 #phenotype=phenotype[which((phenotype$group=='Prenatal'&phenotype$age>30)==F & (phenotype$group=='Postnatal'&phenotype$age<2)==F),]
 #phenotype[which(phenotype$group=='Prenatal'),]
 #phenotype[which(phenotype$age < 10),]
@@ -19,7 +19,7 @@ phenotype=phenotype[which(startsWith(phenotype$sample, 'Whole')),]
 
 
 #Expression file (demux csv - make sure first column is isoform; all samples are there and that the sample names match up with those in the phenotype file)
-expression=fread("/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARIdevelopmentalgenomics/12_deseq2/WholeTargeted_demux.csv",data.table=F)
+expression=fread("/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/10_deseq/WholeTargeted_demux.csv",data.table=F)
 
 #selecting the samples (whole in this case)
 expression = expression[,c(1,which(colnames(expression)%in%phenotype$sample))]
@@ -30,7 +30,7 @@ expression = expression[,c(1,which(colnames(expression)%in%phenotype$sample))]
 #Filter expression file for targeted genes (but not filtered on abundance)
 #input.class.files="/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/RBFetal/1_SQANTI3/SQANTI3_collapse_options_RulesFilter_result_classification.targetgenes_counts.txt"
 
-input.class.files="/gpfs/mrc0/projects/Research_Project-MRC148213/Rosie/WholeTargeted/SQANTI/unfiltered/WholeTargeted_cleaned_aligned_merged_collapsed_qced_RulesFilter_classification.txt"
+input.class.files="/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/6_sqanti/sqanti/WholeTargeted_cleaned_aligned_merged_collapsed_qced_RulesFilter_classification_Whole_2reads2samples_monomultirem.txt"
 
 class.files=fread(input.class.files,sep="\t",header=T,data.table=F)
 #print(head(class.files))
@@ -52,15 +52,15 @@ select(-isoform) %>% summarize_all(.funs = list(sum))
 
 #nThread=16 helps with big files
 #print(head(expression))
-#phenotype$sex <- as.factor(phenotype$sex)
+phenotype$sex <- as.factor(phenotype$sex)
 phenotype$group <- as.factor(phenotype$group)
 #phenotype$group <- factor(phenotype$group, levels=c("Early", "Mid...)
 
 #phenotype$group <- relevel(phenotype$group,"NeuN")
-#phenotype$sex <- relevel(phenotype$sex,"M")
+phenotype$sex <- relevel(phenotype$sex,"M")
 
 phenotype$group <- relevel(phenotype$group,"Postnatal")
-#phenotype$sex <- relevel(phenotype$sex,"M")
+phenotype$sex <- relevel(phenotype$sex,"M")
 
 str(phenotype$group)
 #str(phenotype$sex)
@@ -68,7 +68,7 @@ str(phenotype$group)
 col_match <- intersect(phenotype$sample, colnames(expression))
 cat("Number of samples:", length(col_match),"\n")
 
-
+expression <- as.data.frame(expression)
 #expression <- expression %>% tibble::column_to_rownames("isoform")
 rownames(expression)<-expression$associated_gene
 phenotype <- phenotype %>% filter(sample %in% col_match) 
@@ -129,7 +129,7 @@ fwrite(deseq_output$norm[which(deseq_output$norm$isoform%in%deseq_output$res_Wal
 ##phenotype$group <- as.factor(phenotype$group)
 ##phenotype$group <- relevel(phenotype$group,"NeuN")
 
-deseq_output$anno_res <-  right_join(deseq_output$res_Wald,class.files[,c("isoform","associated_gene","associated_transcript","structural_category","subcategory")], by = "associated_gene")
+deseq_output$anno_res <-  right_join(deseq_output$res_Wald,class.files[,c("associated_gene""structural_category","subcategory")], by = "associated_gene")
 
 fwrite(deseq_output$anno_res,file="anno_whole_gene_group_removinglateprenatal.csv", quote=F)
 
