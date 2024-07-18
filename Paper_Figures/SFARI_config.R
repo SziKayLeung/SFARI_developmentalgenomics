@@ -32,6 +32,7 @@ dirnames <- list(
   output = paste0(root_sfari,"/0_output/"),
   utils = paste0(root_sfari,"/0_utils/"),
   protein = paste0(root_sfari, "/8_longReadProteogenomics/longReadProteogenomics"),
+  massspec= paste0(root_sfari, "/13_massSpec"),
   
   DGE = paste0(root_sfari, "10_deseq//1_DGE/"), 
   DTE = paste0(root_sfari, "10_deseq//2_DTE/"),
@@ -40,16 +41,21 @@ dirnames <- list(
   ficle = "/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/15_ficle/TargetGenes",
   
   # Leung et al. 2021 PacBio HumanCTX dataset
-  humanPacBio = "/lustre/projects/Research_Project-MRC148213/lsl693/PacBioPaper/SQANTI2/HumanCTX"
+  humanPacBio = "/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/17_longReadDatasetComparisons/Leung2021/HumanCTX"
 )
 
 TargetGene = read.table(paste0(root_sfari, "0_metadata/Complete_TargetGenes_TargetedSequencing.txt"))[["V1"]]
+ProteinCodingGenes = read.table(paste0(dirnames$utils, "WholeProteinCodingGenes.txt"))[["V1"]]
+GWAS = c("ACTR1B", "ATP2A2", "BCL11B", "BCL2L12", "BNIP3L", "C12orf43", "CACNA1C", "CALN1", "CISD2", "CLCN3", "CNTN4", "CSMD1", "CTD-2008L17.2", "CUL9", "DCC", "DLGAP2", "DPYD", "EMX1", "ENOX1", "EPN2", "EYS", "FURIN", "GABBR2", "GPM6A", "GPR98", "GRAMD1B", "GRIN2A", "GRM1", "IL1RAPL1", "IMMP2L", "IRF3", "KIAA1549", "KLF6", "LINC00320", "LINC01088", "LRRC4B", "MAD1L1", "MAN2A1", "MAPT", "MSI2", "NAB2", "NEBL", "NEGR1", "NLGN4X", "NRIP1", "NXPH1", "OPCML", "PAK6", "PCGF3", "PCNXL3", "PDE4B", "PJA1", "PLCH2", "PTPRD", "R3HDM2", "RP11-399D6.2", "RP11-507B12.2", "SGCD", "SLC39A8", "SLC4A10", "SNAP91", "SP4", "THAP8", "TMTC1", "TRPC4", "TSNARE1", "TXNRD1", "WSCD2", "ZNF804A", "ZNF823", "ZNF835")
+
 # list of SZ and ASD genes in targeted panel 
 #TargetGeneSZASD = read.csv(paste0(root_sfari,"0_metadata/TargetGeneByDisease.csv"))
 
 
 ## ------------- Phenotype files -------------------
 phenotype <- fread(paste0(root_sfari, "0_metadata/WholeTargetedphenotype_fixedsex.csv"),data.table=F, stringsAsFactors=F) %>% mutate(time = age)
+phenotype <- phenotype %>% mutate(type = ifelse(grepl("Targeted",sample),"Targeted","Whole"),
+                     sampleID = gsub("^Targeted", "", sample)) %>% mutate(sampleID = gsub("^Whole","", sampleID))
 phenotype <- phenotype %>% mutate(group = factor(group, levels = c("Prenatal","Postnatal")), 
                                   col = paste0(sample,"_",group),
                                   sex = factor(sex, levels = c("M","F"))) 
@@ -57,6 +63,9 @@ femaleWhole <- phenotype[phenotype$sex == "F" & grepl("Whole",phenotype$sample),
 maleWhole <- phenotype[phenotype$sex == "M" & grepl("Whole",phenotype$sample),][["sample"]]
 postWhole <- phenotype[phenotype$group == "Postnatal" & grepl("Whole",phenotype$sample),][["sample"]]
 preWhole <- phenotype[phenotype$group == "Prenatal" & grepl("Whole",phenotype$sample),][["sample"]]
+matchedsamples <- intersect(phenotype[phenotype$type == "Whole","sampleID"],phenotype[phenotype$type == "Targeted","sampleID"])
+wholematchedsamples <- phenotype[phenotype$sampleID %in% matchedsamples & phenotype$type == "Whole","sample"]
+targetedmatchedsamples <- phenotype[phenotype$sampleID %in% matchedsamples & phenotype$type == "Targeted","sample"]
 
 
 ## -------------- Final classification files ------------- 
@@ -68,6 +77,13 @@ class.files$protein_filtered = fread(paste0(dirnames$protein,"/7_classified_prot
 class.files$glob_targ_SQ_counts = fread(paste0(dirnames$wholetarg_SQ,"WholeTargeted_cleaned_aligned_merged_collapsed_qced_RulesFilter_2reads2samples_classification_noMonoIntergenic_counts.txt"), data.table = F)
 class.files$glob_targ_SQ_counts <- class.files$glob_targ_SQ_counts %>% filter(isoform %in% class.files$glob_targ_SQ$isoform)
 
+# annotated genic features
+annoGenesStats <- list(
+  novelTrans = class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$associated_transcript == "novel",],
+  annoTrans = class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$associated_transcript != "novel",],
+  NIC = class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$structural_category == "NIC",],
+  NNC = class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$structural_category == "NNC",]
+)
 
 # subset by number of FL reads
 femaleReads <- class.files$glob_SQ %>% select(all_of(femaleWhole)) %>% apply(., 1, sum)
@@ -81,8 +97,8 @@ class.files$glob_SQ$DevStatus <- apply(class.files$glob_SQ, 1, function(x) ident
 class.files$glob_SQ_annoGene <- class.files$glob_SQ %>% filter(!grepl("novelGene", associated_gene))
 class.files$glob_SQ_annoGene <- class.files$glob_SQ_annoGene %>% mutate(novelTranscript = ifelse(associated_transcript == "novel","Novel","Known"))
 
-wholesamples <- colnames(class.files$glob_targ_SQ)[grepl("Whole", colnames(class.files$glob_targ_SQ))]
-targetedsamples <- colnames(class.files$glob_targ_SQ)[grepl("Targeted", colnames(class.files$glob_targ_SQ))]
+wholesamples <- colnames(class.files$glob_targ_SQ_counts)[grepl("Whole", colnames(class.files$glob_targ_SQ_counts))]
+targetedsamples <- colnames(class.files$glob_targ_SQ_counts)[grepl("Targeted", colnames(class.files$glob_targ_SQ_counts))]
 matchedsamples <- intersect(gsub("^.*?Whole","",wholesamples),gsub("^.*?Targeted","",targetedsamples))
 targetedmatchedsamples <- paste0("Targeted",matchedsamples)
 wholematchedsamples <- paste0("Whole",matchedsamples)
@@ -238,3 +254,18 @@ unique(setdiff(FICLENotProcessedGenes,FICLEProcessedGenes))
 
 FICLE_class_final_exp <- merge(FICLE_class_final[,c("isoform","A5A3","ES","IR","NE_All")], class.files$glob_SQ[,c("isoform","preReads","postReads")], by = "isoform")
 FICLE_class_final_exp <- merge(FICLE_class_final_exp, normWholeIsoform, by = "isoform", all.x = T)
+
+
+## ----- selected disease genes ------
+monoAllelicDDP = c('ADNP','ANK2','ANKRD11','ARID1B','ASH1L','AUTS2','BCL11A','BCL11B','CACNA1C','CACNA1G','CACNA1H','CDH1','CDH2','CDK13','CHD2','CHD8','CLCN3','CNOT1','DLG4','DMD','DYRK1A','EIF2S3','EP300','FMR1','FOXP1','FOXP2','GABBR2','GATA3','GATA4','GATA6','GLMN','GRIA3','GRIK2','GRIN1','GRIN2A','GRIN2B','H1-4','HNF1B','HNF4A','IL1RAPL1','ITPR1','KAT6B','KDM6A','KDM6B','KIRREL3','KMT2D','LMNA','MAGI2','MECP2','MED13L','MEIS2','MNX1','NF1','NFIA','NFIB','NLGN3','NLGN4X','NRXN1','OPA1','PAX6','PBX1','POGZ','POLA1','PTEN','QRICH1','RANBP2','RBFOX1','RPL10','SCN1A','SCN2A','SCN8A','SET','SETD1A','SHANK3','SHH','SLC9A9','SMARCE1','SON','SOX9','SRRM2','STAG1','STXBP1','SYNGAP1','SYP','TBL1XR1','TBR1','TCF4','TRIO','TSC1','TSC2','UBE3A','USP7','WFS1','ZBTB20','ZEB2','ZMYM2')
+
+biallelicDDP = c('ASPM','CACNA1G','CHL1','CISD2','CLCN3','CNTNAP2','CTNNA2','DCC','EIF2AK3','EOMES','GLIS3','GPC6','GRIK2','GRIN1','GRIN2A','GRM1','HADH','HERC1','HPSE2','ITPR1','KDM6B','KIAA1109','LMNA','LRBA','MCPH1','NRXN1','NTNG1','ONECUT1','PDIA6','PDX1','PEX16','PPP1R15B','PTF1A','QARS1','RELN','RFX6','SLC39A8','SLF2','TRMT10A','TSPEAR','UBE3B','VPS13B','WFS1','WWOX','ZBTB16','ZFP57')
+
+GWAS = c("ACTR1B", "ATP2A2", "BCL11B", "BCL2L12", "BNIP3L", "C12orf43", "CACNA1C", "CALN1", "CISD2", "CLCN3", "CNTN4", "CSMD1", "CTD-2008L17.2", "CUL9", "DCC", "DLGAP2", "DPYD", "EMX1", "ENOX1", "EPN2", "EYS", "FURIN", "GABBR2", "GPM6A", "GPR98", "GRAMD1B", "GRIN2A", "GRM1", "IL1RAPL1", "IMMP2L", "IRF3", "KIAA1549", "KLF6", "LINC00320", "LINC01088", "LRRC4B", "MAD1L1", "MAN2A1", "MAPT", "MSI2", "NAB2", "NEBL", "NEGR1", "NLGN4X", "NRIP1", "NXPH1", "OPCML", "PAK6", "PCGF3", "PCNXL3", "PDE4B", "PJA1", "PLCH2", "PTPRD", "R3HDM2", "RP11-399D6.2", "RP11-507B12.2", "SGCD", "SLC39A8", "SLC4A10", "SNAP91", "SP4", "THAP8", "TMTC1", "TRPC4", "TSNARE1", "TXNRD1", "WSCD2", "ZNF804A", "ZNF823", "ZNF835")
+
+SFARI = c('ADNP','AGAP1','ANK2','ANKRD11','ARID1B','ASH1L','ASPM','AUTS2','BCL11A','CACNA1C','CACNA1G','CACNA1H','CADPS','CADPS2','CD38','CDH13','CDH2','CDK13','CELF6','CHD2','CHD8','CLTCL1','CNOT1','CNTN4','CNTN6','CNTNAP2','CSMD1','CTNNA2','CYFIP1','DAGLA','DCC','DISC1','DLG4','DLGAP2','DMD','DPYD','DRD2','DRD3','DYRK1A','ELP4','EP300','FBXO40','FMR1','FOXP1','FOXP2','GABBR2','GPC6','GRIA3','GRIK2','GRIK3','GRIN1','GRIN2A','GRIN2B','H1-4','HERC1','IL1RAPL1','IMMP2L','ITPR1','KAT6B','KATNAL2','KCTD13','KDM6A','KDM6B','KIRREL3','LRBA','MAPT','MCM4','MCPH1','MECP2','MED13L','MEIS2','MET','NEGR1','NF1','NFIA','NFIB','NKX2-2','NLGN1','NLGN2','NLGN3','NLGN4X','NR3C2','NRXN1','NTNG1','NXPH1','OXTR','PARD3B','PAX6','PBX1','PCDH10','PCDH9','PHB','PJA1','POGZ','PRKN','PTEN','PTPRT','QRICH1','RBFOX1','RELN','RPL10','RUNX1T1','SCN1A','SCN2A','SCN8A','SET','SETD1A','SEZ6L2','SHANK3','SLC4A10','SLC9A9','SON','SRRM2','STAG1','STXBP1','SYNGAP1','SYP','TBL1XR1','TBR1','TCF4','TRIO','TSC1','TSC2','TSHZ3','UBE3A','USP7','VPS13B','WWOX','ZBTB16','ZBTB20','ZMYM2','ZNF18','ZNF804A')
+
+schemaGenes <- read.table("/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/0_metadata/schema_genes.txt", col.names = c("Gene"))
+
+selectedTargetGenes <- unique(c(as.character(monoAllelicDDP), as.character(SFARI), as.character(schemaGenes$Gene), as.character(biallelicDDP), GWAS))
+length(selectedTargetGenes)

@@ -109,6 +109,7 @@ WholeDESeqGeneSig <- list(
 # Expression
 Exp <- list(
   whole_group = vroom(paste0(dirnames$DTE,"DESeq2_whole_development_normSig.csv"),delim = ","),
+  whole_sex = vroom(paste0(dirnames$DTE,"DESeq2_whole_sex_normSig.csv"),delim = ","),
   ns1 = read.csv(paste0(dirnames$DTE,"ONTX_6127_19264_whole_normAll.csv"), header = F),
   ns2 = read.csv(paste0(dirnames$DTE,"ONTX_6127_19264_whole_normAll.csv"), header = F)
 )
