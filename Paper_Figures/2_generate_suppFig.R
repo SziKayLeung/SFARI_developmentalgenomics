@@ -18,9 +18,10 @@ pAge <- ages(phenotype$WholeTargeted)
 no_of_isoforms_sample(class.files$targ_SQ)
 
 # comparison of whole vs targeted datasets across matched samples
-comp = whole_vs_targeted_plots(classfiles=class.files$glob_targ_SQ, wholeSamples=wholematchedsamples, targetedSamples=targetedmatchedsamples, targetGene=TargetGene)
+comp = whole_vs_targeted_plots(classfiles=class.files$glob_targ_SQ_counts, wholeSamples=wholematchedsamples, targetedSamples=targetedmatchedsamples, targetGene=selectedTargetGenes)
 pdf(paste0(output_dir,"/UniqueIsoformsWholeDataset.pdf"), width = 10, height = 30)
-comp[[7]]
+comp[[1]]
+plot_grid(comp[[3]])
 dev.off()
 
 plot_grid(plotlist = comp[1:6], labels = c("A","B","C","D","E","F"))
@@ -100,9 +101,6 @@ for(t in c("ONTX_7115_8288","ONTX_7115_7279","ONTX_7115_8547")){
 }
 
 ## --- Comparison between PacBio and fetal dataset 
-
-DetectedBoth <- unique(gfftmap[gfftmap$class_code == "=","qry_id"])
-Unique <- setdiff(unique(gfftmap[gfftmap$class_code != "=","qry_id"]),unique(gfftmap[gfftmap$class_code == "=","qry_id"]))
 
 PacBioWhole <- rbind(
   humanCTX[humanCTX$isoform %in% DetectedBoth,c("structural_category","totalFL","exons","length")] %>% mutate(Dataset = "Detected"),

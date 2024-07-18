@@ -149,15 +149,7 @@ Fig4Targeted <- list(
 
 ## ------ DTE across sex and development ------ 
 
-WholeDTEsexAge <- lapply(intersect(WholeDTE$sex$isoform, WholeDTE$age$isoform), function(x) plot_trans_exp_lifetime(x,class.files$glob_SQ,Exp$whole_group,sex=TRUE))
-plot_grid(plotlist = WholeDTEsexAge)
-WholeDTEsexAge2 <- lapply(intersect(WholeDTE$sex$isoform, WholeDTE$age$isoform), function(x) plot_trans_exp_individual(x,class.files$glob_SQ,Exp$whole_sex,"sex") + scale_fill_manual(values = c(tCol,tCol)))
-
-
-WholeDTEsexAge3 <- lapply(1:length(WholeDTEsexAge), function(x) plot_grid(WholeDTEsexAge[[x]],WholeDTEsexAge2[[x]], rel_widths = c(0.7,0.3)))
-plot_grid(plotlist = WholeDTEsexAge)
-plot_grid(plotlist = WholeDTEsexAge2)
-plot_grid(plotlist = WholeDTEsexAge3)
+WholeDTEsexAge <- lapply(intersect(WholeDTE$sex$isoform, WholeDTE$age$isoform), function(x) plot_trans_exp_individual(x,class.files$glob_SQ,Exp$whole_group,"both", sqrt=TRUE))
 
 
 ## ------ Output ------ 
@@ -243,6 +235,10 @@ pdf(paste0(output_dir,"/TargetedDescriptive.pdf"), width = 10, height = 10)
 fig2Targeted$numIsogene
 fig2Targeted$numIso
 fig2Targeted$numIsoCate
+dev.off()
+
+pdf("DTESexDevelopment_Supp.pdf", width = 12, height=8)
+plot_grid(plotlist = WholeDTEsexAge)
 dev.off()
 
 pdf("DevelopmentVolcano.pdf", width = 8, height=6)
