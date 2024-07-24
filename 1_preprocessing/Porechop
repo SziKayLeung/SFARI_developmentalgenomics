@@ -1,0 +1,40 @@
+#!/bin/bash
+#SBATCH --export=ALL # export all environment variables to the batch job
+#SBATCH -D .
+#SBATCH -p mrcq # submit to the parallel queue
+#SBATCH --time=400:00:00 # maximum walltime for the job e.g. 01:00:00
+#SBATCH -A Research_Project-MRC148213 # research project to submit under
+#SBATCH --nodes=1 # specify number of nodes
+#SBATCH --ntasks-per-node=12 # specify number of processors per node
+#SBATCH --mem=200G # specify bytes of memory to reserve
+#SBATCH --mail-type=END # send email at job completion
+#SBATCH --mail-user=rb520@exeter.ac.uk # email address
+#SBATCH --job-name=Porechop_trial
+#SBATCH --array=0-20
+
+#To run an array this either needs to be specified in the job script above or on the command line
+
+#This is the first step of targeted ONT sequencing analysis. The fastq_pass files are generated after Guppy basecalling from the MinKnow software.
+#Use Porechop (https://github.com/rrwick/Porechop) to trim adaptors and demultiplex barcodes from targeted ONT sequencing 
+#Porechop requires an input of fastq file(s) and then an output destination
+
+source "/lustre/home/rb520/miniconda3/etc/profile.d/conda.sh"
+conda activate porechop
+
+
+PROJECT="PATH/fastq_pass/"
+
+cd ${PROJECT}
+
+output_folder=`printf "${output_base_folder}%02d\n" $SLURM_ARRAY_TASK_ID`
+
+mkdir -p Porechop_${output_folder}
+
+cat `ls -1 /lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/Targeted_transcriptome/10915_batch2/Targeted_batch2_QC/20230112_1228_2G_PAG70820_027f2fda/fastq_pass/*.fastq.gz | awk "NR%20==${SLURM_ARRAY_TASK_ID}"` >> Porechop_${output_folder}/input.fastq.gz
+#There will be an error that Porechop_20 input file cannot be found
+
+porechop --input Porechop_${output_folder}/input.fastq.gz --threads 24 --barcode_dir Porechop_${output_folder}
+
+#If you are able to combine all your files into one fastq file or you are just doing a check of your barcodes then you don't need to use a array 
+#porechop --input "PATH/combined.fq" --threads 24 --barcode_dir "PATH/combined"
+

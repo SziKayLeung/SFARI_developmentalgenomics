@@ -1,0 +1,22 @@
+#!/bin/bash
+#SBATCH --export=ALL # export all environment variables to the batch job
+#SBATCH -D .
+#SBATCH -p mrcq # submit to the parallel queue
+#SBATCH --time=05:00:00 # maximum walltime for the job e.g. 01:00:00
+#SBATCH -A Research_Project-MRC148213 # research project to submit under
+#SBATCH --nodes=1 # specify number of nodes
+#SBATCH --ntasks-per-node=16 # specify number of processors per node
+#SBATCH --mem=100G # specify bytes of memory to reserve
+#SBATCH --mail-type=END # send email at job completion
+#SBATCH --mail-user=rb520@exeter.ac.uk # email address
+
+#Pychopper is used on whole ONT transcriptome data (not targeted - use Porechop in that instance). 
+#It is a tool to identify, orient and trim full-length Nanopore cDNA reads. The tool is also able to rescue fused reads.
+#https://github.com/epi2me-labs/pychopper
+#Before running this tool on the demultiplexed reads, it is important to concatenate the fastq.gz files for each barcode, respectively."/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/Gorilla/P0112_20231117_RB/Gorilla/20231117_1915_2G_PAS59504_8481076b/fastq_pass/barcode01/PAS59504_pass_barcode01_8481076b_95d34aff_0.fastq.gz"
+
+source "/lustre/home/rb520/miniconda3/etc/profile.d/conda.sh"
+conda activate nano
+
+pychopper -r report.pdf input.fq output.fq
+
