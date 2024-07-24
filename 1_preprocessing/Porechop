@@ -30,7 +30,8 @@ output_folder=`printf "${output_base_folder}%02d\n" $SLURM_ARRAY_TASK_ID`
 
 mkdir -p Porechop_${output_folder}
 
-cat `ls -1 /lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/Targeted_transcriptome/10915_batch2/Targeted_batch2_QC/20230112_1228_2G_PAG70820_027f2fda/fastq_pass/*.fastq.gz | awk "NR%20==${SLURM_ARRAY_TASK_ID}"` >> Porechop_${output_folder}/input.fastq.gz
+#NR%20 needs to equal the array number in SBATCH
+cat `ls -1 /lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/Targeted_transcriptome/10915_batch2/Targeted_batch2_QC/20230112_1228_2G_PAG70820_027f2fda/fastq_pass/*.fastq.gz | awk "NR%20==${SLURM_ARRAY_TASK_ID}"` > Porechop_${output_folder}/input.fastq.gz
 #There will be an error that Porechop_20 input file cannot be found
 
 porechop --input Porechop_${output_folder}/input.fastq.gz --threads 24 --barcode_dir Porechop_${output_folder}
