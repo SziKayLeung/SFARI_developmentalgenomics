@@ -126,6 +126,12 @@ message("% of all postnatal detected: ", length(commonDevTranscripts)/length(cla
 message("Number of transcripts unique to postnatal:", length(setdiff(class.files$glob_SQ_annoGene_postnatal$isoform, class.files$glob_SQ_annoGene_prenatal$isoform)))
 message("Number of transcripts unique to prenatal:", length(setdiff(class.files$glob_SQ_annoGene_prenatal$isoform, class.files$glob_SQ_annoGene_postnatal$isoform)))
 
+message("Number of transcripts unique to postnatal with >50 reads:", nrow(class.files$glob_SQ_annoGene_postnatal[class.files$glob_SQ_annoGene_postnatal$DevStatus == "postnatal" & class.files$glob_SQ_annoGene_postnatal$postReads >= 50,]))
+
+message("Number of transcripts unique to prenatal with >= 50 reads:", nrow(class.files$glob_SQ_annoGene_prenatal[class.files$glob_SQ_annoGene_prenatal$DevStatus == "prenatal" & class.files$glob_SQ_annoGene_prenatal$preReads >= 50,]))
+
+
+
 totalTranscripts = unique(c(class.files$glob_SQ_annoGene_postnatal$isoform,class.files$glob_SQ_annoGene_prenatal$isoform,commonDevTranscripts))
 length(totalTranscripts) == nrow(class.files$glob_SQ_annoGene)
 message("% of unique postnatal to all: ",
@@ -329,7 +335,7 @@ peptidesFiltered <- peptidesFiltered %>% distinct()
 message("Total number of peptides:", length(unique(peptidesFiltered$`Base Sequence`)))
 #do not use nrows for peptide counts #peptidesFiltered[peptidesFiltered$`Base Sequence` == "AADAEAEVASLNR",]
 
-# determine number of transcripts validated in terms of splicce junction (split protein accession column)
+# determine number of transcripts validated in terms of splice junction (split protein accession column)
 accession_split <- lapply(peptidesFiltered[["Protein Accession"]], function(x) strsplit(x, "|", fixed = TRUE)[[1]])
 accession_split <- unique(unlist(accession_split))
 
@@ -356,3 +362,28 @@ novelPeptidesTranscripts <- novelPeptides[!novelPeptides$structural_category %in
 write.table(novelPeptidesTranscripts, paste0(dirnames$output,"novelTranscriptsPeptides.txt"), sep = "\t", quote = F)
 
 
+## ---------- bambu ----------
+
+message("Number of total transcripts: ", nrow(class.files$bambu))
+message("Number of all genes: ", length(unique((class.files$bambu$associated_gene))))
+message("Number of annotated known genes: ", length(unique((class.files$bambu_annoGene$associated_gene))))
+message("Number of total transcripts to known genes: ", nrow(class.files$bambu_annoGene))
+message("Number of novel transcripts to annotated known genes: ", nrow(bambuAnnoGeneStats$novelTrans), "( ", 
+        round(nrow(bambuAnnoGeneStats$novelTrans)/nrow(class.files$bambu_annoGene) * 100,2), "%)")
+
+message("Mean length (sd): ", round(mean(class.files$bambu_annoGene$length),2)," (", round(sd(class.files$bambu_annoGene$length),2),")")
+message("Min - max length: ", round(min(class.files$bambu_annoGene$length),2)," - ", round(max(class.files$bambu_annoGene$length),2),"")
+message("Mean number of exons, (sd): ", round(mean(class.files$bambu_annoGene$exons),2)," (", round(sd(class.files$bambu_annoGene$exons),2),")")
+
+
+# most isomorphic gene
+message("Number of transcripts detected to HNRNPK: ", nrow(class.files$bambu_annoGene[class.files$bambu_annoGene$associated_gene == "HNRNPK",]))
+
+# most isoformic novel transcript
+class.files$glob_targ_SQ_counts[class.files$glob_targ_SQ_counts$associated_transcript == "novel",] %>% arrange(-nreads) %>% select(isoform, structural_category, exons, associated_gene, associated_transcript, nreads, nsamples)
+class.files$bambu[class.files$bambu$associated_gene == "RPS27A",]
+
+novelPeptidesTranscripts <- read.table(paste0(dirnames$output,"novelTranscriptsPeptides.txt"))
+class.files$glob_targ_SQ_counts[class.files$glob_targ_SQ_counts$isoform %in% novelPeptidesTranscripts$isoform,] %>% arrange(-nreads) 
+class.files$bambu[class.files$bambu$associated_gene == "HMOX2",]
+  

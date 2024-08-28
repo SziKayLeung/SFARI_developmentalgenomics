@@ -10,6 +10,7 @@ suppressMessages(library("dplyr"))
 suppressMessages(library("vroom"))
 
 LOGEN <- "/lustre/projects/Research_Project-MRC148213/lsl693/scripts/LOGen/"
+LOGEN_ROOT <- "/lustre/projects/Research_Project-MRC148213/lsl693/scripts/LOGen/"
 source(paste0(LOGEN,"transcriptome_stats/read_sq_classification.R"))
 source(paste0(LOGEN,"transcriptome_stats/sample_sensitivity.R"))
 source(paste0(LOGEN,"compare_datasets/dataset_identifer.R"))
@@ -77,6 +78,12 @@ class.files$protein_filtered = fread(paste0(dirnames$protein,"/7_classified_prot
 class.files$glob_targ_SQ_counts = fread(paste0(dirnames$wholetarg_SQ,"WholeTargeted_cleaned_aligned_merged_collapsed_qced_RulesFilter_2reads2samples_classification_noMonoIntergenic_counts.txt"), data.table = F)
 class.files$glob_targ_SQ_counts <- class.files$glob_targ_SQ_counts %>% filter(isoform %in% class.files$glob_targ_SQ$isoform)
 
+# bambu collapsed from pbmm2 aligned files (whole + targeted)
+bambu <- "/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/16_bambu/sqanti/WholeTargeted_RulesFilter_result_classification.txt"
+class.files$bambu <- SQANTI_class_preparation(bambu,"nstandard")
+class.files$bambu_annoGene <- class.files$bambu %>% filter(!grepl("novelGene", associated_gene))
+class.files$bambu_annoGene <- class.files$bambu_annoGene  %>% mutate(novelTranscript = ifelse(associated_transcript == "novel","Novel","Known"))
+
 # annotated genic features
 annoGenesStats <- list(
   novelTrans = class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$associated_transcript == "novel",],
@@ -84,6 +91,14 @@ annoGenesStats <- list(
   NIC = class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$structural_category == "NIC",],
   NNC = class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$structural_category == "NNC",]
 )
+
+bambuAnnoGeneStats <- list(
+  novelTrans = class.files$bambu_annoGene[class.files$bambu_annoGene$associated_transcript == "novel",],
+  annoTrans = class.files$bambu_annoGene[class.files$bambu_annoGene$associated_transcript != "novel",],
+  NIC = class.files$bambu_annoGene[class.files$bambu_annoGene$structural_category == "NIC",],
+  NNC = class.files$bambu_annoGene[class.files$bambu_annoGene$structural_category == "NNC",]
+)
+
 
 # subset by number of FL reads
 femaleReads <- class.files$glob_SQ %>% select(all_of(femaleWhole)) %>% apply(., 1, sum)

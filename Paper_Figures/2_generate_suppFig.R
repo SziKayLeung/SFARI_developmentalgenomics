@@ -6,7 +6,7 @@
 ## ---------------------------------
 
 
-SC_ROOT = "/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/scripts/SFARI_developmentalgenomics"
+SC_ROOT = "/lustre/projects/Research_Project-MRC148213/lsl693/scripts/SFARI_developmentalgenomics"
 source(paste0(SC_ROOT,"/Paper_Figures/SFARI_config.R"))
 source(paste0(SC_ROOT,"/Paper_Figures/0_source_functions.R"))
 output_dir = paste0(SC_ROOT,"/Paper_Figures/outputFigs")
@@ -129,3 +129,21 @@ dev.off()
 pdf(paste0(output_dir,"/targeted_schema.pdf"), width = 10, height = 10)
 num_disease_focus_DTE(TargetedDESeq2Sig$age,disease_list$SCHEMA$Gene,"SCHEMA")
 dev.off()
+
+tallyReads <- class.files$glob_targ_SQ_counts %>% filter(!grepl("novel", associated_gene)) %>% 
+  group_by(nreads, nsamples) %>% 
+  tally()
+tallyReads <- as.data.frame(tallyReads) %>% mutate(perc = n/sum(n) * 100)
+
+
+tallyReads <- tallyReads %>%
+  arrange(nreads, nsamples) %>%  # Sort the data (optional, depending on the desired order)
+  mutate(cum_sum = cumsum(n),
+         cum_percentage = cum_sum / sum(n) * 100)
+
+tallyReads <- tallyReads %>% mutate(label = ifelse(cum_percentage < 70, paste0(nreads, "reads,", nsamples, "samples"), ""))
+ggplot(tallyReads, aes(x = nreads, y = cum_percentage, colour = factor(nsamples), label = label)) + geom_point() +
+  scale_x_continuous(breaks = seq(min(tallyReads$nreads), max(tallyReads$nreads), by = 50000)) +
+  geom_label_repel(show.legend = FALSE) +
+  theme_classic() +
+  labs(x = "Number of reads", y = "Cumulative percentage of transcripts annotated to known genes", colour = "Number of samples")

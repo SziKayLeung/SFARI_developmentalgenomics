@@ -108,3 +108,8 @@ for SLURM_ARRAY_TASK_ID in {0..34}; do
   grep -f SFARI.pacbio_novel_peptides_id.tsv ${SFARIgtf} >  SFARI.pacbio_novel_peptides.gtf
 
 done
+
+cd /lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/13_massSpec
+sfaripeptides=$(find -L . -name "Sfari_peptides.bed12")
+cat $sfaripeptides > merged_sfari_peptides.bed12
+grep VIM merged_sfari_peptides.bed12 > VIMmerged_sfari_peptides.bed12
