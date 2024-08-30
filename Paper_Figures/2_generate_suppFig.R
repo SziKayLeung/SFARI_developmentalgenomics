@@ -147,3 +147,25 @@ ggplot(tallyReads, aes(x = nreads, y = cum_percentage, colour = factor(nsamples)
   geom_label_repel(show.legend = FALSE) +
   theme_classic() +
   labs(x = "Number of reads", y = "Cumulative percentage of transcripts annotated to known genes", colour = "Number of samples")
+
+
+## ----- correlation of RIN with number of transcripts -------
+
+datWholeCounts <- class.files$glob_targ_SQ_counts %>% select(contains("Whole"))
+## to check below command about colSums
+#length(datWholeCounts[,"Whole11831"][datWholeCounts[,"Whole11831"] != 0])
+#length(datWholeCounts[,"Whole11831"][datWholeCounts[,"Whole11831"] == 0])
+#nrow(datWholeCounts) == length(datWholeCounts[,"Whole11831"][datWholeCounts[,"Whole11831"] != 0]) + length(datWholeCounts[,"Whole11831"][datWholeCounts[,"Whole11831"] == 0])
+
+# tally the occurences in each column, not equal to 0 i.e. a read detected for transcript, and therefore transcript detected in dataset
+TranscriptPerSample <- colSums(datWholeCounts  != 0) %>%  reshape2::melt(., value.name = "counts") %>% tibble::rownames_to_column(., var = "ID")
+
+# merge with manifest to get the RIN numbers
+TranscriptPerSample <- merge(TranscriptPerSample, manifest, by = "ID")
+
+cor.test(TranscriptPerSample$RIN, TranscriptPerSample$counts)
+pRINTranscripts <- ggplot(TranscriptPerSample, aes(x = RIN, y = counts, colour = Group)) + 
+  geom_point(size = 3) +
+  labs(x = "RIN", y = "Number of Transcripts") + 
+  theme_classic()
+

@@ -145,9 +145,9 @@ WholeDESeqGeneSig <- list(
   age = as.data.frame(fread(paste0(dirnames$DGE,"DESeq2_whole_gene_development_resSig.csv")))
 )
 
-notDGE <- setdiff(class.files$glob_targ_SQ$associated_gene, WholeDESeqGeneSig$age)
-notDGE[!grepl("novelGene",notDGE)]
-write.table(notDGE[!grepl("novelGene",notDGE)],"NotDGEList.csv",row.names=F,col.names = F, sep = ",",quote=F)
+#notDGE <- setdiff(class.files$glob_targ_SQ$associated_gene, WholeDESeqGeneSig$age)
+#notDGE[!grepl("novelGene",notDGE)]
+#write.table(notDGE[!grepl("novelGene",notDGE)],"NotDGEList.csv",row.names=F,col.names = F, sep = ",",quote=F)
 
 
 ## -------------- differential isoform usage ----------------
