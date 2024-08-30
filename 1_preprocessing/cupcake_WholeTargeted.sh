@@ -23,7 +23,6 @@ echo Job started on:
 date -u
 
 module load Miniconda2/4.3.21
-source activate nanopore
 
 # paths
 UTILS_DIR=/lustre/projects/Research_Project-MRC148213/lsl693/scripts/SFARI_developmentalgenomics/0_utilities
@@ -46,10 +45,13 @@ chrNum=${chromosomes[${SLURM_ARRAY_TASK_ID}]}
 
 # merge the aligned bam files from whole and targeted, and split by chromosome (1 - 22, X and Y)
 cd ${MERGED_CHROM_DIR}
-samtools merge -f WholeTargeted.bam -b ${UTILS_DIR}/combined_files.txt
-samtools index ${MERGED_CHROM_DIR}/WholeTargeted.bam
+source activate nanopore
+#samtools merge -f WholeTargeted.bam -b ${UTILS_DIR}/combined_files.txt
+#samtools index ${MERGED_CHROM_DIR}/WholeTargeted.bam
 
 # isoseq collapse the merged file by chromosome
 samtools view -b ${MERGED_CHROM_DIR}/WholeTargeted.bam $chrNum > ${MERGED_CHROM_DIR}/${chrNum}.bam
-isoseq3 collapse ${MERGED_CHROM_DIR}/${chrNum}.bam ${chrNum}.bam --do-not-collapse-extra-5exons --min-aln-coverage=0.85 --min-aln-identity=0.95 --num-threads 16
+
+source activate isoseq3
+isoseq3 collapse ${MERGED_CHROM_DIR}/${chrNum}.bam ${chrNum}.gff --do-not-collapse-extra-5exons --min-aln-coverage=0.85 --min-aln-identity=0.95 --num-threads 16
 #isoseq3 collapse ${MERGED_CHROM_DIR}/WholeTargeted.bam WholeTargeted.gff --do-not-collapse-extra-5exons --min-aln-coverage=0.85 --min-aln-identity=0.95 --num-threads 16
