@@ -30,13 +30,15 @@ alignDir=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/3_
 for i in ${alignDir}/*sorted.bam; do
   sample=$(basename "$i" | cut -d "." -f 1 )
   echo $sample
-  grep -w -f HNRNPK_rawONTID.txt $i > ${sample}_HNRNPK.sorted.sam
+  samtools view $i | grep -w -f HNRNPK_rawONTID.txt > ${sample}_HNRNPK.sorted.sam
+  samtools view -bS ${sample}_HNRNPK.sorted.sam > ${sample}_HNRNPK.sorted.bam
+  samtools index  ${sample}_HNRNPK.sorted.bam
 done
 
 samtools merge mergedWholeTargeted_HNRNPK.sorted.sam *HNRNPK.sorted.sam
 
 # 4. extract raw ONT read ID 
-#samtools merge mergedWholeTargeted.bam ${alignDir}/*sorted.bam
-#samtools view mergedWholeTargeted.bam | grep -f HNRNPK_rawONTID.txt > mergedWholeTargeted_HNRNPK.sorted.sam
-#samtools view -bS mergedWholeTargeted_HNRNPK.sorted.sam > mergedWholeTargeted_HNRNPK.sorted.bam
-#samtools index mergedWholeTargeted_HNRNPK.sorted.bam mergedWholeTargeted_HNRNPK.sorted.bam.bai
+samtools merge mergedWholeTargeted.bam ${alignDir}/*sorted.bam
+samtools view mergedWholeTargeted.bam | grep -f HNRNPK_rawONTID.txt > mergedWholeTargeted_HNRNPK.sorted.sam
+samtools view -bS mergedWholeTargeted_HNRNPK.sorted.sam > mergedWholeTargeted_HNRNPK.sorted.bam
+samtools index mergedWholeTargeted_HNRNPK.sorted.bam mergedWholeTargeted_HNRNPK.sorted.bam.bai
