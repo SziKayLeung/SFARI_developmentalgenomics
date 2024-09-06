@@ -15,6 +15,7 @@
 #SBATCH --error=log_sqanti/sqanti-%A_%a.e
 
 # 04/09/2024: running sqanti from split files
+# 06/09/2024: sqanti filter
 
 ##-------------------------------------------------------------------------
 
@@ -35,7 +36,7 @@ export CAGE_PEAK=${SQANTI3_DATA_DIR}/ref_TSS_annotation/human.refTSS_v3.1.hg38.b
 export POLYA=${SQANTI3_DATA_DIR}/polyA_motifs/mouse_and_human.polyA_motif.txt
 export refAnno=/lustre/projects/Research_Project-MRC190311/scripts/sequencing/longReadseq/Reference/gencode.v38.annotation.gtf
 export refFile=/lustre/projects/Research_Project-MRC190311/scripts/sequencing/longReadseq/Reference/Hg38.fa
-
+export SQANTI_JSON=/lustre/projects/Research_Project-MRC190311/scripts/sequencing/longReadseq/SQANTI3-5.1/SQANTI3-5.1/utilities/filter/filter_adapted.json
 
 ##-------------------------------------------------------------------------
 
@@ -58,8 +59,17 @@ chr_chunk=${chr%.txt}
 chr=${chr%%_*}
 
 echo "Processing $i; output chromosome = $chr; output gff: $prefix.gff; output sqanti: $chr_chunk"
+## extract the relevant gff to run sqanti
+## renamed.gff from renaming the PB to ONT<chr> in the gff after cupcake collapse
 grep -wF -f ${SPLIT}/${i} ${MERGED_CHROM_DIR}/${chr}.gff >> ${SPLIT}/${prefix}.gff
 
+## run sqanti
 python ${SQANTI3_DIR}/sqanti3_qc.py ${SPLIT}/${prefix}.gff ${refAnno} ${refFile} -o WholeTargeted_collapsed${chr_chunk} \
   --report skip --genename --skipORF \
   --CAGE_peak ${CAGE_PEAK} --polyA_motif_list ${POLYA}
+  
+## run sqanti filter
+python ${SQANTI3_DIR}/sqanti3_filter.py rules \
+  --output WholeTargeted_collapsed_filtered${chr_chunk} \
+  --skip_report --gtf WholeTargeted_collapsed${chr_chunk}_corrected.gtf \
+  --json_filter ${SQANTI_JSON} WholeTargeted_collapsed${chr_chunk}_classification.txt

@@ -32,9 +32,11 @@ for i in ${MERGED_CHROM_DIR}/*read_stat.txt; do
   
   # replace PB with ONT and the chromosome 
   sed -i "s/PB/${replaceONTprefix}/g" WholeTargeted_${chromosome}.id.txt
-
+  
+  # replace gff with the correct gff name
+  sed "s/PB/${replaceONTprefix}/g" $MERGED_CHROM_DIR/$chromosome.gff > $MERGED_CHROM_DIR/$chromosome.renamed.gff
+  
   # split chunk with 1000000 lines
-
   split WholeTargeted_${chromosome}.id.txt WholeTargeted_${chromosome}_chunk -l1000000 --additional-suffix=.txt -d
 
 done
