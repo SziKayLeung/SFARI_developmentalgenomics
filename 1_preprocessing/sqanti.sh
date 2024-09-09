@@ -61,7 +61,7 @@ chr=${chr%%_*}
 echo "Processing $i; output chromosome = $chr; output gff: $prefix.gff; output sqanti: $chr_chunk"
 ## extract the relevant gff to run sqanti
 ## renamed.gff from renaming the PB to ONT<chr> in the gff after cupcake collapse
-grep -wF -f ${SPLIT}/${i} ${MERGED_CHROM_DIR}/${chr}.gff >> ${SPLIT}/${prefix}.gff
+grep -wF -f ${SPLIT}/${i} ${MERGED_CHROM_DIR}/${chr}.renamed.gff >> ${SPLIT}/${prefix}.gff
 
 ## run sqanti
 python ${SQANTI3_DIR}/sqanti3_qc.py ${SPLIT}/${prefix}.gff ${refAnno} ${refFile} -o WholeTargeted_collapsed${chr_chunk} \

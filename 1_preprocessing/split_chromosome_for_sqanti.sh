@@ -36,6 +36,9 @@ for i in ${MERGED_CHROM_DIR}/*read_stat.txt; do
   # replace gff with the correct gff name
   sed "s/PB/${replaceONTprefix}/g" $MERGED_CHROM_DIR/$chromosome.gff > $MERGED_CHROM_DIR/$chromosome.renamed.gff
   
+  # replace read.stat txt with corrected isoform id
+  sed "s/PB/${replaceONTprefix}/g" $MERGED_CHROM_DIR/$chromosome.read_stat.txt > $MERGED_CHROM_DIR/$chromosome.read_stat.renamed.txt
+  
   # split chunk with 1000000 lines
   split WholeTargeted_${chromosome}.id.txt WholeTargeted_${chromosome}_chunk -l1000000 --additional-suffix=.txt -d
 
