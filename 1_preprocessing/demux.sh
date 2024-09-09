@@ -2,14 +2,34 @@
 #SBATCH --export=ALL # export all environment variables to the batch job
 #SBATCH -D . # set working directory to .
 #SBATCH -p mrcq # submit to the parallel queue
-#SBATCH --time=120:00:00 # maximum walltime for the job
+#SBATCH --time=10:00:00 # maximum walltime for the job
 #SBATCH -A Research_Project-MRC148213 # research project to submit under
 #SBATCH --nodes=1 # specify number of nodes
 #SBATCH --ntasks-per-node=16 # specify number of processors per node
 #SBATCH --mem=100G # specify bytes memory to reserve
 #SBATCH --mail-type=END # send email at job completion
-#SBATCH --mail-user=v.chundru@exeter.ac.uk # email address
-#SBATCH --array 1-22
+#SBATCH --array 0-23 # 24 chromsomes, 22 autosomal, X and Y
+#SBATCH --output=log/demux-%A_%a.o
+#SBATCH --error=log/demux-%A_%a.e
 
-#python /lustre/home/vc362/MRC148213/vc362/LOGen/assist_ont_processing/demux_cupcake_collapse.py /lustre/home/vc362/MRC148213/Rosie/WholeTargeted/cleaned_merged_collapsed/WholeTargeted_cleaned_aligned_merged_collapsed_chr${SLURM_ARRAY_TASK_ID}.read_stat.renamed.txt /lustre/home/vc362/MRC148213/Rosie/WholeTargeted//BAMford/WholeTargeted_sample_id_fixed.csv -o WholeTargeted_demux_chr${SLURM_ARRAY_TASK_ID}
-python /lustre/home/vc362/MRC148213/vc362/LOGen/assist_ont_processing/demux_cupcake_collapse.py /lustre/home/vc362/MRC148213/Rosie/WholeTargeted/cleaned_merged_collapsed/Whole_cleaned_aligned_merged_collapsed_chr${SLURM_ARRAY_TASK_ID}.read_stat.renamed.txt /lustre/home/vc362/MRC148213/Rosie/WholeTargeted/BAMford/Whole_sample_id_fixed.csv -o Whole_demux_chr${SLURM_ARRAY_TASK_ID}
+##-------------------------------------------------------------------------
+
+MERGED_CHROM_DIR=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/5_isoseq/WholeTargeted/mergedChrom
+TCLEAN_DIR=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/Targeted_transcriptome/4_tclean
+TCLEAN_WHOLE_DIR=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/4_transcriptClean/Whole
+DEMUX_DIR=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/Targeted_transcriptome/6_demux
+
+export PATH=$PATH:/lustre/projects/Research_Project-MRC148213/lsl693/scripts/LOGen/assist_ont_processing
+
+
+##-------------------------------------------------------------------------
+
+module load Miniconda2/4.3.21
+source activate nanopore
+
+# set batch array (run per chromosome)
+chromosomes=($(printf "chr%s " $(seq 1 22) X Y))
+chrNum=${chromosomes[${SLURM_ARRAY_TASK_ID}]}  
+
+echo $chrNum
+demux_cupcake_collapse.py ${MERGED_CHROM_DIR}/${chrNum}.read_stat.renamed.txt ${DEMUX_DIR}/WholeTargeted_sample_id.csv -o WholeTargeted_demux_${chrNum} --dataset ont -d ${DEMUX_DIR}
