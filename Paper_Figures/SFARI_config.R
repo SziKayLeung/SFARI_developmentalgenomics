@@ -108,6 +108,13 @@ preReads <- class.files$glob_SQ %>% select(all_of(preWhole)) %>% apply(., 1, sum
 class.files$glob_SQ <- class.files$glob_SQ %>% mutate(FReads = femaleReads, MReads = maleReads, preReads = preReads, postReads = postReads)
 class.files$glob_SQ$DevStatus <- apply(class.files$glob_SQ, 1, function(x) identify_dataset_by_counts(x[["postReads"]], x[["preReads"]], "postnatal","prenatal"))
 
+femaleMedianReads <- class.files$glob_SQ %>% select(all_of(femaleWhole)) %>% apply(., 1, median)
+maleMedianReads <- class.files$glob_SQ %>% select(all_of(maleWhole)) %>% apply(., 1, median)
+postMedianReads <- class.files$glob_SQ %>% select(all_of(postWhole)) %>% apply(., 1, median)
+preMedianReads <- class.files$glob_SQ %>% select(all_of(preWhole)) %>% apply(., 1, median)
+class.files$glob_SQ <- class.files$glob_SQ %>% mutate(FReads_median = femaleMedianReads, MReads_median = maleMedianReads, 
+                                                      preReads_median = preMedianReads, postReads_median = postMedianReads)
+
 # annotated genes 
 class.files$glob_SQ_annoGene <- class.files$glob_SQ %>% filter(!grepl("novelGene", associated_gene))
 class.files$glob_SQ_annoGene <- class.files$glob_SQ_annoGene %>% mutate(novelTranscript = ifelse(associated_transcript == "novel","Novel","Known"))
@@ -128,6 +135,7 @@ WholeDTE <- list(
 )
 WholeDTE <- lapply(WholeDTE, function(x) x %>% mutate(dirAcrossDev = ifelse(log2FoldChange < 0 , "upregulated", "downregulated")))
 WholeDTE$sex <- merge(WholeDTE$sex, class.files$glob_targ_SQ[,c("isoform","chrom")],by.x="isoform",all.x=T)
+WholeDTE$age <- merge(WholeDTE$age, class.files$glob_targ_SQ[,c("isoform","chrom")],by.x="isoform",all.x=T)
 
 WholeDTEAll <- list(
   sex = vroom(paste0(dirnames$DTE,"DESeq2_whole_transcript_sex_resAll.csv"),delim = ",",show_col_types = FALSE)

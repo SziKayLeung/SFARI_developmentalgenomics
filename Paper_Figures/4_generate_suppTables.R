@@ -14,16 +14,19 @@ library(xlsx)
 SC_ROOT = "/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/scripts/SFARI_developmentalgenomics"
 source(paste0(SC_ROOT,"/Paper_Figures/SFARI_config.R"))
 source(paste0(SC_ROOT,"/Paper_Figures/0_source_functions.R"))
-output_dir = paste0(SC_ROOT,"/Paper_Figures/outputFigs/SuppTables")
+output_dir = "/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/0_output"
 
 
 ##************** Whole DESeq 
 # DTE 
 DESeqCols <- c("isoform","chrom", "associated_gene", "associated_transcript","log2FoldChange","lfcSE","pvalue","padj","structural_category","subcategory")
 DESeqColsRenamed <- c("Isoform","Chromosome", "Associated gene", "Associated transcript","Log2FC","lfcSE", "p-value","FDR","Structural category","Subcategory")
-WholeDESeqSigOut <- lapply(WholeDESeqSig, function(x) x %>% arrange(padj) %>% select(all_of(DESeqCols)) %>% `colnames<-`(DESeqColsRenamed))
-write.csv(WholeDESeqSigOut$sex,paste0(output_dir,"/WholeDTESex.csv"))
-write.csv(WholeDESeqSigOut$age,paste0(output_dir,"/WholeDTEGroup.csv"))
+WholeDTEOut <- lapply(WholeDTE, function(x) x %>% arrange(padj) %>% select(all_of(DESeqCols)) %>% `colnames<-`(DESeqColsRenamed))
+# include the median values for the signficant transcripts
+WholeDTEOut <- lapply(WholeDTEOut, function(x) merge(x, class.files$glob_SQ %>% select(contains("median"), "isoform"), by.x = "Isoform", by.y = "isoform"))
+write.csv(WholeDTEOut$sex,paste0(output_dir,"/WholeDTESex.csv"))
+write.csv(WholeDTEOut$age,paste0(output_dir,"/WholeDTEGroup.csv"))
+
 
 WholeDTENumGene <- WholeDTE$age %>% group_by(associated_gene, dirAcrossDev) %>% tally() %>% 
   as.data.frame() %>% reshape(., idvar = "associated_gene", timevar = "dirAcrossDev", direction = "wide")
@@ -100,9 +103,9 @@ for(i in 1:length(TargetGene)){
   dat[i,3] <- ifelse(nrow(TargetedDESeqGeneSig$age[TargetedDESeqGeneSig$age$associated_gene == gene,]) == 1,TRUE,FALSE)
   dat[i,4] <- ifelse(nrow(WholeDESeqGeneSig$sex[WholeDESeqGeneSig$sex$associated_gene == gene,]) == 1,TRUE,FALSE)
   dat[i,5] <- ifelse(nrow(TargetedDESeqGeneSig$sex[TargetedDESeqGeneSig$sex$associated_gene == gene,]) == 1,TRUE,FALSE)
-  dat[i,6] <- nrow(WholeDESeqSig$age %>% filter(associated_gene == gene))
+  dat[i,6] <- nrow(WholeDTE$age %>% filter(associated_gene == gene))
   dat[i,7] <- nrow(TargetedDESeqSig$age %>% filter(associated_gene == gene))
-  dat[i,8] <- nrow(WholeDESeqSig$sex %>% filter(associated_gene == gene))
+  dat[i,8] <- nrow(WholeDTE$sex %>% filter(associated_gene == gene))
   dat[i,9] <- nrow(TargetedDESeqSig$sex %>% filter(associated_gene == gene))
 }
 colnames(dat) <- c("TargetGene","WholeDGEGroup","TargetedDGEGroup","WholeDGESex","TargetedDGESex","NumWholeDTEGroup","NumTargetedDTEGroup","NumWholeDTESex","NumTargetedDTESex")
