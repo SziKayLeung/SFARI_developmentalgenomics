@@ -14,18 +14,14 @@
 
 ##-------------------------------------------------------------------------
 
-# source config file and function script
-module load Miniconda2/4.3.21
-source activate nanopore
-
 # set up batch
-WKD_ROOT=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/Targeted_transcriptome
-RAW_FASTQ=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/Targeted_transcriptome/UploadtoSRA/combined
-GENOME_FASTA=/lustre/projects/Research_Project-MRC148213/lsl693/references/human/hg38.fa
-export TCLEAN=/lustre/projects/Research_Project-MRC148213/lsl693/software/TranscriptClean/TranscriptClean.py
+WKD_ROOT=/media/disk2/sfari_RB
+RAW_FASTQ=/media/disk/sfari_RB/porechop
+GENOME_FASTA=/media/disk2/sfari_RB/references/hg38.fa
+#export TCLEAN=~/installs/TranscriptClean/TranscriptClean/TranscriptClean.py
 
-SamplePath=${RAW_FASTQ}/Targeted22.fastq.gz
-sample=$(basename ${SamplePath} .fastq.gz)
+SamplePath=${RAW_FASTQ}/Targeted22.fasta
+sample=$(basename ${SamplePath} .fasta)
 echo "Processing ${sample}"
 
 
@@ -35,29 +31,24 @@ echo "Processing ${sample}"
 # Output: <sample_name>_combined_reads.sam, <sample_name>_Minimap2.log
 run_minimap2(){
   
-  source activate nanopore
-  
   name=$(basename $1 .fasta)
   echo "Aligning ${name} using Minimap2"
   
   minimap2 -t 46 -ax splice ${GENOME_FASTA} $1 > $2/${name}.sam 2> $2/${name}_minimap2.log
   samtools sort -O SAM $2/${name}.sam > $2/${name}_sorted.sam
   
-  source deactivate
 }
 
 
 # run_transcriptclean <input_sam> <output_dir>
 run_transcriptclean(){
   
-  source activate sqanti2_py3
-  
   name=$(basename $1 _merged_combined_sorted.sam)
   echo "TranscriptClean ${name}"
   
   cd $2; mkdir -p ${name}
   cd $2/${name}
-  python ${TCLEAN} --sam $1 --genome ${GENOME_FASTA} --outprefix $2/${name}/${name} --tmpDir $2/${name}/${name}_tmp
+  transcriptclean --sam $1 --genome ${GENOME_FASTA} --outprefix $2/${name}/${name} --tmpDir $2/${name}/${name}_tmp
 }
 
 
@@ -68,8 +59,6 @@ run_minimap2 ${WKD_ROOT}/2_cutadapt_merge/${sample}_combined.fasta ${WKD_ROOT}/3
 
 # run transcript clean on aligned reads
 run_transcriptclean ${WKD_ROOT}/3_minimap/${sample}_combined_sorted.sam ${WKD_ROOT}/4_tclean
-
-source activate isoseq3
 
 # pbmm2 align
 cd ${WKD_ROOT}/5_cupcake/5_align
