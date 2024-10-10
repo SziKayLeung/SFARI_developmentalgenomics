@@ -11,8 +11,8 @@
 #SBATCH --mail-user=sl693@exeter.ac.uk # email address
 #SBATCH --mem=20G
 #SBATCH --array=1-343%20
-#SBATCH --output=log_sqanti/sqanti-%A_%a.o
-#SBATCH --error=log_sqanti/sqanti-%A_%a.e
+#SBATCH --output=../log/log_Oct2024/4_sqanti-%A_%a.o
+#SBATCH --error=../log/log_Oct2024/4_qanti-%A_%a.e
 
 # 04/09/2024: running sqanti from split files
 # 06/09/2024: sqanti filter
