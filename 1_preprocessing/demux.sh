@@ -1,16 +1,17 @@
 #!/bin/bash
 #SBATCH --export=ALL # export all environment variables to the batch job
 #SBATCH -D . # set working directory to .
-#SBATCH -p mrcq # submit to the parallel queue
-#SBATCH --time=10:00:00 # maximum walltime for the job
+#SBATCH -p pq # submit to the parallel queue
+#SBATCH --time=60:00:00 # maximum walltime for the job
 #SBATCH -A Research_Project-MRC148213 # research project to submit under
 #SBATCH --nodes=1 # specify number of nodes
 #SBATCH --ntasks-per-node=16 # specify number of processors per node
-#SBATCH --mem=100G # specify bytes memory to reserve
 #SBATCH --mail-type=END # send email at job completion
+#SBATCH --mem=100G # specify bytes memory to reserve
 #SBATCH --array 0-23 # 24 chromsomes, 22 autosomal, X and Y
 #SBATCH --output=log/demux-%A_%a.o
 #SBATCH --error=log/demux-%A_%a.e
+#SBATCH --mail-user=sl693@exeter.ac.uk # email address
 
 ##-------------------------------------------------------------------------
 
@@ -32,4 +33,14 @@ chromosomes=($(printf "chr%s " $(seq 1 22) X Y))
 chrNum=${chromosomes[${SLURM_ARRAY_TASK_ID}]}  
 
 echo $chrNum
-demux_cupcake_collapse.py ${MERGED_CHROM_DIR}/${chrNum}.read_stat.renamed.txt ${DEMUX_DIR}/WholeTargeted_sample_id.csv -o WholeTargeted_demux_${chrNum} --dataset ont -d ${DEMUX_DIR}
+
+if [ -f ${DEMUX_DIR}/WholeTargeted_demux_${chrNum}_fl_count.csv ]; then
+
+  echo WholeTargeted_demux_${chrNum}_fl_count.csv present
+  
+else
+
+  echo Run demux for $chrNum
+  demux_cupcake_collapse.py ${MERGED_CHROM_DIR}/${chrNum}.read_stat.renamed.txt ${DEMUX_DIR}/WholeTargeted_sample_id.csv -o WholeTargeted_demux_${chrNum} --dataset ont -d ${DEMUX_DIR}
+  
+fi

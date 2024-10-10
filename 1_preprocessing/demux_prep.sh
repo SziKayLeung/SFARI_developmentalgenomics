@@ -24,7 +24,7 @@ export PATH=$PATH:/lustre/projects/Research_Project-MRC148213/lsl693/scripts/LOG
 
 # generate sample_id.csv for targeted and whole dataset
 adapt_cupcake_to_ont.py ${TCLEAN_DIR} -o Targeted -i clean.fa -d ${DEMUX_DIR}
-adapt_cupcake_to_ont.py ${TCLEAN_WHOLE_DIR} -o Whole -i fa -d ${DEMUX_DIR}
+#adapt_cupcake_to_ont.py ${TCLEAN_WHOLE_DIR} -o Whole -i fa -d ${DEMUX_DIR}
 
 # remoe "combined_sorted" string in Targeted_sample_id.csv (due to the input of the fasta files)
 cd ${DEMUX_DIR}
