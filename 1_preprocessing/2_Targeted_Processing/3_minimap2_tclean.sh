@@ -8,10 +8,13 @@
 #SBATCH --ntasks-per-node=16 # specify number of processors per node
 #SBATCH --mail-type=END # send email at job completion
 #SBATCH --mail-user=sl693@exeter.ac.uk # email address
-#SBATCH --array=0-39%5
-#SBATCH --output=3_minimap2_tclean-%A_%a.o
-#SBATCH --error=3_minimap2_tclean-%A_%a.e
+#SBATCH --array=0-39
+#SBATCH --output=./log_Oct2024/3_minimap2_tclean-%A_%a.o
+#SBATCH --error=./log_Oct2024/3_minimap2_tclean-%A_%a.e
 
+# 08/2024: Ran minimap2 on all samples except for the Targeted22, Targeted26, Targeted29 due to error from demultiplexed reads
+# 09/2024: Ran minimap2 on Targeted 22, Targeted26, Targeted29 on Darren's computer
+# 10/10/2024: Updated TranscriptClean command
 
 ##-------------------------------------------------------------------------
 
@@ -20,7 +23,7 @@ module load Miniconda2/4.3.21
 source activate nanopore
 
 # set up batch
-WKD_ROOT=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/Targeted_transcriptome
+WKD_ROOT=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/B_Targeted
 RAW_FASTQ=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/Targeted_transcriptome/UploadtoSRA/combined
 GENOME_FASTA=/lustre/projects/Research_Project-MRC148213/lsl693/references/human/hg38.fa
 export TCLEAN=/lustre/projects/Research_Project-MRC148213/lsl693/software/TranscriptClean/TranscriptClean.py
@@ -58,14 +61,14 @@ run_transcriptclean(){
   
   cd $2; mkdir -p ${name}
   cd $2/${name}
-  python ${TCLEAN} --sam $1 --genome ${GENOME_FASTA} --outprefix $2/${name}/${name} --tmpDir $2/${name}/${name}_tmp
+  python ${TCLEAN} --sam $1 --genome ${GENOME_FASTA} --outprefix $2/${name}/${name} --tmpDir $2/${name}/${name}_tmp --maxLenIndel=10
 }
 
 
 ##-------------------------------------------------------------------------
 
 # map combined fasta to reference genome
-run_minimap2 ${WKD_ROOT}/2_cutadapt_merge/${sample}_combined.fasta ${WKD_ROOT}/3_minimap
+#run_minimap2 ${WKD_ROOT}/2_cutadapt_merge/${sample}_combined.fasta ${WKD_ROOT}/3_minimap
 
 # run transcript clean on aligned reads
 run_transcriptclean ${WKD_ROOT}/3_minimap/${sample}_combined_sorted.sam ${WKD_ROOT}/4_tclean
