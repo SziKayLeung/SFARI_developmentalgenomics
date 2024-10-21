@@ -8,7 +8,7 @@
 #SBATCH --ntasks-per-node=16 # specify number of processors per node
 #SBATCH --mail-type=END # send email at job completion
 #SBATCH --mail-user=sl693@exeter.ac.uk # email address
-#SBATCH --array=0-39%5
+#SBATCH --array=0-39
 #SBATCH --output=./log_Oct2024/4_pbmm2_filter-%A_%a.o
 #SBATCH --error=./log_Oct2024/4_pbmm2_filter-%A_%a.e
 
