@@ -9,8 +9,8 @@
 #SBATCH --mem=200G # specify bytes memory to reserve
 #SBATCH --mail-type=END # send email at job completion
 #SBATCH --mail-user=sl693@exeter.ac.uk # email address
-#SBATCH --output=../log/log_Oct2024/3_split_chromosome_for_sqanti.o
-#SBATCH --error=../log/log_Oct2024/3_split_chromosome_for_sqanti.e
+#SBATCH --output=../log/log_Oct2024/3_split_chromosome_for_sqanti2.o
+#SBATCH --error=../log/log_Oct2024/3_split_chromosome_for_sqanti2.e
 
 # 03/09/2024: split chromosomes for downstream sqanti (note chromosome 19 still running)
 # 10/10/2024: re-run due to updated transcriptclean paramater to --maxindelLength=10
@@ -26,22 +26,31 @@ for i in ${ISOSEQ_COLLAPSE_DIR}/*read_stat.txt; do
   replaceONTprefix="${chromosome//chr/ONT}"
   #echo $replaceONTprefix
   
-  cd ${SPLIT}
-  
-  # extract the isoform list from each read stat file
-  awk -F'\t' '{print $2}' $i | tail -n +2 > WholeTargeted_${chromosome}.id.txt
-  
-  # replace PB with ONT and the chromosome 
-  sed -i "s/PB/${replaceONTprefix}/g" WholeTargeted_${chromosome}.id.txt
-  
-  # replace gff with the correct gff name
-  sed "s/PB/${replaceONTprefix}/g" $ISOSEQ_COLLAPSE_DIR/$chromosome.gff > $ISOSEQ_COLLAPSE_DIR/$chromosome.renamed.gff
-  
-  # replace read.stat txt with corrected isoform id
-  sed "s/PB/${replaceONTprefix}/g" $ISOSEQ_COLLAPSE_DIR/$chromosome.read_stat.txt > $ISOSEQ_COLLAPSE_DIR/$chromosome.read_stat.renamed.txt
-  
-  # split chunk with 1000000 lines
-  split WholeTargeted_${chromosome}.id.txt WholeTargeted_${chromosome}_chunk -l1000000 --additional-suffix=.txt -d
+  if [ ! -f $ISOSEQ_COLLAPSE_DIR/$chromosome.read_stat.renamed.txt ]; then
+    echo "Modify ${chromosome}"
+    
+    cd ${SPLIT}
+    
+    # extract the isoform list from each read stat file
+    awk -F'\t' '{print $2}' $i | tail -n +2 > WholeTargeted_${chromosome}.id.txt
+    
+    # replace PB with ONT and the chromosome 
+    sed -i "s/PB/${replaceONTprefix}/g" WholeTargeted_${chromosome}.id.txt
+    
+    # replace gff with the correct gff name
+    sed "s/PB/${replaceONTprefix}/g" $ISOSEQ_COLLAPSE_DIR/$chromosome.gff > $ISOSEQ_COLLAPSE_DIR/$chromosome.renamed.gff
+    
+    # replace read.stat txt with corrected isoform id
+    sed "s/PB/${replaceONTprefix}/g" $ISOSEQ_COLLAPSE_DIR/$chromosome.read_stat.txt > $ISOSEQ_COLLAPSE_DIR/$chromosome.read_stat.renamed.txt
+    
+    # split chunk with 1000000 lines
+    split WholeTargeted_${chromosome}.id.txt WholeTargeted_${chromosome}_chunk -l1000000 --additional-suffix=.txt -d
+
+  else
+
+    echo "${chromosome} already modified"
+
+  fi
 
 done
 
