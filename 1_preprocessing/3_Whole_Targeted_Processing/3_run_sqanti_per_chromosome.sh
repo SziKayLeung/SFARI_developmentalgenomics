@@ -93,7 +93,7 @@ run_sqanti_per_chunk(){
 	echo "Run Sqanti"
 	source activate sqanti2_py3
 	python ${SQANTI3_DIR}/sqanti3_qc.py $3/${prefix}.gff ${refAnno} ${refFile} -o WholeTargeted_collapsed${chr_chunk} \
-	  --report skip --genename \
+	  --report skip --genename --skipORF \
 	  --CAGE_peak ${CAGE_PEAK} --polyA_motif_list ${POLYA}
 	  
 	## run sqanti filter

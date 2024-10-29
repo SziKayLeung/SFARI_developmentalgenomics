@@ -10,13 +10,14 @@
 #SBATCH --mail-type=END # send email at job completion
 #SBATCH --mail-user=sl693@exeter.ac.uk # email address
 #SBATCH --array 0-23 # 24 chromsomes, 22 autosomal, X and Y
-#SBATCH --output=../log/log_Oct2024/2_run_isoseqCollapse_WholeTargeted-%A_%a.o
-#SBATCH --error=../log/log_Oct2024/2_run_isoseqCollapse_WholeTargeted-%A_%a.e
+#SBATCH --output=2_run_isoseqCollapse_WholeTargeted-%A_%a.o
+#SBATCH --error=2_run_isoseqCollapse_WholeTargeted-%A_%a.e
 
 # 20/08/2024: run cupcake collapse on merged whole and targeted dataset (timed out)
 # 28/08/2024: run cupcake collapse on merged whole and targeted dataset split by chromosome
 # 10/08/2024: re-run cupcake collapse due to wrong sample
 # 10/10/2024: re-run due to updated transcriptclean paramater to --maxindelLength=10
+# 18/10/2024: have to re-run some of the chromosomes as source acivate failed from ISCA time-out/failure
 
 
 ##-------------------------------------------------------------------------
@@ -41,7 +42,19 @@ chrNum=${chromosomes[${SLURM_ARRAY_TASK_ID}]}
 cd ${ISOSEQ_COLLAPSE_DIR}
 
 # isoseq collapse the merged file by chromosome
+source activate nanopore
 samtools view -b ${ISOSEQ_COLLAPSE_DIR}/WholeTargeted.sorted.bam $chrNum > ${ISOSEQ_COLLAPSE_DIR}/${chrNum}.bam
 
 source activate isoseq3
-isoseq3 collapse ${ISOSEQ_COLLAPSE_DIR}/${chrNum}.bam ${chrNum}.gff --do-not-collapse-extra-5exons --min-aln-coverage=0.85 --min-aln-identity=0.95 --num-threads 16
+
+if compgen -G "${ISOSEQ_COLLAPSE_DIR}/*${chrNum}*" > /dev/null; then
+  
+  echo "$chrNum already processed or currently processing"
+  exit 2
+
+else
+  
+  echo "$chrNum to collapse"
+  isoseq3 collapse ${ISOSEQ_COLLAPSE_DIR}/${chrNum}.bam ${chrNum}.gff --do-not-collapse-extra-5exons --min-aln-coverage=0.85 --min-aln-identity=0.95 --num-threads 16
+
+fi

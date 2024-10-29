@@ -23,7 +23,7 @@ module load Miniconda2/4.3.21
 # paths
 UTILS_DIR=/lustre/projects/Research_Project-MRC148213/lsl693/scripts/SFARI_developmentalgenomics/0_utilities
 ALIGNED_WHOLE_DIR=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/A_Whole/5_isoseq/pbmm2_align
-ALIGNED_TARGETED_DIR=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/B_Targeted/5_cupcake/5_align
+ALIGNED_TARGETED_DIR=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/B_Targeted/5_cupcake/5_align_filter
 ISOSEQ_COLLAPSE_DIR=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/C_Whole_Targeted/6_isoseqCollapse
 
 
@@ -39,10 +39,9 @@ source activate nanopore
 
 # list the pbmm2 aligned individual files to be merged
 # create file if not present
-if [ ! -f ${UTILS_DIR}/combined_files.txt ]; then 
-  ls ${ALIGNED_WHOLE_DIR}/*Whole*filtered_sorted.bam > ${UTILS_DIR}/combined_files.txt
-  ls ${ALIGNED_TARGETED_DIR}/*Targeted*filtered_sorted.bam >> ${UTILS_DIR}/combined_files.txt
-fi
+> ${UTILS_DIR}/combined_files.txt
+ls ${ALIGNED_WHOLE_DIR}/*Whole*filtered_sorted.bam > ${UTILS_DIR}/combined_files.txt
+ls ${ALIGNED_TARGETED_DIR}/*Targeted*filtered_sorted.bam >> ${UTILS_DIR}/combined_files.txt
 
 # merge the aligned bam files from whole and targeted, and split by chromosome (1 - 22, X and Y)
 cd ${ISOSEQ_COLLAPSE_DIR}
