@@ -34,3 +34,12 @@ awk -F',' '{gsub("_combined_sorted", "", $2); print $1 "," $2}' Targeted_sample_
 
 # concatenate whole and targeted sample_id.csv for downstream demux
 cat Whole_sample_id.csv Targeted_sample_id_mod.csv  > WholeTargeted_sample_id.csv
+
+# split read stat per chromosome further into 10 parts
+# i.e.  ${chrNum}.read_stat.renamed > ${chrNum}.read_stat.renamed_part_00
+mkdir -p ${ISOSEQ_COLLAPSE_DIR}/split
+chromosomes=($(printf "chr%s " $(seq 1 22) X Y))
+for chr in ${chromosomes[@]}; do
+  echo $chr
+  split -n l/10 -d ${ISOSEQ_COLLAPSE_DIR}/${chrNum}.read_stat.renamed.txt ${ISOSEQ_COLLAPSE_DIR}/split/${chrNum}_part_
+done
