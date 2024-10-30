@@ -42,9 +42,18 @@ for i in ${ISOSEQ_COLLAPSE_DIR}/*read_stat.txt; do
     
     # replace read.stat txt with corrected isoform id
     sed "s/PB/${replaceONTprefix}/g" $ISOSEQ_COLLAPSE_DIR/$chromosome.read_stat.txt > $ISOSEQ_COLLAPSE_DIR/$chromosome.read_stat.renamed.txt
+
+    # replace abundance txt with corrected isoform id
+    sed "s/PB/${replaceONTprefix}/g" $ISOSEQ_COLLAPSE_DIR/$chromosome.abundance.txt > $ISOSEQ_COLLAPSE_DIR/$chromosome.abundance.renamed.txt
     
     # split chunk with 1000000 lines
     split WholeTargeted_${chromosome}.id.txt WholeTargeted_${chromosome}_chunk -l1000000 --additional-suffix=.txt -d
+
+    # filter abundance txt (minimum 2 full-length reads)
+    python filter_cupcake_collapse_stat.py --fl_read=2 ${ISOSEQ_COLLAPSE_DIR}/${chromosome}.read_stat.renamed.txt ${ISOSEQ_COLLAPSE_DIR}/${chromosome}.abundance.renamed.txt
+
+    # get the id of the filtered abundance txt
+    awk '{print $2}' ${chromosome}.read_stat.renamed.min2FL.sqantiMonoexonicFiltered.txt | sort | uniq > ${chromosome}.read_stat.renamed.min2FL.sqantiMonoexonicFilteredID.txt
 
   else
 
