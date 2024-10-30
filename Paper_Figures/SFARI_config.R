@@ -23,37 +23,40 @@ sapply(list.files(path = paste0(LOGEN,"target_gene_annotation"), pattern="*summa
 ## ------------ directory names --------------- 
 
 root_dir <- "/lustre/projects/Research_Project-MRC148213/lsl693/"
+root_rna_dir <- "/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/"
 root_sfari <- "/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/"
-root_rb_dir <- "/lustre/projects/Research_Project-MRC148213/Rosie/SFARIdevelopmentalgenomics/"
-recovered_dir <- "/lustre/recovered/Research_Project-MRC148213/sl693/RBFetal/"
 dirnames <- list(
   
-  wholetarg_SQ = paste0(root_rb_dir,"6_sqanti3/"),
-  
+  # general
   output = paste0(root_sfari,"/0_output/"),
   utils = paste0(root_sfari,"/0_utils/"),
-  protein = paste0(root_sfari, "/8_longReadProteogenomics/longReadProteogenomics"),
-  massspec= paste0(root_sfari, "/13_massSpec"),
+
+  wholetarg_SQ = paste0(root_sfari,"C_Whole_Targeted/9_sqanti_final/"),
+  protein = paste0(root_sfari, "C_Whole_Targeted/10_longReadProteogenomics/"),
+  massspec= paste0(root_sfari, "C_Whole_Targeted/13_massSpec/"),
   
-  DGE = paste0(root_sfari, "10_deseq//1_DGE/"), 
-  DTE = paste0(root_sfari, "10_deseq//2_DTE/"),
-  DIU = paste0(root_sfari, "10_deseq//3_DIU/"),
-  
-  ficle = "/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/15_ficle/TargetGenes",
-  
-  # Leung et al. 2021 PacBio HumanCTX dataset
-  humanPacBio = "/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/17_longReadDatasetComparisons/Leung2021/HumanCTX"
+  # whole dataset differential expression analysis
+  DGE = paste0(root_sfari, "A_Whole/10_deseq/1_DGE/"), 
+  DTE = paste0(root_sfari, "A_Whole/10_deseq/2_DTE/"),
+  DIU = paste0(root_sfari, "A_Whole/10_deseq/3_DIU/"),
+
+  # ficle
+  ficle = paste0(root_sfari, "C_Whole_Targeted/15_ficle/TargetGenes/"),
+
+  # comparison to other long read sequencing datasets
+  humanPacBio = paste0(root_sfari, "C_Whole_Targeted/17_longReadDatasetComparisons/Leung2021/HumanCTX"),
+  directRNA = paste0(root_rna_dir, "dRNA/Rosie/9_sqanti_final/"),
+
+  overlapDatasets = paste0(root_sfari, "C_Whole_Targeted/14_OverlapDatasets/")
 )
 
 TargetGene = read.table(paste0(root_sfari, "0_metadata/Complete_TargetGenes_TargetedSequencing.txt"))[["V1"]]
 ProteinCodingGenes = read.table(paste0(dirnames$utils, "WholeProteinCodingGenes.txt"))[["V1"]]
 GWAS = c("ACTR1B", "ATP2A2", "BCL11B", "BCL2L12", "BNIP3L", "C12orf43", "CACNA1C", "CALN1", "CISD2", "CLCN3", "CNTN4", "CSMD1", "CTD-2008L17.2", "CUL9", "DCC", "DLGAP2", "DPYD", "EMX1", "ENOX1", "EPN2", "EYS", "FURIN", "GABBR2", "GPM6A", "GPR98", "GRAMD1B", "GRIN2A", "GRM1", "IL1RAPL1", "IMMP2L", "IRF3", "KIAA1549", "KLF6", "LINC00320", "LINC01088", "LRRC4B", "MAD1L1", "MAN2A1", "MAPT", "MSI2", "NAB2", "NEBL", "NEGR1", "NLGN4X", "NRIP1", "NXPH1", "OPCML", "PAK6", "PCGF3", "PCNXL3", "PDE4B", "PJA1", "PLCH2", "PTPRD", "R3HDM2", "RP11-399D6.2", "RP11-507B12.2", "SGCD", "SLC39A8", "SLC4A10", "SNAP91", "SP4", "THAP8", "TMTC1", "TRPC4", "TSNARE1", "TXNRD1", "WSCD2", "ZNF804A", "ZNF823", "ZNF835")
 
-# list of SZ and ASD genes in targeted panel 
-#TargetGeneSZASD = read.csv(paste0(root_sfari,"0_metadata/TargetGeneByDisease.csv"))
-
 
 ## ------------- Phenotype files -------------------
+
 phenotype <- fread(paste0(root_sfari, "0_metadata/WholeTargetedphenotype_fixedsex.csv"),data.table=F, stringsAsFactors=F) %>% mutate(time = age)
 phenotype <- phenotype %>% mutate(type = ifelse(grepl("Targeted",sample),"Targeted","Whole"),
                      sampleID = gsub("^Targeted", "", sample)) %>% mutate(sampleID = gsub("^Whole","", sampleID))
@@ -68,23 +71,12 @@ matchedsamples <- intersect(phenotype[phenotype$type == "Whole","sampleID"],phen
 wholematchedsamples <- phenotype[phenotype$sampleID %in% matchedsamples & phenotype$type == "Whole","sample"]
 targetedmatchedsamples <- phenotype[phenotype$sampleID %in% matchedsamples & phenotype$type == "Targeted","sample"]
 
+# manifest 
+manifest <- fread(paste0(root_sfari, "0_metadata/WholeTargetedphenotype_manifest.csv"),data.table=F, stringsAsFactors=F)
 
 ## -------------- Final classification files ------------- 
 
-# class.files
-# list: glob_targ_SQ, glob_SQ, targ_SQ
-load(file = paste0(dirnames$wholetarg_SQ,"all_filtered_classification_2reads2samples_noMonoIntergenicAll.RData"))
-class.files$protein_filtered = fread(paste0(dirnames$protein,"/7_classified_protein/Whole.sqanti_protein_classification.tsv"),data.table = F)
-class.files$glob_targ_SQ_counts = fread(paste0(dirnames$wholetarg_SQ,"WholeTargeted_cleaned_aligned_merged_collapsed_qced_RulesFilter_2reads2samples_classification_noMonoIntergenic_counts.txt"), data.table = F)
-class.files$glob_targ_SQ_counts <- class.files$glob_targ_SQ_counts %>% filter(isoform %in% class.files$glob_targ_SQ$isoform)
-
-# bambu collapsed from pbmm2 aligned files (whole + targeted)
-bambu <- "/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/16_bambu/sqanti/WholeTargeted_RulesFilter_result_classification.txt"
-class.files$bambu <- SQANTI_class_preparation(bambu,"nstandard")
-class.files$bambu_annoGene <- class.files$bambu %>% filter(!grepl("novelGene", associated_gene))
-class.files$bambu_annoGene <- class.files$bambu_annoGene  %>% mutate(novelTranscript = ifelse(associated_transcript == "novel","Novel","Known"))
-
-# annotated genic features
+load(file = paste0(dirnames$wholetarg_SQ,"sqantifiltered_monoexonicfiltered_2reads2samples.RData"))
 annoGenesStats <- list(
   novelTrans = class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$associated_transcript == "novel",],
   annoTrans = class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$associated_transcript != "novel",],
@@ -92,38 +84,23 @@ annoGenesStats <- list(
   NNC = class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$structural_category == "NNC",]
 )
 
-bambuAnnoGeneStats <- list(
-  novelTrans = class.files$bambu_annoGene[class.files$bambu_annoGene$associated_transcript == "novel",],
-  annoTrans = class.files$bambu_annoGene[class.files$bambu_annoGene$associated_transcript != "novel",],
-  NIC = class.files$bambu_annoGene[class.files$bambu_annoGene$structural_category == "NIC",],
-  NNC = class.files$bambu_annoGene[class.files$bambu_annoGene$structural_category == "NNC",]
-)
+## Protein level 
+class.files$protein_filtered = fread(paste0(dirnames$protein,"/7_classified_protein/Whole.sqanti_protein_classification.tsv"),data.table = F)
 
+## -------------- Bambu ---------------- 
 
-# subset by number of FL reads
-femaleReads <- class.files$glob_SQ %>% select(all_of(femaleWhole)) %>% apply(., 1, sum)
-maleReads <- class.files$glob_SQ %>% select(all_of(maleWhole)) %>% apply(., 1, sum)
-postReads <- class.files$glob_SQ %>% select(all_of(postWhole)) %>% apply(., 1, sum)
-preReads <- class.files$glob_SQ %>% select(all_of(preWhole)) %>% apply(., 1, sum)
-class.files$glob_SQ <- class.files$glob_SQ %>% mutate(FReads = femaleReads, MReads = maleReads, preReads = preReads, postReads = postReads)
-class.files$glob_SQ$DevStatus <- apply(class.files$glob_SQ, 1, function(x) identify_dataset_by_counts(x[["postReads"]], x[["preReads"]], "postnatal","prenatal"))
+# bambu collapsed from pbmm2 aligned files (whole + targeted)
+#bambu <- "/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/16_bambu/sqanti/WholeTargeted_RulesFilter_result_classification.txt"
+#class.files$bambu <- SQANTI_class_preparation(bambu,"nstandard")
+#class.files$bambu_annoGene <- class.files$bambu %>% filter(!grepl("novelGene", associated_gene))
+#class.files$bambu_annoGene <- class.files$bambu_annoGene  %>% mutate(novelTranscript = ifelse(associated_transcript == "novel","Novel","Known"))
 
-femaleMedianReads <- class.files$glob_SQ %>% select(all_of(femaleWhole)) %>% apply(., 1, median)
-maleMedianReads <- class.files$glob_SQ %>% select(all_of(maleWhole)) %>% apply(., 1, median)
-postMedianReads <- class.files$glob_SQ %>% select(all_of(postWhole)) %>% apply(., 1, median)
-preMedianReads <- class.files$glob_SQ %>% select(all_of(preWhole)) %>% apply(., 1, median)
-class.files$glob_SQ <- class.files$glob_SQ %>% mutate(FReads_median = femaleMedianReads, MReads_median = maleMedianReads, 
-                                                      preReads_median = preMedianReads, postReads_median = postMedianReads)
-
-# annotated genes 
-class.files$glob_SQ_annoGene <- class.files$glob_SQ %>% filter(!grepl("novelGene", associated_gene))
-class.files$glob_SQ_annoGene <- class.files$glob_SQ_annoGene %>% mutate(novelTranscript = ifelse(associated_transcript == "novel","Novel","Known"))
-
-wholesamples <- colnames(class.files$glob_targ_SQ_counts)[grepl("Whole", colnames(class.files$glob_targ_SQ_counts))]
-targetedsamples <- colnames(class.files$glob_targ_SQ_counts)[grepl("Targeted", colnames(class.files$glob_targ_SQ_counts))]
-matchedsamples <- intersect(gsub("^.*?Whole","",wholesamples),gsub("^.*?Targeted","",targetedsamples))
-targetedmatchedsamples <- paste0("Targeted",matchedsamples)
-wholematchedsamples <- paste0("Whole",matchedsamples)
+#bambuAnnoGeneStats <- list(
+#  novelTrans = class.files$bambu_annoGene[class.files$bambu_annoGene$associated_transcript == "novel",],
+#  annoTrans = class.files$bambu_annoGene[class.files$bambu_annoGene$associated_transcript != "novel",],
+#  NIC = class.files$bambu_annoGene[class.files$bambu_annoGene$structural_category == "NIC",],
+#  NNC = class.files$bambu_annoGene[class.files$bambu_annoGene$structural_category == "NNC",]
+#)
 
 
 ## -------------- DESeq2 ----------------
@@ -256,12 +233,16 @@ class.files$glob_SQ_annoGene_postnatal <- class.files$glob_SQ_annoGene[class.fil
 ## -------------- comparison with Leung et al.(2021) dataset ----------------
 
 # gffcompare output 
-gfftmap <- data.table::fread(paste0(root_sfari,"14_OverlapPacBio/sfariPacBio.HumanCTX.collapsed_classification.filtered_lite.gtf.tmap"), data.table = FALSE)
+gfftmapComparisons <- list(
+  cellReports = data.table::fread(paste0(dirnames$overlapDatasets,"cellReports2021/sfari_PacBio.HumanCTX.collapsed_classification.filtered_lite.gtf.tmap"), data.table = FALSE),
+  directRNA = data.table::fread(paste0(dirnames$overlapDatasets,"directRNA/sfari_dRNA.sqantifiltered_monoexonicfiltered_2reads2samples.filtered.gtf.tmap"), data.table = FALSE),
+  BDRNatureComms = data.table::fread(paste0(dirnames$overlapDatasets,"BDRNatureComms2024/sfari_BDR.ontBDR_collapsed.filtered_counts_filtered.gtf.tmap"), data.table = FALSE)
+)
 humanCTX <- read.table(paste0(dirnames$humanPacBio, "/HumanCTX.collapsed_classification.filtered_lite_classification.txt"), header = TRUE)
 humanCTX$totalFL <- humanCTX %>% dplyr::select(contains("FL.")) %>% apply(.,1,sum)
+directRNA <- read.table(paste0(dirnames$directRNA, "sqantifiltered_monoexonicfiltered_2reads2samples_classification.txt"), header = TRUE, sep = "\t", as.is = T)
 
-
-## -------------- comparison with Leung et al.(2021) dataset ----------------
+## -------------- FICLE ----------------
 
 protein_coding_genes = read.table("/lustre/home/vc362/protein-coding-genes.txt")
 FICLE_class <- fread("/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/15_ficle/TargetGenes/all_final_transcript_classifications.csv", data.table = F)

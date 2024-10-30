@@ -151,7 +151,7 @@ ggplot(tallyReads, aes(x = nreads, y = cum_percentage, colour = factor(nsamples)
 
 ## ----- correlation of RIN with number of transcripts -------
 
-datWholeCounts <- class.files$glob_targ_SQ_counts %>% select(contains("Whole"))
+datWholeCounts <- class.files$glob_targ_SQ %>% select(contains("Whole"),-"whole_nsamples",-"whole_nreads")
 ## to check below command about colSums
 #length(datWholeCounts[,"Whole11831"][datWholeCounts[,"Whole11831"] != 0])
 #length(datWholeCounts[,"Whole11831"][datWholeCounts[,"Whole11831"] == 0])

@@ -5,51 +5,12 @@
 ##
 ## ---------------------------------
 
+LOGEN <- "/lustre/projects/Research_Project-MRC148213/lsl693/scripts/LOGen/"
+source(paste0(LOGEN,"transcriptome_stats/summarise_classfiles.R"))
+
 ## ------- whole transcriptome -------
 
-# number of transcripts and genes to annotated genes
-message("Number of total transcripts to all genes: ", nrow(class.files$glob_SQ_annoGene))
-message("Number of annotated known genes: ", length(unique((class.files$glob_SQ_annoGene$associated_gene))))
-
-# length summary
-message("Mean length (sd): ", round(mean(class.files$glob_SQ_annoGene$length),2)," (", round(sd(class.files$glob_SQ_annoGene$length),2),")")
-message("Min - max length: ", round(min(class.files$glob_SQ_annoGene$length),2)," - ", round(max(class.files$glob_SQ_annoGene$length),2),"")
-
-# number of transcripts summary
-numIsogene = numIsoGene(class.files$glob_SQ_annoGene,stats=TRUE)
-numIsogeneTally = class.files$glob_SQ_annoGene %>% group_by(associated_gene) %>% tally()
-message("Most isomorphic gene: ")
-#numIsogeneTally %>% arrange(-n)
-message("Mean number of isoforms (sd): ", round(mean(numIsogeneTally$n),2)," (", round(sd(numIsogeneTally$n),2),")")
-nrow(numIsogeneTally[numIsogeneTally$n >= 10,])
-nrow(numIsogeneTally[numIsogeneTally$n >= 10,])/length(unique(numIsogeneTally$associated_gene))
-
-# exon summary 
-message("Mean number of exons, (sd): ", round(mean(class.files$glob_SQ_annoGene$exons),2)," (", round(sd(class.files$glob_SQ_annoGene$exons),2),")")
-meanExonGene <- aggregate(class.files$glob_SQ_annoGene[,"exons"], list(class.files$glob_SQ_annoGene$associated_gene), mean)
-message("Mean number of exons for any given gene (sd): ", round(mean(meanExonGene$x),2)," (", round(sd(meanExonGene$x),2),")")
-
-# number of novel and known transcripts
-message("Number of total transcripts to annotated known genes: ", nrow(class.files$glob_SQ_annoGene))
-
-message("Number of novel transcripts to annotated known genes: ", nrow(annoGenesStats$novelTrans), "( ", 
-        round(nrow(annoGenesStats$novelTrans)/nrow(class.files$glob_SQ_annoGene) * 100,2), "%)")
-
-message("Number of annotated known genes with novel transcripts: ", length(unique(annoGenesStats$novelTrans$associated_gene)), "( ", 
-        round(length(unique(annoGenesStats$novelTrans$associated_gene))/length(unique(class.files$glob_SQ_annoGene$associated_gene)) * 100,2), "%)")
-
-message("Mean length (sd): ", round(mean(annoGenesStats$novelTrans$length),2)," (", round(sd(annoGenesStats$novelTrans$length),2),")")
-message("Mean number of exons (sd): ", round(mean(annoGenesStats$novelTrans$exons),2)," (", round(sd(annoGenesStats$novelTrans$exons),2),")")
-
-
-message("Number of known transcripts to annotated known genes: ", nrow(annoGenesStats$annoTrans), "( ", 
-        round(nrow(annoGenesStats$annoTrans)/nrow(class.files$glob_SQ_annoGene) * 100,2), "%)")
-
-message("Number of NIC transcripts to annotated known genes: ", nrow(annoGenesStats$NIC), "( ", 
-        round(nrow(annoGenesStats$NIC)/nrow(annoGenes_stats$novelTrans) * 100,2), "%)")
-
-message("Number of NNC transcripts to annotated known genes: ", nrow(annoGenesStats$NNC), "( ", 
-        round(nrow(annoGenesStats$NNC)/nrow(annoGenes_stats$novelTrans) * 100,2), "%)")
+summary_table <- descriptives_summary(class.files, annoGenesStats)
 
 # abundance of novel transcripts vs known transcripts of known genes 
 # sum the mean of the counts across all the whole samples
@@ -152,27 +113,35 @@ WholeDTE$age %>% group_by(structural_category) %>% tally()
 17308/85428
 63204/85428
 
+## ------- long-read sequencing datasets comparisons -------
 
 # number of overlaps between Leung et al. 2021 and whole dataset
-message("Number overlap: ",length(unique(gfftmap[gfftmap$class_code == "=","qry_id"])))
-length(unique(gfftmap[gfftmap$class_code == "=","ref_id"]))
-message("Percentage overlap: ",length(unique(gfftmap[gfftmap$class_code == "=","qry_id"]))/nrow(humanCTX))
-nrow(humanCTX) - length(unique(gfftmap[gfftmap$class_code == "=","qry_id"]))
-length(class.files$glob_SQ$isoform) - length(unique(gfftmap[gfftmap$class_code == "=","qry_id"]))
 
-DetectedBoth <- unique(gfftmap[gfftmap$class_code == "=","qry_id"])
-DetectedBothRB <- unique(gfftmap[gfftmap$qry_id %in% DetectedBoth,"ref_id"])
-Unique <- setdiff(unique(gfftmap[gfftmap$class_code != "=","qry_id"]),unique(gfftmap[gfftmap$class_code == "=","qry_id"]))
-UniqueRB <- class.files$glob_SQ[!class.files$glob_SQ$isoform %in% DetectedBothRB,]
-CommonRB <- class.files$glob_SQ[class.files$glob_SQ$isoform %in% DetectedBothRB,]
+comparison_dataset <- function(gfftmap, classfiles, altDataset){
 
-ExpressionDiffPacBio <- rbind(UniqueRB %>% mutate(dataset = "Unique") %>% select(nreads, dataset),
-                              CommonRB %>% mutate(dataset = "Common") %>% select(nreads, dataset))
+        Detected_alt <- unique(gfftmap[gfftmap$class_code == "=","qry_id"])
+        Detected_RB <- unique(gfftmap[gfftmap$qry_id %in% Detected_alt,"ref_id"])
+        Unique_alt <- setdiff(unique(gfftmap[gfftmap$class_code != "=","qry_id"]),unique(gfftmap[gfftmap$class_code == "=","qry_id"]))
+        Unique_RB <- classfiles[!classfiles$isoform %in% Detected_RB,]
+        Common_RB <- classfiles[classfiles$isoform %in% Detected_RB,]
+
+        message("Number overlap from alternative long read sequencing dataset: ",length(Detected_alt))
+        message("Percentage covered from alternative long read sequencing dataset: ", round(length(Detected_alt)/length(unique(altDataset$isoform)) * 100,2))
+        message("Number overlap from Bamford dataset: ", length(Detected_RB))
+        message("Percentage overlap from Bamford dataset: ", round(length(Detected_RB)/nrow(classfiles)* 100,2))
+        message("Number unique to Bamford dataset: ", nrow(Unique_RB))
+
+}
+
+comparison_dataset(gfftmapComparisons$cellReports, class.files$glob_SQ, humanCTX)
+comparison_dataset(gfftmapComparisons$directRNA, class.files$glob_SQ, directRNA)
+
+ExpressionDiffPacBio <- rbind(Unique_RB %>% mutate(dataset = "Unique") %>% select(nreads, dataset),
+                              Common_RB %>% mutate(dataset = "Common") %>% select(nreads, dataset))
 res <- wilcox.test(nreads ~ dataset, ExpressionDiffPacBio, exact = FALSE)
 res
 res$p.value
 format(res$p.value, scientific = TRUE)
-
 
 
 

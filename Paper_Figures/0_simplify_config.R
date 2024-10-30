@@ -21,19 +21,19 @@ sapply(list.files(path = paste0(LOGEN,"longread_QC"), pattern="*.R", full = T), 
 
 root_dir <- "/lustre/projects/Research_Project-MRC148213/lsl693/"
 root_sfari <- "/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/"
-root_rb_dir <- "/lustre/projects/Research_Project-MRC148213/Rosie/SFARIdevelopmentalgenomics/"
-recovered_dir <- "/lustre/recovered/Research_Project-MRC148213/sl693/RBFetal/"
 dirnames <- list(
   
-  wholetarg_SQ = paste0(root_rb_dir,"6_sqanti3/"),
-  
+  # general
   output = paste0(root_sfari,"/0_output/"),
   utils = paste0(root_sfari,"/0_utils/"),
-  protein = paste0(root_sfari, "/8_longReadProteogenomics/longReadProteogenomics"),
+
+  wholetarg_SQ = paste0(root_sfari,"C_Whole_Targeted/9_sqanti_final/"),
+  protein = paste0(root_sfari, "C_Whole_Targeted/10_longReadProteogenomics/"),
   
-  DGE = paste0(root_sfari, "10_deseq/1_DGE/"), 
-  DTE = paste0(root_sfari, "10_deseq/2_DTE/"),
-  DIU = paste0(root_sfari, "10_deseq/3_DIU/")
+  # whole dataset differential expression analysis
+  DGE = paste0(root_sfari, "A_Whole/10_deseq/1_DGE/"), 
+  DTE = paste0(root_sfari, "A_Whole/10_deseq/2_DTE/"),
+  DIU = paste0(root_sfari, "A_Whole/10_deseq/3_DIU/")
 )
 
 
@@ -42,56 +42,47 @@ TargetGene = read.table(paste0(root_sfari, "0_metadata/Complete_TargetGenes_Targ
 
 ## -------------- Final classification files -------------
 
+## Transcript level: targeted + whole SQANTI dataset file generated from filter 
+# keeping only the transcripts kept from sqanti filtering (relaxed json file)
+# removed mono-exonic intergenic transcripts 
+# removed mono-exonic transcripts within multi-exonic genes
+# futher filtered by minimum 2 reads and 2 samples
+
 class.names.files <- list(
-  
-  # targeted + whole SQANTI dataset futher filtered by minimum 2 reads and 2 samples
-  glob_targ_SQ = paste0(dirnames$wholetarg_SQ,"WholeTargeted_cleaned_aligned_merged_collapsed_qced_RulesFilter_2reads2samples_classification.txt"),
-  
-  # whole transcriptome SQANTI dataset further filtered by minimum 2 reads and 2 samples
-  glob_SQ = paste0(dirnames$wholetarg_SQ, "WholeTargeted_cleaned_aligned_merged_collapsed_qced_RulesFilter_classification_Whole_2reads2samples.txt"),
-  
-  # targeted SQANTI dataset further filtered by minimum 2 reads and 2 samples
-  targ_SQ = paste0(dirnames$wholetarg_SQ, "WholeTargeted_cleaned_aligned_merged_collapsed_qced_RulesFilter_classification_Targeted_2reads2samples.txt")
-  
+  glob_targ_SQ = paste0(dirnames$wholetarg_SQ,"sqantifiltered_monoexonicfiltered_2reads2samples_classification_finalversion.txt")
+)
+class.files <- lapply(class.names.files, function(x) SQANTI_class_preparation(x,"nstandard"))
+
+# filter isoforms that are only detected in the whole dataset, 2 reads, 2 samples
+class.files$glob_SQ <- class.files$glob_targ_SQ %>% filter(targeted_nsamples == 0 , targeted_nreads == 0) %>% filter(whole_nsamples >= 2, whole_nreads >= 2)
+class.files$targ_SQ <- class.files$glob_targ_SQ %>% filter(whole_nsamples == 0 , whole_nreads == 0) %>% filter(targeted_nsamples >= 2, targeted_nreads >= 2)
+
+# known genes in whole dataset
+class.files$glob_SQ_annoGene <- class.files$glob_SQ %>% filter(!grepl("novelGene", associated_gene)) %>% mutate(novelTranscript = ifelse(associated_transcript == "novel","Novel","Known"))
+
+# annotated genic features
+annoGenesStats <- list(
+  novelTrans = class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$associated_transcript == "novel",],
+  annoTrans = class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$associated_transcript != "novel",],
+  NIC = class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$structural_category == "NIC",],
+  NNC = class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$structural_category == "NNC",]
 )
 
-class.files <- lapply(class.names.files, function(x) SQANTI_class_preparation(x,"nstandard"))
-message("Number of transcripts in whole transcriptome dataset after SQANTI filtering, 2 reads 2 samples: ", nrow(class.files$glob_SQ))
-message("Number of genes: ", length(unique(class.files$glob_SQ$associated_gene)))
+# subset by number of FL reads
+femaleReads <- class.files$glob_SQ %>% select(all_of(femaleWhole)) %>% apply(., 1, sum)
+maleReads <- class.files$glob_SQ %>% select(all_of(maleWhole)) %>% apply(., 1, sum)
+postReads <- class.files$glob_SQ %>% select(all_of(postWhole)) %>% apply(., 1, sum)
+preReads <- class.files$glob_SQ %>% select(all_of(preWhole)) %>% apply(., 1, sum)
+class.files$glob_SQ <- class.files$glob_SQ %>% mutate(FReads = femaleReads, MReads = maleReads, preReads = preReads, postReads = postReads)
+class.files$glob_SQ$DevStatus <- apply(class.files$glob_SQ, 1, function(x) identify_dataset_by_counts(x[["postReads"]], x[["preReads"]], "postnatal","prenatal"))
 
-# remove mono-exonic intergenic transcripts
-class.files <- lapply(class.files, function(x) x %>% mutate(structural_category_exons = paste0(structural_category,"_",exons)))
-class.files <- lapply(class.files, function(x) x %>% filter(structural_category_exons != "Intergenic_1"))
-message("Number of transcripts in whole transcriptome dataset after SQANTI filtering, 2 reads 2 samples, -monoexonic intergenic: ", nrow(class.files$glob_SQ))
-message("Number of genes: ", length(unique(class.files$glob_SQ$associated_gene)))
-
-# remove mono-exonic transcripts 
-refExonNum <- read.csv(paste0(dirnames$utils,"gencode.v40.annotation.numExon.csv"))
-exonicClass <- refExonNum %>% 
-  group_by(Gene, GeneName, GeneType) %>% 
-  dplyr::summarise(maxNumExon = max(NumExon)) %>% 
-  mutate(monoExonic = ifelse(maxNumExon == 1, TRUE, FALSE))
-
-refGeneType <- read.table(paste0(dirnames$utils,"gencode.v38.annotation.geneannotation.txt"), header = T)
-
-# identify multi-exonic genes
-multiExonicGenes <- unique(exonicClass[exonicClass$monoExonic == FALSE,][["GeneName"]])
-# TRUE = monotranscript within multi-exonic gene
-class.files <- lapply(class.files, function(x) x %>% mutate(monomulti = ifelse(exons == 1 & associated_gene %in% multiExonicGenes, TRUE,FALSE)))
-# filter FALSE to retain multi-transcripts within multi-exonic gene, and mono-transcripts within mono-exonic gene
-class.files <- lapply(class.files, function(x) x %>% filter(monomulti == FALSE))
-message("Number of transcripts in whole transcriptome dataset after SQANTI filtering, 2 reads 2 samples, -monoexonic intergenic, -monoexonic multigene: ", nrow(class.files$glob_SQ))
-message("Number of genes: ", length(unique(class.files$glob_SQ$associated_gene)))
-
-# mmExonicClass <- refExonNum[refExonNum$NumExon == 1 & refExonNum$GeneName %in% exonicClass[exonicClass$monoExonic != TRUE,][["GeneName"]],]
-# monomulti.class.files$glob_SQ[monomulti.class.files$glob_SQ$associated_gene %in% mmExonicClass$GeneName,]
-
-# filter targeted dataset to just the target genes
-class.files$targ_SQ <- class.files$targ_SQ %>% filter(associated_gene %in% TargetGene)
-
-save(class.files, file = paste0(dirnames$wholetarg_SQ,"all_filtered_classification_2reads2samples_noMonoIntergenicAll.RData"))
-write.table(class.files$glob_SQ, paste0(dirnames$wholetarg_SQ,"WholeTargeted_cleaned_aligned_merged_collapsed_qced_RulesFilter_classification_Whole_2reads2samples_monomultirem.txt"),quote=F, sep = "\t")
-write.table(class.files$glob_targ_SQ, paste0(dirnames$wholetarg_SQ,"WholeTargeted_cleaned_aligned_merged_collapsed_qced_RulesFilter_classification_2reads2samples_monomultirem.txt"),quote=F, sep = "\t", row.names= F)
+femaleMedianReads <- class.files$glob_SQ %>% select(all_of(femaleWhole)) %>% apply(., 1, median)
+maleMedianReads <- class.files$glob_SQ %>% select(all_of(maleWhole)) %>% apply(., 1, median)
+postMedianReads <- class.files$glob_SQ %>% select(all_of(postWhole)) %>% apply(., 1, median)
+preMedianReads <- class.files$glob_SQ %>% select(all_of(preWhole)) %>% apply(., 1, median)
+class.files$glob_SQ <- class.files$glob_SQ %>% mutate(FReads_median = femaleMedianReads, MReads_median = maleMedianReads, 
+                                                      preReads_median = preMedianReads, postReads_median = postMedianReads)
+save(class.files, file = paste0(dirnames$wholetarg_SQ,"sqantifiltered_monoexonicfiltered_2reads2samples.RData"))
 
 ## -------------- DESeq2
 
