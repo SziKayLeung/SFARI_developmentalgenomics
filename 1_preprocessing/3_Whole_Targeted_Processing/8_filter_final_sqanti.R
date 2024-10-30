@@ -46,7 +46,7 @@ filtered.merged.demux.files <- merged.demux.files %>% filter(nreads >= 2 & nsamp
 filtered.class.files <- class.files %>% filter(isoform %in% filtered.merged.demux.files$id)
 
 # final classification file 
-final.class.files <- merge(filtered.class.files, filtered.merged.demux.files, by.x = "isoform", by.y = "id", all = TRUE)
+final.class.files <- merge(filtered.class.files, filtered.merged.demux.files, by.x = "isoform", by.y = "id", all.x = TRUE)
 
 write.table(final.class.files, file = paste0(dirnames$output,"sqantifiltered_monoexonicfiltered_2reads2samples_classification.txt"), quote=F, sep = "\t", row.names= F)
 write.table(final.class.files$isoform, file = paste0(dirnames$output,"sqantifiltered_monoexonic_2reads2samplesfiltered_ID.txt"), quote=F, sep = "\t", row.names= F, col.names = F)
