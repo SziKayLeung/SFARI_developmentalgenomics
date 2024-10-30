@@ -8,20 +8,22 @@
 #SBATCH --ntasks-per-node=16 # specify number of processors per node
 #SBATCH --mail-type=END # send email at job completion
 #SBATCH --mail-user=sl693@exeter.ac.uk # email address
-#SBATCH --array=0-46%5 # 47 samples
+#SBATCH --array=0-8
 #SBATCH --output=rarefaction_whole-%A_%a.o
 #SBATCH --error=rarefaction_whole-%A_%a.e
 #SBATCH --job-name=whole_transcriptome_rarefaction
 
-# 20/08/2024: rarefaction curves on whole dataset (47 samples)
+# 30/10/2024: rarefaction curves on whole dataset (47 samples)
 
 #************************************* DEFINE GLOBAL VARIABLES
 # setting names of directory outputs
-RAREFACTION=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/0_rarefactionSKL
-CUPCAKE=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/5_isoseq/cupcakeIndividual
-CUPCAKE_WHOLE=($(ls $CUPCAKE/*Whole*.read_stat.txt*))
-SamplePath=${CUPCAKE_WHOLE[${SLURM_ARRAY_TASK_ID}]}
-sample=$(basename ${SamplePath} .read_stat.txt)
+RAREFACTION=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/A_Whole/0_rarefactionSKL
+CUPCAKE=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/A_Whole/5_isoseq/collapse_per_sample
+SQANTI=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/C_Whole_Targeted/9_sqanti_final/sqantifiltered_monoexonicfiltered_2reads2samples_classification_finalversion.txt
+samples=(Whole51168 WholeNP15050 Whole45988 Whole11831 Whole11950 Whole1281 Whole47308 Whole83549)
+sample=${samples[${SLURM_ARRAY_TASK_ID}]}
+SamplePath=$CUPCAKE/${sample}*.read_stat.txt*
+samplePrefix=$(basename ${SamplePath} .read_stat.txt)
 
 module load Miniconda2/4.3.21
 source activate sqanti2_py3
@@ -35,14 +37,14 @@ make_file_for_rarefaction(){
   echo "Working with $1"
   prefix=$1
   # make_file_for_subsampling_from_collapsed.py <sample_name_prefix>.input.file <sample_name_prefix>.output.file <sample_name_prefix>.classification.txt
-  python $CUPCAKE_ANNOTATION/make_file_for_subsampling_from_collapsed.py -i $2/$prefix -o $1.subsampling &>> $1.makefile.log
+  python $CUPCAKE_ANNOTATION/make_file_for_subsampling_from_collapsed.py -i $2/$prefix -o $1.subsampling -m2 $4 &>> $1.makefile.log
   python $CUPCAKE_ANNOTATION/subsample.py --by pbgene --min_fl_count 2 --step 1000 $1.subsampling.all.txt > $1.rarefaction.by_pbgene.min_fl_2.txt
   python $CUPCAKE_ANNOTATION/subsample.py --by pbid --min_fl_count 2 --step 1000 $1.subsampling.all.txt > $1.rarefaction.by_pbid.min_fl_2.txt
   
   # if running with sqanti_class file
-  #python $CUPCAKE_ANNOTATION/subsample.py --by refgene --min_fl_count 2 --step 1000 $1.subsampling.all.txt > $1.rarefaction.by_refgene.min_fl_2.txt 
-  #python $CUPCAKE_ANNOTATION/subsample.py --by refisoform --min_fl_count 2 --step 1000 $1.subsampling.all.txt > $1.rarefaction.by_refisoform.min_fl_2.txt
+  python $CUPCAKE_ANNOTATION/subsample.py --by refgene --min_fl_count 2 --step 1000 $1.subsampling.all.txt > $1.rarefaction.by_refgene.min_fl_2.txt 
+  python $CUPCAKE_ANNOTATION/subsample.py --by refisoform --min_fl_count 2 --step 1000 $1.subsampling.all.txt > $1.rarefaction.by_refisoform.min_fl_2.txt
   
 }
 
-make_file_for_rarefaction $sample $CUPCAKE $RAREFACTION   
+make_file_for_rarefaction $samplePrefix $CUPCAKE $RAREFACTION $SQANTI 
