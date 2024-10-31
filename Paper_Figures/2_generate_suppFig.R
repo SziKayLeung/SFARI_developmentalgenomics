@@ -163,6 +163,14 @@ TranscriptPerSample <- colSums(datWholeCounts  != 0) %>%  reshape2::melt(., valu
 # merge with manifest to get the RIN numbers
 TranscriptPerSample <- merge(TranscriptPerSample, manifest, by = "ID")
 
+# postnatal dataset
+PostnatalTranscriptPerSample <- TranscriptPerSample[TranscriptPerSample$Group == "Postnatal",]
+cor.test(PostnatalTranscriptPerSample$RIN, PostnatalTranscriptPerSample$counts)
+
+# postnatal dataset (with RIN > 5)
+PostnatalTranscriptPerSampleGoodRIN <- TranscriptPerSample[TranscriptPerSample$Group == "Postnatal" & TranscriptPerSample$RIN >= 4.5,]
+cor.test(PostnatalTranscriptPerSampleGoodRIN$RIN, PostnatalTranscriptPerSampleGoodRIN$counts)
+
 cor.test(TranscriptPerSample$RIN, TranscriptPerSample$counts)
 pRINTranscripts <- ggplot(TranscriptPerSample, aes(x = RIN, y = counts, colour = Group)) + 
   geom_point(size = 3) +
