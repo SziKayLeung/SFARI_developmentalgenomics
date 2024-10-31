@@ -135,6 +135,8 @@ comparison_dataset <- function(gfftmap, classfiles, altDataset){
 
 comparison_dataset(gfftmapComparisons$cellReports, class.files$glob_SQ, humanCTX)
 comparison_dataset(gfftmapComparisons$directRNA, class.files$glob_SQ, directRNA)
+comparison_dataset(gfftmapComparisons$BDRNatureComms, class.files$glob_targ_SQ_20AD, BDRNatureComms)
+
 
 ExpressionDiffPacBio <- rbind(Unique_RB %>% mutate(dataset = "Unique") %>% select(nreads, dataset),
                               Common_RB %>% mutate(dataset = "Common") %>% select(nreads, dataset))

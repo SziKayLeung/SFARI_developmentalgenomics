@@ -46,6 +46,7 @@ dirnames <- list(
   # comparison to other long read sequencing datasets
   humanPacBio = paste0(root_sfari, "C_Whole_Targeted/17_longReadDatasetComparisons/Leung2021/HumanCTX"),
   directRNA = paste0(root_rna_dir, "dRNA/Rosie/9_sqanti_final/"),
+  BDRNatureComms = paste0(root_dir, "AD_BDR/D_ONT/5_cupcake/7_sqanti3/"),
 
   overlapDatasets = paste0(root_sfari, "C_Whole_Targeted/14_OverlapDatasets/")
 )
@@ -241,6 +242,12 @@ gfftmapComparisons <- list(
 humanCTX <- read.table(paste0(dirnames$humanPacBio, "/HumanCTX.collapsed_classification.filtered_lite_classification.txt"), header = TRUE)
 humanCTX$totalFL <- humanCTX %>% dplyr::select(contains("FL.")) %>% apply(.,1,sum)
 directRNA <- read.table(paste0(dirnames$directRNA, "sqantifiltered_monoexonicfiltered_2reads2samples_classification.txt"), header = TRUE, sep = "\t", as.is = T)
+BDRNatureComms <- read.table(paste0(dirnames$BDRNatureComms, "ontBDR_collapsed_RulesFilter_result_classification.targetgenes_counts_filtered.txt"), header = TRUE, sep = "\t", as.is = T)
+
+# subset global targeted dataset to 20 AD target genes
+AD20TargetGenes <- c("ABCA1", "PICALM", "SORL1", "FUS", "MAPT", "RHBDF2", "ABCA7", "APOE", "CD33", "BIN1", "TARDBP", "APP", "SNCA", "TREM2", "FYN",
+  "VGF", "PTK2B","CLU", "ANK1", "TRPA1")
+class.files$glob_targ_SQ_20AD <- class.files$glob_targ_SQ[class.files$glob_targ_SQ$associated_gene %in% AD20TargetGenes,]
 
 ## -------------- FICLE ----------------
 
