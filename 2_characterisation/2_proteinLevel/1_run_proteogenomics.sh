@@ -12,6 +12,7 @@
 #SBATCH --error=1_run_proteogenomics.e
 
 # 04/12/2023: run on whole dataset
+# 04/11/2024: re-run on whole dataset after subsetting from whole+targeted
 
 
 #-----------------------------------------------------------------------#
@@ -21,8 +22,9 @@ date -u
 
 module load Miniconda2
 source activate sqanti2_py3
-source /gpfs/mrc0/projects/Research_Project-MRC148213/sl693/scripts/SFARI_developmentalgenomics/1_characterisation/2_proteinLevel/0_proteogenomics_functions.sh
-source /gpfs/mrc0/projects/Research_Project-MRC148213/sl693/scripts/SFARI_developmentalgenomics/1_characterisation/2_proteinLevel/0_proteomics.config
+scriptDir=/lustre/projects/Research_Project-MRC148213/lsl693/scripts/SFARI_developmentalgenomics/2_characterisation/2_proteinLevel
+source ${scriptDir}/0_proteogenomics_functions.sh
+source ${scriptDir}/0_proteomics.config
 
 echo "#************************************* Collate and prepare long-read data"
 prepare_reference_tables
