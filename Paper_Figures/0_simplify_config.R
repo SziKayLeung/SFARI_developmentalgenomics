@@ -13,7 +13,6 @@ LOGEN <- "/lustre/projects/Research_Project-MRC148213/lsl693/scripts/LOGen/"
 LOGEN_ROOT <- "/lustre/projects/Research_Project-MRC148213/lsl693/scripts/LOGen/"
 source(paste0(LOGEN,"transcriptome_stats/read_sq_classification.R"))
 source(paste0(LOGEN,"transcriptome_stats/sample_sensitivity.R"))
-source(paste0(LOGEN,"transcriptome_stats/sample_sensitivity.R"))
 source(paste0(LOGEN,"compare_datasets/dataset_identifer.R"))
 sapply(list.files(path = paste0(LOGEN,"transcriptome_stats"), pattern="*.R", full = T), source,.GlobalEnv)
 sapply(list.files(path = paste0(LOGEN,"longread_QC"), pattern="*.R", full = T), source,.GlobalEnv)
@@ -97,6 +96,14 @@ class.files <- lapply(class.files, function(x) x %>% mutate(monomulti = ifelse(e
 mono.multi.class.files <- lapply(class.files, function(x) x %>% filter(monomulti == TRUE))
 class.files <- lapply(class.files, function(x) x %>% filter(monomulti == FALSE))
 
+# filter mono-exonic genic intron
+class.files <- lapply(class.files, function(x) x %>% filter(!structural_category_exons %in% c("Genic_Intron_1","genic_intron_1")))
+class.files$glob_collapsed <- class.files$glob_collapsed %>%
+    mutate(structural_category = recode(structural_category,
+                                        "full-splice_match" = "FSM",
+                                        "novel_in_catalog" = "NIC",
+                                        "novel_not_in_catalog" = "NNC",
+                                        "incomplete-splice_match" = "ISM"))
 
 ## ------ filtering by expression ------
 
@@ -106,6 +113,7 @@ class.files$targ_SQ <- class.files$glob_targ_SQ %>% filter(targeted_nsamples >= 
 
 # known genes in whole dataset
 class.files$glob_SQ_annoGene <- class.files$glob_SQ %>% filter(!grepl("novelGene", associated_gene)) %>% mutate(novelTranscript = ifelse(associated_transcript == "novel","Novel","Known"))
+class.files$glob_collapsed_annoGene <- class.files$glob_collapsed %>% filter(!grepl("novelGene", associated_gene)) %>% mutate(novelTranscript = ifelse(associated_transcript == "novel","Novel","Known"))
 
 # annotated genic features
 annoGenesStats <- list(
@@ -130,6 +138,10 @@ preMedianReads <- class.files$glob_SQ %>% select(all_of(preWhole)) %>% apply(., 
 class.files$glob_SQ <- class.files$glob_SQ %>% mutate(FReads_median = femaleMedianReads, MReads_median = maleMedianReads, 
                                                       preReads_median = preMedianReads, postReads_median = postMedianReads)
 save(class.files, file = paste0(dirnames$wholetarg_SQ,"sqantifiltered_monoexonicfiltered_2reads2samples.RData"))
+write.table(class.files$glob_SQ, paste0(dirnames$wholetarg_SQ,"sqantifiltered_monoexonicfiltered_2reads2samples_whole_intergenicGenicIntron_classification.txt"), quote = F, row.names = F, sep = "\t")
+write.table(class.files$glob_SQ$isoform, paste0(dirnames$wholetarg_SQ,"sqantifiltered_monoexonic_2reads2samplesfiltered_intergenicGenicIntron.ID.txt"), quote = F, row.names = F, col.names = F)
+# bash
+# grep -wF -f sqantifiltered_monoexonic_2reads2samplesfiltered_intergenicGenicIntron.ID.txt sqantifiltered_monoexonicfiltered_2reads2samples.filtered.gtf > sqantifiltered_monoexonicfiltered_2reads2samples_intergenicGenicIntron.filtered.gtf
 
 ## -------------- DESeq2
 

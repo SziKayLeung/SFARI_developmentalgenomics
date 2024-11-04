@@ -15,5 +15,9 @@ SQANTI_FINAL_DIR=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/
 
 cd ${SQANTI_FINAL_DIR}
 
-outputName=sqantifiltered_monoexonicfiltered_2reads2samples_whole
-grep -wF -f sqantifiltered_monoexonic_2reads2samplesfiltered_whole_ID.txt sqantifiltered_monoexonicfiltered_2reads2samples.filtered.gtf > ${outputName}.filtered.gtf
+outputName=sqantifiltered_monoexonicfiltered_2reads2samples_whole_intergenicGenicIntron
+filteredID=sqantifiltered_monoexonic_2reads2samplesfiltered_whole_intergenicGenicIntron_ID.txt
+grep -wF -f ${filteredID} sqantifiltered_monoexonicfiltered_2reads2samples.filtered.gtf > ${outputName}.filtered.gtf
+
+source activate nanopore 
+seqtk subseq WholeTargeted_collapsedAllChr_corrected.fasta ${filteredID} > ${outputName}.fasta

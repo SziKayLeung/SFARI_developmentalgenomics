@@ -10,7 +10,8 @@ source(paste0(LOGEN,"transcriptome_stats/summarise_classfiles.R"))
 
 ## ------- whole transcriptome -------
 
-summary_table <- descriptives_summary(class.files, annoGenesStats)
+wholetarg_annotatedGenes_summary_table <- descriptives_summary(class.files$glob_SQ, class.files$glob_SQ_annoGene)
+wholecollapsed_annotatedGenes_summary_table <- descriptives_summary(class.files$glob_collapsed, class.files$glob_collapsed_annoGene)
 
 # abundance of novel transcripts vs known transcripts of known genes 
 # sum the mean of the counts across all the whole samples
