@@ -29,6 +29,7 @@ dirnames <- list(
   output = paste0(root_sfari,"/0_output/"),
   utils = paste0(root_sfari,"/0_utils/"),
 
+  whole = paste0(root_sfari,"A_Whole/"),
   wholetarg_SQ = paste0(root_sfari,"C_Whole_Targeted/9_sqanti_final/"),
   protein = paste0(root_sfari, "C_Whole_Targeted/10_longReadProteogenomics/"),
   
@@ -69,9 +70,35 @@ manifest <- fread(paste0(root_sfari, "0_metadata/WholeTargetedphenotype_manifest
 # futher filtered by minimum 2 reads and 2 samples
 
 class.names.files <- list(
-  glob_targ_SQ = paste0(dirnames$wholetarg_SQ,"sqantifiltered_monoexonicfiltered_2reads2samples_classification_finalversion.txt")
+  glob_targ_SQ = paste0(dirnames$wholetarg_SQ,"sqantifiltered_monoexonicfiltered_2reads2samples_classification_finalversion.txt"),
+  glob_collapsed = paste0(dirnames$whole,"6_sqanti/Whole_cleaned_aligned_merged_collapsed_qced_RulesFilter_2reads2samples_classification.txt")
 )
 class.files <- lapply(class.names.files, function(x) fread(x, sep = "\t", data.table = FALSE))
+
+## ------ removing mono-exonic transcripts ------
+# remove mono-exonic intergenic transcripts
+class.files <- lapply(class.files, function(x) x %>% mutate(structural_category_exons = paste0(structural_category,"_",exons)))
+class.files <- lapply(class.files, function(x) x %>% filter(!structural_category_exons %in% c("Intergenic_1","intergenic_1")))
+
+# remove mono-exonic transcripts 
+refExonNum <- read.csv(paste0(dirnames$utils,"gencode.v40.annotation.numExon.csv"))
+exonicClass <- refExonNum %>% 
+  group_by(Gene, GeneName, GeneType) %>% 
+  dplyr::summarise(maxNumExon = max(NumExon)) %>% 
+  mutate(monoExonic = ifelse(maxNumExon == 1, TRUE, FALSE))
+
+refGeneType <- read.table(paste0(dirnames$utils,"gencode.v38.annotation.geneannotation.txt"), header = T)
+
+# identify multi-exonic genes
+multiExonicGenes <- unique(exonicClass[exonicClass$monoExonic == FALSE,][["GeneName"]])
+# TRUE = monotranscript within multi-exonic gene
+class.files <- lapply(class.files, function(x) x %>% mutate(monomulti = ifelse(exons == 1 & associated_gene %in% multiExonicGenes, TRUE,FALSE)))
+# filter FALSE to retain multi-transcripts within multi-exonic gene, and mono-transcripts within mono-exonic gene
+mono.multi.class.files <- lapply(class.files, function(x) x %>% filter(monomulti == TRUE))
+class.files <- lapply(class.files, function(x) x %>% filter(monomulti == FALSE))
+
+
+## ------ filtering by expression ------
 
 # filter isoforms that are only detected in the whole dataset, 2 reads, 2 samples
 class.files$glob_SQ <- class.files$glob_targ_SQ %>% filter(whole_nsamples >= 2, whole_nreads >= 2)
