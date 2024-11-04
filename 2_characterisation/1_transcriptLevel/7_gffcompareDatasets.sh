@@ -20,7 +20,7 @@ sqanti_whole_gtf=sqantifiltered_monoexonicfiltered_2reads2samples_whole.filtered
 sqanti_wholetargeted_gtf=sqantifiltered_monoexonicfiltered_2reads2samples.filtered.gtf
 
 outputDir=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/C_Whole_Targeted/14_OverlapDatasets
-mkdir -p ${outputDir}/cellReports2021 ${outputDir}/directRNA ${outputDir}/BDRNatureComms2024
+mkdir -p ${outputDir}/cellReports2021 ${outputDir}/directRNA ${outputDir}/BDRNatureComms2024 ${outputDir}/Patowary2024
 
 ## ----- run gffcompare on PacBio dataset ---- 
 
@@ -62,3 +62,19 @@ cp ${ADBDRDir}/${BDR_gtf} .
 PATH="/lustre/projects/Research_Project-MRC148213/lsl693/software/gffcompare:$PATH"
 gffcompare -r ${sqanti_wholetargeted_gtf} ${BDR_gtf} -o sfari_BDR
 gffcompare -r ${BDR_gtf} ${sqanti_wholetargeted_gtf} -o BDR_sfari
+
+
+## ----- run gffcompare on Patowary 2024 dataset ---- 
+
+source activate sqanti2_py3 
+cd ${outputDir}/Patowary2024
+cp ${sqantiDir}/${sqanti_wholetargeted_gtf} .
+# uploaded Patowary dataset: https://github.com/gandallab/Dev_Brain_IsoSeq/blob/main/data/sqanti/cp_vz_0.75_min_7_recovery_talon_corrected.gtf.gz
+gunzip cp_vz_0.75_min_7_recovery_talon_corrected.gtf.gz
+# https://github.com/gandallab/Dev_Brain_IsoSeq/blob/main/data/sqanti/cp_vz_0.75_min_7_recovery_talon_classification.txt.gz
+gunzip cp_vz_0.75_min_7_recovery_talon_classification.txt.gz
+Patowary_gtf=cp_vz_0.75_min_7_recovery_talon_corrected.gtf
+
+PATH="/lustre/projects/Research_Project-MRC148213/lsl693/software/gffcompare:$PATH"
+gffcompare -r ${sqanti_wholetargeted_gtf} ${Patowary_gtf} -o sfari_Patowary
+gffcompare -r ${Patowary_gtf} ${sqanti_wholetargeted_gtf} -o Patowary_sfari

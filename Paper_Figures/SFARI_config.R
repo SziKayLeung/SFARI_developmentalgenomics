@@ -238,11 +238,13 @@ gfftmapComparisons <- list(
   cellReports = data.table::fread(paste0(dirnames$overlapDatasets,"cellReports2021/sfari_PacBio.HumanCTX.collapsed_classification.filtered_lite.gtf.tmap"), data.table = FALSE),
   directRNA = data.table::fread(paste0(dirnames$overlapDatasets,"directRNA/sfari_dRNA.sqantifiltered_monoexonicfiltered_2reads2samples.filtered.gtf.tmap"), data.table = FALSE),
   BDRNatureComms = data.table::fread(paste0(dirnames$overlapDatasets,"BDRNatureComms2024/sfari_BDR.ontBDR_collapsed.filtered_counts_filtered.gtf.tmap"), data.table = FALSE)
+  Patowary = data.table::fread(paste0(dirnames$overlapDatasets,"Patowary2024/sfari_Patowary.cp_vz_0.75_min_7_recovery_talon_corrected.gtf.tmap"), data.table = FALSE)
 )
 humanCTX <- read.table(paste0(dirnames$humanPacBio, "/HumanCTX.collapsed_classification.filtered_lite_classification.txt"), header = TRUE)
 humanCTX$totalFL <- humanCTX %>% dplyr::select(contains("FL.")) %>% apply(.,1,sum)
 directRNA <- read.table(paste0(dirnames$directRNA, "sqantifiltered_monoexonicfiltered_2reads2samples_classification.txt"), header = TRUE, sep = "\t", as.is = T)
 BDRNatureComms <- read.table(paste0(dirnames$BDRNatureComms, "ontBDR_collapsed_RulesFilter_result_classification.targetgenes_counts_filtered.txt"), header = TRUE, sep = "\t", as.is = T)
+PatowaryCTX <- data.table::fread(paste0(dirnames$overlapDatasets, "Patowary2024/cp_vz_0.75_min_7_recovery_talon_classification.txt"), data.table = FALSE)
 
 # subset global targeted dataset to 20 AD target genes
 AD20TargetGenes <- c("ABCA1", "PICALM", "SORL1", "FUS", "MAPT", "RHBDF2", "ABCA7", "APOE", "CD33", "BIN1", "TARDBP", "APP", "SNCA", "TREM2", "FYN",

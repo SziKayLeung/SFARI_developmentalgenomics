@@ -122,13 +122,16 @@ comparison_dataset <- function(gfftmap, classfiles, altDataset){
         Detected_alt <- unique(gfftmap[gfftmap$class_code == "=","qry_id"])
         Detected_RB <- unique(gfftmap[gfftmap$qry_id %in% Detected_alt,"ref_id"])
         Unique_alt <- setdiff(unique(gfftmap[gfftmap$class_code != "=","qry_id"]),unique(gfftmap[gfftmap$class_code == "=","qry_id"]))
+        
+        # subset to the classfiles
         Unique_RB <- classfiles[!classfiles$isoform %in% Detected_RB,]
         Common_RB <- classfiles[classfiles$isoform %in% Detected_RB,]
 
+        message("Total number of transcripts alternative long read sequencing dataset: ",length(altDataset$isoform))
         message("Number overlap from alternative long read sequencing dataset: ",length(Detected_alt))
         message("Percentage covered from alternative long read sequencing dataset: ", round(length(Detected_alt)/length(unique(altDataset$isoform)) * 100,2))
-        message("Number overlap from Bamford dataset: ", length(Detected_RB))
-        message("Percentage overlap from Bamford dataset: ", round(length(Detected_RB)/nrow(classfiles)* 100,2))
+        message("Number overlap from Bamford dataset: ", length(unique(Common_RB$isoform)))
+        message("Percentage overlap from Bamford dataset: ", round(length(unique(Common_RB$isoform))/nrow(classfiles)* 100,2))
         message("Number unique to Bamford dataset: ", nrow(Unique_RB))
 
 }
@@ -136,7 +139,7 @@ comparison_dataset <- function(gfftmap, classfiles, altDataset){
 comparison_dataset(gfftmapComparisons$cellReports, class.files$glob_SQ, humanCTX)
 comparison_dataset(gfftmapComparisons$directRNA, class.files$glob_SQ, directRNA)
 comparison_dataset(gfftmapComparisons$BDRNatureComms, class.files$glob_targ_SQ_20AD, BDRNatureComms)
-
+comparison_dataset(gfftmapComparisons$Patowary, class.files$glob_SQ, PatowaryCTX)
 
 ExpressionDiffPacBio <- rbind(Unique_RB %>% mutate(dataset = "Unique") %>% select(nreads, dataset),
                               Common_RB %>% mutate(dataset = "Common") %>% select(nreads, dataset))
