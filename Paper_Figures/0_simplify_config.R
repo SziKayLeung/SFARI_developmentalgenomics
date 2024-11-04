@@ -10,9 +10,11 @@ suppressMessages(library("dplyr"))
 suppressMessages(library("vroom"))
 
 LOGEN <- "/lustre/projects/Research_Project-MRC148213/lsl693/scripts/LOGen/"
+LOGEN_ROOT <- "/lustre/projects/Research_Project-MRC148213/lsl693/scripts/LOGen/"
 source(paste0(LOGEN,"transcriptome_stats/read_sq_classification.R"))
 source(paste0(LOGEN,"transcriptome_stats/sample_sensitivity.R"))
-source(paste0(LOGEN,"target_gene_annotation/summarise_gene_stats.R"))
+source(paste0(LOGEN,"transcriptome_stats/sample_sensitivity.R"))
+source(paste0(LOGEN,"compare_datasets/dataset_identifer.R"))
 sapply(list.files(path = paste0(LOGEN,"transcriptome_stats"), pattern="*.R", full = T), source,.GlobalEnv)
 sapply(list.files(path = paste0(LOGEN,"longread_QC"), pattern="*.R", full = T), source,.GlobalEnv)
 
@@ -39,6 +41,24 @@ dirnames <- list(
 
 TargetGene = read.table(paste0(root_sfari, "0_metadata/Complete_TargetGenes_TargetedSequencing.txt"))[["V1"]]
 
+## ------------- Phenotype files -------------------
+
+phenotype <- fread(paste0(root_sfari, "0_metadata/WholeTargetedphenotype_fixedsex.csv"),data.table=F, stringsAsFactors=F) %>% mutate(time = age)
+phenotype <- phenotype %>% mutate(type = ifelse(grepl("Targeted",sample),"Targeted","Whole"),
+                     sampleID = gsub("^Targeted", "", sample)) %>% mutate(sampleID = gsub("^Whole","", sampleID))
+phenotype <- phenotype %>% mutate(group = factor(group, levels = c("Prenatal","Postnatal")), 
+                                  col = paste0(sample,"_",group),
+                                  sex = factor(sex, levels = c("M","F"))) 
+femaleWhole <- phenotype[phenotype$sex == "F" & grepl("Whole",phenotype$sample),][["sample"]]
+maleWhole <- phenotype[phenotype$sex == "M" & grepl("Whole",phenotype$sample),][["sample"]]
+postWhole <- phenotype[phenotype$group == "Postnatal" & grepl("Whole",phenotype$sample),][["sample"]]
+preWhole <- phenotype[phenotype$group == "Prenatal" & grepl("Whole",phenotype$sample),][["sample"]]
+matchedsamples <- intersect(phenotype[phenotype$type == "Whole","sampleID"],phenotype[phenotype$type == "Targeted","sampleID"])
+wholematchedsamples <- phenotype[phenotype$sampleID %in% matchedsamples & phenotype$type == "Whole","sample"]
+targetedmatchedsamples <- phenotype[phenotype$sampleID %in% matchedsamples & phenotype$type == "Targeted","sample"]
+
+# manifest 
+manifest <- fread(paste0(root_sfari, "0_metadata/WholeTargetedphenotype_manifest.csv"),data.table=F, stringsAsFactors=F)
 
 ## -------------- Final classification files -------------
 
@@ -51,11 +71,11 @@ TargetGene = read.table(paste0(root_sfari, "0_metadata/Complete_TargetGenes_Targ
 class.names.files <- list(
   glob_targ_SQ = paste0(dirnames$wholetarg_SQ,"sqantifiltered_monoexonicfiltered_2reads2samples_classification_finalversion.txt")
 )
-class.files <- lapply(class.names.files, function(x) SQANTI_class_preparation(x,"nstandard"))
+class.files <- lapply(class.names.files, function(x) fread(x, sep = "\t", data.table = FALSE))
 
 # filter isoforms that are only detected in the whole dataset, 2 reads, 2 samples
-class.files$glob_SQ <- class.files$glob_targ_SQ %>% filter(targeted_nsamples == 0 , targeted_nreads == 0) %>% filter(whole_nsamples >= 2, whole_nreads >= 2)
-class.files$targ_SQ <- class.files$glob_targ_SQ %>% filter(whole_nsamples == 0 , whole_nreads == 0) %>% filter(targeted_nsamples >= 2, targeted_nreads >= 2)
+class.files$glob_SQ <- class.files$glob_targ_SQ %>% filter(whole_nsamples >= 2, whole_nreads >= 2)
+class.files$targ_SQ <- class.files$glob_targ_SQ %>% filter(targeted_nsamples >= 2, targeted_nreads >= 2)
 
 # known genes in whole dataset
 class.files$glob_SQ_annoGene <- class.files$glob_SQ %>% filter(!grepl("novelGene", associated_gene)) %>% mutate(novelTranscript = ifelse(associated_transcript == "novel","Novel","Known"))
