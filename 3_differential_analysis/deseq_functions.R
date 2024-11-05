@@ -49,8 +49,14 @@ opt = parse_args(opt_parser)
 # phenotype
 message("Read in: ", opt$phenotype)
 phenotype <- read.csv(opt$phenotype) 
-phenotype <- phenotype[grepl("Whole", phenotype$sample),]
+if(opt$dataset != "whole"){
+  phenotype <- phenotype[grepl("Targeted", phenotype$sample),]
+}else{
+  phenotype <- phenotype[grepl("Whole", phenotype$sample),]
+}
 nrow(phenotype)
+
+
 # remove early postnatal samples
 removePhenotype <- phenotype[phenotype$group == "Postnatal" & phenotype$age < 1,]
 message("Removing samples", removePhenotype$sample)
@@ -59,7 +65,11 @@ nrow(phenotype)
 
 # expression (demux csv - make sure first column is isoform; all samples are there and that the sample names match up with those in the phenotype file)
 message("Read in: ", opt$expression)
-expression <- fread(opt$expression, data.table=F)
+if (grepl("\\.txt$", opt$expression)) {
+  expression <- fread(opt$expression, data.table = FALSE, sep = "\t")
+} else {
+  expression <- fread(opt$expression, data.table = FALSE)
+}
 
 # classification file
 class.files <- fread(opt$classfile, sep="\t", header=T, data.table=F)
