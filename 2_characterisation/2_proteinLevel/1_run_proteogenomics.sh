@@ -32,7 +32,7 @@ summarise_longread_data
 
 echo "#************************************* Call open reading frames and classify proteins"
 call_orf
-refine_calledorf
+refine_calledorf  
 classify_protein
 
 echo "#***************All done!****************#"
