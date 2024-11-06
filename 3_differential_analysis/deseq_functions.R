@@ -59,16 +59,20 @@ nrow(phenotype)
 
 # remove early postnatal samples
 removePhenotype <- phenotype[phenotype$group == "Postnatal" & phenotype$age < 1,]
-message("Removing samples", removePhenotype$sample)
+message("Removing samples;", removePhenotype$sample)
 phenotype <- phenotype[!phenotype$sample %in% removePhenotype$sample,]
 nrow(phenotype)
 
 # expression (demux csv - make sure first column is isoform; all samples are there and that the sample names match up with those in the phenotype file)
-message("Read in: ", opt$expression)
-if (grepl("\\.txt$", opt$expression)) {
-  expression <- fread(opt$expression, data.table = FALSE, sep = "\t")
-} else {
-  expression <- fread(opt$expression, data.table = FALSE)
+if(!is.null(opt$expression)){
+  message("Read in: ", opt$expression)
+  if (grepl("\\.txt$", opt$expression)) {
+    expression <- fread(opt$expression, data.table = FALSE, sep = "\t")
+  } else {
+    expression <- fread(opt$expression, data.table = FALSE)
+  }
+}else{
+  message("Not reading in expression file")
 }
 
 # classification file
@@ -84,27 +88,40 @@ row.names(class.files) <- class.files$isoform
 if(exists("filter_result", where = class.files) == TRUE){
   class.files <- class.files[which(class.files$filter_result=="Isoform"),]
 }
-class.files <- class.files[,c("isoform","associated_gene","associated_transcript","structural_category","subcategory","exons")]
 
-## --- expression --- 
-# subset samples based on the phenotype file
-expression <- expression[,c(1,which(colnames(expression)%in%phenotype$sample))]
+if(!is.null(opt$expression)){
+  class.files <- class.files[,c("isoform","associated_gene","associated_transcript","structural_category","subcategory","exons")]
 
-# subset expression to only the transcripts in classification file
-expression <-  right_join(expression,class.files[,c("isoform","associated_gene")], by = "isoform")
+  ## --- expression --- 
+  # subset samples based on the phenotype file
+  expression <- expression[,c(1,which(colnames(expression)%in%phenotype$sample))]
 
-# filter rows with 0 reads
-expression <- expression[which(rowSums(expression[,2:(ncol(expression)-1)])>0),]
+  # subset expression to only the transcripts in classification file
+  expression <-  right_join(expression,class.files[,c("isoform","associated_gene")], by = "isoform")
+
+}else{
+  
+  message("selecting expression from classfile")
+  expression <- class.files %>% select(isoform, associated_gene, phenotype$sample)
+
+}
 
 # remove associated gene column
 if(opt$level == "gene"){
+  # calculate gene expression across each sample
+  expression <- expression %>% select(-isoform)
   expression <- as.data.frame(expression %>%
                                 group_by(associated_gene) %>%
-                                select(-isoform) %>% summarize_all(.funs = list(sum)))
-  rownames(expression)<- expression$associated_gene
+                                summarize_all(.funs = list(sum)))
+  rownames(expression) <- expression$associated_gene
   expression <- expression %>% dplyr::select(-associated_gene)
+
+  # filter rows with 0 reads 
+  expression <- expression[which(rowSums(expression[,1:ncol(expression)])>0),]
   
 }else{
+  # filter rows with 0 reads
+  expression <- expression[which(rowSums(expression[,2:(ncol(expression)-1)])>0),]
   rownames(expression) <- expression$isoform
   expression <- expression %>% dplyr::select(-associated_gene, isoform)
 }
