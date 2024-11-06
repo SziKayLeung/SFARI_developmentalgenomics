@@ -14,18 +14,31 @@ library(xlsx)
 SC_ROOT = "/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/scripts/SFARI_developmentalgenomics"
 source(paste0(SC_ROOT,"/Paper_Figures/SFARI_config.R"))
 source(paste0(SC_ROOT,"/Paper_Figures/0_source_functions.R"))
-output_dir = "/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/0_output"
+
+## ------- number of total transcripts across all samples -------
+
+TallyNumNovelKnown <- as.data.frame(class.files$glob_SQ_annoGene %>% dplyr::group_by(novelTranscript, associated_gene) %>% tally())
+TallyNumNovelKnown <- reshape(TallyNumNovelKnown, idvar = "associated_gene", timevar = "novelTranscript", direction = "wide")
+geneNum <- Reduce(function(...) merge(..., all=T, by = "associated_gene"), 
+                  list(class.files$glob_SQ_annoGene %>% dplyr::group_by(associated_gene) %>% tally(name = "totalNumTranscripts"),
+                       TallyNumNovelKnown,
+                       class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$preReads >= 1,] %>% group_by(associated_gene) %>% tally(name = "prenatalTranscripts"),
+                       class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$postReads >= 1,] %>% group_by(associated_gene) %>% tally(name = "postnatalTranscripts")))
+geneNum  <- geneNum %>% mutate(ratioPrevsPost = prenatalTranscripts/postnatalTranscripts, ratioPostvsPre = postnatalTranscripts/prenatalTranscripts)
+colnames(geneNum)[1:4] <- c("associated_gene","totalTranscripts","totalKnownTranscripts","totalNovelTranscripts")
+geneNum  <- geneNum %>% mutate(DiffGeneExp = ifelse(associated_gene %in% WholeDESeqGeneSig$age$associated_gene,TRUE,FALSE))
+write.csv(geneNum, paste0(output_dir,"NumberofTranscriptsPrevsPost.csv"), quote=F, row.names = F)
 
 
-##************** Whole DESeq 
+## ------- Differential expression analysis -------
 # DTE 
 DESeqCols <- c("isoform","chrom", "associated_gene", "associated_transcript","log2FoldChange","lfcSE","pvalue","padj","structural_category","subcategory")
 DESeqColsRenamed <- c("Isoform","Chromosome", "Associated gene", "Associated transcript","Log2FC","lfcSE", "p-value","FDR","Structural category","Subcategory")
 WholeDTEOut <- lapply(WholeDTE, function(x) x %>% arrange(padj) %>% select(all_of(DESeqCols)) %>% `colnames<-`(DESeqColsRenamed))
-# include the median values for the signficant transcripts
+# include the median values for the significant transcripts
 WholeDTEOut <- lapply(WholeDTEOut, function(x) merge(x, class.files$glob_SQ %>% select(contains("median"), "isoform"), by.x = "Isoform", by.y = "isoform"))
-write.csv(WholeDTEOut$sex,paste0(output_dir,"/WholeDTESex.csv"))
-write.csv(WholeDTEOut$age,paste0(output_dir,"/WholeDTEGroup.csv"))
+write.csv(WholeDTEOut$sex %>% arrange(FDR),paste0(output_dir,"/WholeDTESex.csv"), row.names = F)
+write.csv(WholeDTEOut$age %>% arrange(FDR),paste0(output_dir,"/WholeDTEGroup.csv"), row.names= F)
 
 
 WholeDTENumGene <- WholeDTE$age %>% group_by(associated_gene, dirAcrossDev) %>% tally() %>% 
@@ -38,8 +51,8 @@ DESeqGeneCols <- c("associated_gene","log2FoldChange","lfcSE","pvalue","padj")
 DESeqGeneColsRenamed <- c("Associated gene","Log2FC","lfcSE", "p-value","FDR")
 WholeDESeqGeneSigOut <- lapply(WholeDESeqGeneSig, function(x) x %>% mutate(TargetGene = ifelse(associated_gene %in% TargetGene,TRUE,FALSE)))
 WholeDESeqGeneSigOut <- lapply(WholeDESeqGeneSigOut, function(x) x %>% arrange(padj) %>% select(all_of(c(DESeqGeneCols,"TargetGene"))) %>% `colnames<-`(c(DESeqGeneColsRenamed,"TargetGene")))
-write.csv(WholeDESeqGeneSigOut$sex,paste0(output_dir,"/WholeDGESex.csv"))
-write.csv(WholeDESeqGeneSigOut$age,paste0(output_dir,"/WholeDGEGroup.csv"))
+write.csv(WholeDESeqGeneSigOut$sex,paste0(output_dir,"/WholeDGESex.csv"), row.names = F)
+write.csv(WholeDESeqGeneSigOut$age,paste0(output_dir,"/WholeDGEGroup.csv"), row.names = F)
 
 # Targeted DESeq
 # DTE (age only, no sig for sex)
@@ -68,19 +81,6 @@ uniquePrenatalTranscripts <- class.files$glob_SQ_annoGene %>% filter(DevStatus =
 uniquePrenatalGenes <- unique(class.files$glob_SQ_annoGene %>% filter(DevStatus == "prenatal") %>% select(associated_gene))
 write.table(uniquePrenatalGenes, paste0(dirnames$output,"uniquePrenatalGenes.txt"), row.names = F, col.names = F, quote = F)
 
-# ratio of prenatal vs postnatal
-TallyNumNovelKnown <- as.data.frame(class.files$glob_SQ_annoGene %>% dplyr::group_by(novelTranscript, associated_gene) %>% tally())
-TallyNumNovelKnown <- reshape(TallyNumNovelKnown, idvar = "associated_gene", timevar = "novelTranscript", direction = "wide")
-geneNum <- Reduce(function(...) merge(..., all=T, by = "associated_gene"), 
-                  list(class.files$glob_SQ_annoGene %>% dplyr::group_by(associated_gene) %>% tally(name = "totalNumTranscripts"),
-                       TallyNumNovelKnown,
-                       class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$preReads >= 1,] %>% group_by(associated_gene) %>% tally(name = "prenatalTranscripts"),
-                       class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$postReads >= 1,] %>% group_by(associated_gene) %>% tally(name = "postnatalTranscripts")))
-geneNum  <- geneNum %>% mutate(ratioPrevsPost = prenatalTranscripts/postnatalTranscripts, ratioPostvsPre = postnatalTranscripts/prenatalTranscripts)
-geneNum  <- geneNum %>% mutate(DiffGeneExp = ifelse(associated_gene %in% WholeDESeqGeneSig$age$associated_gene,TRUE,FALSE))
-WholeDESeqGeneSig$age$associated_gene
-colnames(geneNum)[1:4] <- c("associated_gene","totalTranscripts","totalNovelTranscripts","totalKnownTranscripts")
-write.csv(geneNum, paste0(dirnames$output,"NumberofTranscriptsPrevsPost.csv"), quote=F, row.names = F)
 
 # number of genes unique to prenatal and postnatal
 nrow(geneNum[is.na(geneNum$prenatalTranscripts),])/nrow(geneNum) * 100

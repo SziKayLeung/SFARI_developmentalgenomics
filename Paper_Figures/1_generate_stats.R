@@ -5,7 +5,6 @@
 ##
 ## ---------------------------------
 
-LOGEN <- "/lustre/projects/Research_Project-MRC148213/lsl693/scripts/LOGen/"
 source(paste0(LOGEN,"transcriptome_stats/summarise_classfiles.R"))
 
 ## ------- whole transcriptome -------
@@ -61,7 +60,6 @@ rawCountsWhole <- rawCountsWhole[!rawCountsWhole$sample %in% removeWholeSample,]
 t.test(counts ~ group, rawCountsWhole)
 
 # prenatal vs postnatal
-message("prenatal vs postnatal")
 prevspostlengths <- bind_rows(
   data.frame(lengths = class.files$glob_SQ_annoGene_prenatal$length, group = "prenatal"),
   data.frame(lengths = class.files$glob_SQ_annoGene_postnatal$length, group = "postnatal"),
@@ -79,27 +77,18 @@ mean(class.files$glob_SQ_annoGene_postnatal$length)
 mean(class.files$glob_SQ_annoGene_prenatal$exons)
 mean(class.files$glob_SQ_annoGene_postnatal$exons)
 
-
-commonDevTranscripts <- intersect(class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$preReads >= 1,"isoform"],class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$postReads >= 1,"isoform"])
+# comparison of number of unique and common transcripts in prenatal vs postnatal
+commonDevTranscripts <- intersect(class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$preReads >= 1,"isoform"],
+                                  class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$postReads >= 1,"isoform"])
 message("Number of transcripts to known genes detected in both prenatal and postnatal: ", length(commonDevTranscripts))
+message("Number of transcripts detected in prenatal: ",length(class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$preReads >= 1,"isoform"]))
 message("% of all prenatal detected: ", length(commonDevTranscripts)/length(class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$preReads >= 1,"isoform"]) * 100)
+message("Number of transcripts detected in postnatal: ",length(class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$postReads >= 1,"isoform"]))
 message("% of all postnatal detected: ", length(commonDevTranscripts)/length(class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$postReads >= 1,"isoform"]) * 100)
-
-message("Number of transcripts unique to postnatal:", length(setdiff(class.files$glob_SQ_annoGene_postnatal$isoform, class.files$glob_SQ_annoGene_prenatal$isoform)))
 message("Number of transcripts unique to prenatal:", length(setdiff(class.files$glob_SQ_annoGene_prenatal$isoform, class.files$glob_SQ_annoGene_postnatal$isoform)))
-
-message("Number of transcripts unique to postnatal with >50 reads:", nrow(class.files$glob_SQ_annoGene_postnatal[class.files$glob_SQ_annoGene_postnatal$DevStatus == "postnatal" & class.files$glob_SQ_annoGene_postnatal$postReads >= 50,]))
-
-message("Number of transcripts unique to prenatal with >= 50 reads:", nrow(class.files$glob_SQ_annoGene_prenatal[class.files$glob_SQ_annoGene_prenatal$DevStatus == "prenatal" & class.files$glob_SQ_annoGene_prenatal$preReads >= 50,]))
-
-
-
-totalTranscripts = unique(c(class.files$glob_SQ_annoGene_postnatal$isoform,class.files$glob_SQ_annoGene_prenatal$isoform,commonDevTranscripts))
-length(totalTranscripts) == nrow(class.files$glob_SQ_annoGene)
-message("% of unique postnatal to all: ",
-        length(setdiff(class.files$glob_SQ_annoGene_postnatal$isoform, class.files$glob_SQ_annoGene_prenatal$isoform))/length(totalTranscripts) * 100)
-message("% of unique prenatal to all: ",
-        length(setdiff(class.files$glob_SQ_annoGene_prenatal$isoform, class.files$glob_SQ_annoGene_postnatal$isoform))/length(totalTranscripts) * 100)
+message("Number of transcripts unique to postnatal:", length(setdiff(class.files$glob_SQ_annoGene_postnatal$isoform, class.files$glob_SQ_annoGene_prenatal$isoform)))
+message("% of unique postnatal to all:", length(setdiff(class.files$glob_SQ_annoGene_postnatal$isoform, class.files$glob_SQ_annoGene_prenatal$isoform))/nrow(class.files$glob_SQ_annoGene) * 100)
+message("% of unique prenatal to all:",length(setdiff(class.files$glob_SQ_annoGene_prenatal$isoform, class.files$glob_SQ_annoGene_postnatal$isoform))/nrow(class.files$glob_SQ_annoGene) * 100)
 
 # most abundant transcript in prenatal and not in postnatal
 class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$postReads == 0,] %>% arrange(-preReads) %>% .[1,]
@@ -154,10 +143,12 @@ format(res$p.value, scientific = TRUE)
 ## ------- differential transcript expression -------
 
 # development
+nrow(WholeDTE$age) == length(unique(WholeDTE$age$isoform))
 message("Number of differentially expressed isoforms: ", nrow(WholeDTE$age))
 message("Number of genes with differentially expressed isoforms: ", length(unique(WholeDTE$age$associated_gene)))
 message("Number of upregulated transcripts in postnatal vs prenatal: ", nrow(WholeDTE$age[WholeDTE$age$dirAcrossDev == "upregulated",]))
-table(WholeDTE$age$structural_category)
+message("top-ranked transcript differentially expressed across development")
+head(WholeDTE$age %>% arrange(padj))
 
 # binomial test of enrichment of upregulated transcripts in post-natal
 binom <- binom.test(nrow(WholeDTE$age[WholeDTE$age$dirAcrossDev == "upregulated",]), nrow(WholeDTE$age))
@@ -168,26 +159,25 @@ WholeDTE$ageNovelTranscripts <- WholeDTE$age %>% filter(grepl("novel", associate
 message("Number of differentially expressed novel isoforms: ", nrow(WholeDTE$ageNovelTranscripts), "(", nrow(WholeDTE$ageNovelTranscripts)/nrow(WholeDTE$age),")")
 binom <- binom.test(nrow(WholeDTE$ageNovelTranscripts), nrow(WholeDTE$age))
 print(binom$p.value)
+message("top-ranked novel transcript differentially expressed across development")
+head(WholeDTE$age %>% arrange(padj) %>% filter(associated_transcript == "novel"))
 
 # Gene ontology input for genes with top-ranked DETs
 View(unique(WholeDTE$age$associated_gene)[1:100])
 
 # antisense DETs
 message("Number of antisense DETs: ", nrow(WholeDTE$age[WholeDTE$age$structural_category == "Antisense",]))
+message("% of antisense DETs: ", nrow(WholeDTE$age[WholeDTE$age$structural_category == "Antisense",])/nrow(WholeDTE$age) * 100)
 View(WholeDTE$age[WholeDTE$age$structural_category == "Antisense" & WholeDTE$age$exons > 1,])
 
 ## sex
 message("Number of differentially expressed transcrips by sex: ", nrow(WholeDTE$sex))
 message("Number of genes with differentially expressed transcrips by sex: ", length(unique(WholeDTE$sex$associated_gene)))
-
-nrow(WholeDTE$sex %>% filter(!chrom %in% c("chrX","chrY")))
-nrow(unique(WholeDTE$sex %>% filter(!chrom %in% c("chrX","chrY")) %>% .["associated_gene"]))
-
+message("Number of transcripts on the X and Y chromosome: ", nrow(WholeDTE$sex %>% filter(chrom %in% c("chrX","chrY"))))
+head(WholeDTE$sex %>% filter(!chrom %in% c("chrX","chrY")) %>% arrange(padj))
+message("common transcripts differentially expressed across development and by sex")
 intersect(WholeDTE$sex$isoform, WholeDTE$age$isoform)
-
-class.files$targ_SQ %>% group_by(associated_gene) %>% tally() %>% arrange(-n)
-
-Cpat$whole
+head(WholeDTE$sex %>% filter(chrom %in% c("chrX","chrY")) %>% arrange(padj))
 
 # targeted transcriptome
 message("Mean number of exons, (sd): ", round(mean(class.files$targ_SQ$exons),2)," (", round(sd(class.files$targ_SQ$exons),2),")")

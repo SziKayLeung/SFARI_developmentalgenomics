@@ -16,6 +16,7 @@ suppressMessages(library(grid))
 
 ## ---------- Packages -----------------
 
+LOGEN = "C:/Users/sl693/Dropbox/Scripts/LOGen/"
 LOGEN = "/lustre/projects/Research_Project-MRC148213/lsl693/scripts/LOGen/"
 source(paste0(LOGEN, "aesthetics_basics_plots/pthemes.R"))
 source(paste0(LOGEN, "transcriptome_stats/read_sq_classification.R"))

@@ -28,9 +28,6 @@ plot_grid(plotlist = comp[1:6], labels = c("A","B","C","D","E","F"))
 
 plot_cupcake_collapse_sensitivity(class.files$targ_SQ,"All target genes")
 
-# prenatal vs postnatal 
-ggplot(geneNum, aes(x = prenatalTranscripts, y = postnatalTranscripts)) + geom_point() +
-  theme_classic() + labs(x = "Number of transcripts: prenatal", y = "Number of transcripts: postnatal")
 
 # Number of DTEs in development by structural category
 WholeDTE$age %>% group_by(structural_category, dirAcrossDev) %>% tally() %>% 
@@ -52,16 +49,6 @@ WholeDTE$age %>% group_by(structural_category, dirAcrossDev) %>% tally() %>%
 devVennNums <- twovenndiagrams(class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$preReads >= 1,"isoform"],
                                class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$postReads >= 1,"isoform"],"Pre-natal","Post-natal")
 grid.draw(devVennNums)
-
-class.files$glob_SQ_annoGene %>% group_by(structural_category, DevStatus) %>% tally() %>% 
-  mutate(DevStatus = factor(DevStatus,levels = c("prenatal","postnatal","Both"))) %>%
-  ggplot(., aes(x = structural_category, y = n, fill = DevStatus)) + 
-  geom_bar(stat="identity", position = position_dodge()) +
-  mytheme + scale_fill_manual(name = "", 
-                                labels = c("Prenatal","Postnatal","Both"), 
-                                values = c(wes_palette("Royal1")[2],wes_palette("Royal1")[1],wes_palette("Royal1")[4])) +
-  labs(x = "Structural category", y = "Number of transcripts of annotated genic features") +
-  theme(legend.position = "top")
 
 
 pIF <- list(

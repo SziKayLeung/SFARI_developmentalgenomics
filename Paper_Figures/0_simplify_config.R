@@ -137,6 +137,8 @@ postMedianReads <- class.files$glob_SQ %>% select(all_of(postWhole)) %>% apply(.
 preMedianReads <- class.files$glob_SQ %>% select(all_of(preWhole)) %>% apply(., 1, median)
 class.files$glob_SQ <- class.files$glob_SQ %>% mutate(FReads_median = femaleMedianReads, MReads_median = maleMedianReads, 
                                                       preReads_median = preMedianReads, postReads_median = postMedianReads)
+save(class.files, file = paste0(dirnames$wholetarg_SQ,"sqantifiltered_monoexonicfiltered_2reads2samples_all.RData"))
+class.files <- class.files[c("glob_targ_SQ", "glob_SQ", "glob_SQ_annoGene", "targ_SQ")]
 save(class.files, file = paste0(dirnames$wholetarg_SQ,"sqantifiltered_monoexonicfiltered_2reads2samples.RData"))
 write.table(class.files$glob_SQ, paste0(dirnames$wholetarg_SQ,"sqantifiltered_monoexonicfiltered_2reads2samples_whole_intergenicGenicIntron_classification.txt"), quote = F, row.names = F, sep = "\t")
 write.table(class.files$glob_SQ$isoform, paste0(dirnames$wholetarg_SQ,"sqantifiltered_monoexonic_2reads2samplesfiltered_intergenicGenicIntron.ID.txt"), quote = F, row.names = F, col.names = F)
@@ -145,29 +147,20 @@ write.table(class.files$glob_SQ$isoform, paste0(dirnames$wholetarg_SQ,"sqantifil
 
 ## -------------- DESeq2
 
-# Whole DESeq2
-WholeDESeqSig <- list(
-  sex = vroom(paste0(dirnames$DTE,"DESeq2_whole_transcript_sex_resSig.csv"),delim = ",",show_col_types = FALSE),
-  age = vroom(paste0(dirnames$DTE,"DESeq2_whole_transcript_development_resSig.csv"),delim = ",",show_col_types = FALSE)
-)
-
-WholeDESeqGeneSig <- list(
-  sex = as.data.frame(fread(paste0(root_dir,"RBFetal/4_deseq2/filtered_output_whole_gene_prenatalsex_removinglateprenatal.csv"))),
-  age = as.data.frame(fread(paste0(root_dir,"RBFetal/4_deseq2/filtered_output_whole_gene_group_removinglateprenatal.csv")))
-)
-
 # Expression
 Exp <- list(
   whole_group = vroom(paste0(dirnames$DTE,"DESeq2_whole_development_normSig.csv"),delim = ","),
-  whole_sex = vroom(paste0(dirnames$DTE,"DESeq2_whole_sex_normSig.csv"),delim = ","),
-  ns1 = read.csv(paste0(dirnames$DTE,"ONTX_6127_19264_whole_normAll.csv"), header = F),
-  ns2 = read.csv(paste0(dirnames$DTE,"ONTX_6127_19264_whole_normAll.csv"), header = F)
+  whole_sex = vroom(paste0(dirnames$DTE,"DESeq2_whole_sex_normSig.csv"),delim = ",")
 )
-colnames(Exp$ns1) <- colnames(Exp$whole_group)
-colnames(Exp$ns2) <- colnames(Exp$whole_group)
-Exp$whole_group <- rbind(Exp$whole_group,Exp$ns1,Exp$ns2)
 Exp <- lapply(Exp, function(x) merge(x, phenotype, by="sample"))
 save(Exp, file = paste0(dirnames$DTE,"DESeq2_whole_normSig.RData"))
+
+ExpAll <- list(
+  whole_group = vroom(paste0(dirnames$DTE,"DESeq2_whole_development_normAll.csv"),delim = ","),
+  whole_sex = vroom(paste0(dirnames$DTE,"DESeq2_whole_sex_normAll.csv"),delim = ",")
+)
+ExpAll <- lapply(ExpAll, function(x) merge(x, phenotype, by="sample"))
+save(Exp, file = paste0(dirnames$DTE,"DESeq2_whole_normAll.RData"))
 
 ExpGenes <- list(
   whole_sex = fread(paste0(dirnames$DGE,"DESeq2_whole_sex_normAll.csv")),
@@ -183,3 +176,24 @@ ExpGenesSig <- list(
   whole_group = ExpGenes$whole_group %>% filter(associated_gene %in% WholeDESeqGeneSig$group$associated_gene)
 )
 save(ExpGenesSig, file = paste0(root_dir,"RBFetal/4_deseq2/filtered_output_norm_gene_sig_removinglateprenatal.RData"))
+
+
+## -------------- differential isoform usage ----------------
+
+read_DIU <- function(inputPath){
+  DIU_targeted <- list.files(path=inputPath,full.names = T, pattern = "resultDIU")
+  if(length(DIU_targeted) > 0){
+    DIU_targeted <- lapply(DIU_targeted, function(x) data.table::fread(x, data.table = F))
+    DIU_targeted <- do.call(rbind, DIU_targeted)
+    colnames(DIU_targeted) <- c("Gene","p.value","FDR","podiumChange","totalChange")
+    DIU_targeted <- DIU_targeted %>% mutate(FDR = as.numeric(as.character(FDR)))
+  }else{
+    return(NULL)
+  }
+}
+
+DIU <- list(
+  wholeAge = read_DIU(paste0(dirnames$DIU,"whole/allGroup")),
+  wholeSex = read_DIU(paste0(dirnames$DIU,"whole/allSex"))
+)
+DIUSig <- lapply(DIU, function(x) x[x$FDR <= 0.05, ])
