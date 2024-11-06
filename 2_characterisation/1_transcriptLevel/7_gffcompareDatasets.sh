@@ -12,12 +12,13 @@
 #SBATCH --error=7_gffcompareDatasets.e
 
 # 30/10/2024: overlap between PacBio whole cortex dataset 
+# 04/11/2024: rerun with gtf filtered by intergenicGenicIntron
 
 module load Miniconda2/4.3.21
 
 sqantiDir=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/C_Whole_Targeted/9_sqanti_final
-sqanti_whole_gtf=sqantifiltered_monoexonicfiltered_2reads2samples_whole.filtered.gtf
-sqanti_wholetargeted_gtf=sqantifiltered_monoexonicfiltered_2reads2samples.filtered.gtf
+sqanti_whole_gtf=sqantifiltered_monoexonicfiltered_2reads2samples_whole_intergenicGenicIntron.filtered.gtf
+sqanti_wholetargeted_gtf=sqantifiltered_monoexonicfiltered_2reads2samples_intergenicGenicIntron.filtered.gtf
 
 outputDir=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/C_Whole_Targeted/14_OverlapDatasets
 mkdir -p ${outputDir}/cellReports2021 ${outputDir}/directRNA ${outputDir}/BDRNatureComms2024 ${outputDir}/Patowary2024
