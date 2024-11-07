@@ -218,22 +218,13 @@ XExcapeList <- read.csv(paste0(dirnames$utils,"XInactivation.csv"))
 
 ## -------------- long read proteoogenomics ----------------
 
-load(paste0(dirnames$utils,"/proteinInputWhole.RData"))
+# created from 7_process_proteomics_input.R
+load(paste0(root_dir,"proteomics/proteinInputWhole.RData"))
 
 # filter protein input to only the class files (pb_accs as this was the original pb_accs before being collapsed)
 proteinInput$t2p.collapse <- proteinInput$t2p.collapse %>% filter(pb_accs %in% class.files$glob_SQ$isoform)
 
-proteinInput$filtered <- read.table(paste0(dirnames$protein,"/7_classified_protein/Whole.classification_filtered.tsv"), sep = "\t", header = T)
-
-ProteinInput = list(
-  cpat = read.table(paste0(dirnames$mprotein,"5_calledOrfs/all_iso_ont.ORF_prob.best.tsv"), sep ="\t", header = T),
-  cpat_best = read.table(paste0(dirnames$mprotein,"5_calledOrfs/all_iso_ont_best_orf.tsv"), sep ="\t", header = T),
-  mapped = read.table(paste0(dirnames$mprotein,"5_calledOrfs/all_orfs_mapped.tsv"), sep ="\t", header = T),
-  noORF = read.table(paste0(dirnames$mprotein,"5_calledOrfs/all_iso_ont.no_ORF.txt"), sep ="\t", header = F),
-  t2p.collapse = read.table(paste0(dirnames$mprotein,"6_refined_database/all_iso_ont_orf_refined.tsv"), sep = "\t", header = T),
-  t2p.collapse.refined = read.table(paste0(dirnames$mprotein,"6_refined_database/all_iso_ont_orf_refined_collapsed.tsv"))
-)
-
+proteinInput$filtered <- read.table(paste0(root_dir,"proteomics/Whole.classification_filtered.tsv"), sep = "\t", header = T)
 
 ## -------------- comparison with Leung et al.(2021) dataset ----------------
 
