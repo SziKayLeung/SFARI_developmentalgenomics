@@ -58,3 +58,10 @@ python $LREAD/peptide_novelty_analysis/src/peptide_novelty_analysis.py \
 --gencode_fasta $Part1WKD/3_reference_tables/gencode_protein.fasta \
 --uniprot_fasta $uniprot_fasta \
 --name SFARI
+
+# generate gtf for novel peptides
+awk '{ print $3 }' SFARI.pacbio_novel_peptides_to_uniprot.tsv > SFARI.pacbio_novel_peptides_seq.tsv
+grep -f SFARI.pacbio_novel_peptides_seq.tsv ../visualisation/Sfari_peptides.bed12 > SFARI.pacbio_novel_peptides_seq.bed12
+sort SFARI.pacbio_novel_peptides_seq.bed12 | uniq > SFARI.pacbio_novel_peptides_seq_unique.bed12
+awk '{ print $2 }' SFARI.pacbio_novel_peptides_to_uniprot.tsv > SFARI.pacbio_novel_peptides_id.tsv
+grep -f SFARI.pacbio_novel_peptides_id.tsv ${sqanti_gtf} >  SFARI.pacbio_novel_peptides.gtf
