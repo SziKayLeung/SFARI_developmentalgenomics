@@ -31,6 +31,7 @@ dirnames <- list(
   whole = paste0(root_sfari,"A_Whole/"),
   wholetarg_SQ = paste0(root_sfari,"C_Whole_Targeted/9_sqanti_final/"),
   protein = paste0(root_sfari, "C_Whole_Targeted/10_longReadProteogenomics/"),
+  massSpec = paste0(root_sfari,"C_Whole_Targeted/13_massSpec/v2/"),
   
   # whole dataset differential expression analysis
   DGE = paste0(root_sfari, "A_Whole/10_deseq/1_DGE/"), 
@@ -197,3 +198,14 @@ DIU <- list(
   wholeSex = read_DIU(paste0(dirnames$DIU,"whole/allSex"))
 )
 DIUSig <- lapply(DIU, function(x) x[x$FDR <= 0.05, ])
+
+
+## -------------- mass spectrometry ----------------
+
+# all peptides from alignment of mass-spectrometry data as outut of metamorpheus
+peptides <- lapply(list.files(path = paste0(dirnames$massSpec), pattern = "AllPeptides.psmtsv", recursive = T, full.names = T), function(x) data.table::fread(x, data.table = FALSE))
+save(peptides, file = paste0(dirnames$massSpec,"AllPeptides.RData"))
+
+# novel peptides from alignment of mass-spectrometry data as outut of metamorpheus
+novelPeptides <- lapply(list.files(path = dirnames$massSpec, pattern = "SFARI.pacbio.novel_peptides.tsv", recursive = T, full.names = T), function(x) data.table::fread(x, data.table = FALSE, header = T))        
+save(novelPeptides, file = paste0(dirnames$massSpec,"NovelPeptides.RData"))

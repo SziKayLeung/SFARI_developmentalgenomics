@@ -291,7 +291,6 @@ message("Number of protein products after filtering: ", nrow(class.files$protein
 ## ---------- Mass spectrometry ----------
 
 # All peptides
-peptides <- lapply(list.files(path = "/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/13_massSpec", pattern = "AllPeptides.psmtsv", recursive = T, full.names = T), function(x) data.table::fread(x))
 peptidesFiltered <- lapply(peptides, function(x) x %>% dplyr::select('Base Sequence', 'Full Sequence', 'Protein Accession'))
 peptidesFiltered <- dplyr::bind_rows(peptidesFiltered)
 
@@ -311,10 +310,7 @@ message("Total number of trancripts with mass-spec validation:", nrow(class.file
 message("Total number of novel trancripts with mass-spec validation:", nrow(class.files$glob_SQ[class.files$glob_SQ$isoform %in% accession_split,] %>% filter(!structural_category %in% c("FSM", "ISM"))))
 
 ## novel peptides
-novelPeptides <- list.files(path = dirnames$massspec, pattern = "SFARI.pacbio.novel_peptides.tsv", recursive = T, full.names = T)
-novelPeptides <- lapply(novelPeptides, function(x) read.table(x, header = T))                         
 novelPeptides <- bind_rows(novelPeptides)
-
 novelPeptides <- novelPeptides[novelPeptides$acc %in% class.files$glob_SQ$isoform,] %>% select(gene, acc, seq)
 novelPeptides <- novelPeptides %>% distinct()
 #novelPeptides[novelPeptides$acc == "ONT12_1620_26499",]
