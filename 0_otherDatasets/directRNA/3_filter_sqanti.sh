@@ -33,3 +33,12 @@ grep -wF -f ${filteredID} ${SQANTI_DIR}/SQANTI_merged_all_collapsed_corrected.gt
 grep -wF -f ${filteredID} ${SQANTI_DIR}/SQANTI_merged_all_collapsed_corrected.gtf.cds.gff > ${outputName}_corrected.gtf.cds.gff
 # junctions
 grep -wF -f ${filteredID} ${SQANTI_DIR}/SQANTI_merged_all_collapsed_junctions.txt > ${outputName}_junctions.txt
+
+# replace PB ID
+python /lustre/projects/Research_Project-MRC148213/lsl693/scripts/LOGen/miscellaneous/replace_PB_id.py \
+	-c=${SQANTI_FINAL_DIR}/sqantifiltered_monoexonicfiltered_2reads2samples_classification.txt \
+	-g=${SQANTI_FINAL_DIR}/sqantifiltered_monoexonicfiltered_2reads2samples.filtered.gtf \
+	-f=${SQANTI_FINAL_DIR}/sqantifiltered_monoexonicfiltered_2reads2samples_corrected.fasta
+	
+python /lustre/projects/Research_Project-MRC148213/lsl693/scripts/LOGen/miscellaneous/replace_PB_id.py \
+	-c=${sqanti}/sqantifiltered_monoexonicfiltered_classification.txt 
