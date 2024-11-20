@@ -5,6 +5,7 @@
 ##
 ## ---------------------------------
 
+suppressMessages(library("dplyr"))
 suppressMessages(library("viridis"))
 suppressMessages(library("cowplot"))
 suppressMessages(library("data.table"))
@@ -13,11 +14,13 @@ suppressMessages(library("forcats"))
 suppressMessages(library("ggh4x"))
 suppressMessages(library(gridExtra))
 suppressMessages(library(grid))
+suppressMessages(library(VennDiagram))
+futile.logger::flog.threshold(futile.logger::ERROR, name = "VennDiagramLogger")
 
 ## ---------- Packages -----------------
 
 LOGEN = "C:/Users/sl693/Dropbox/Scripts/LOGen/"
-LOGEN = "/lustre/projects/Research_Project-MRC148213/lsl693/scripts/LOGen/"
+LOGEN_ROOT = "C:/Users/sl693/Dropbox/Scripts/LOGen/"
 source(paste0(LOGEN, "aesthetics_basics_plots/pthemes.R"))
 source(paste0(LOGEN, "transcriptome_stats/read_sq_classification.R"))
 source(paste0(LOGEN, "compare_datasets/whole_vs_targeted.R"))
@@ -25,6 +28,7 @@ source(paste0(LOGEN, "compare_datasets/dataset_identifer.R"))
 source(paste0(LOGEN, "merge_characterise_dataset/run_ggtranscript.R"))
 source(paste0(LOGEN, "differential_analysis/plot_usage.R"))
 source(paste0(LOGEN, "aesthetics_basics_plots/draw_venn.R"))
+sapply(list.files(path = paste0(LOGEN,"target_gene_annotation"), pattern="*summarise*", full = T), source,.GlobalEnv)
 
 
 ## ---------- Labels -----------------
@@ -150,6 +154,7 @@ plot_trans_exp_individual <- function(transcript=NULL, classfiles, Norm_transcou
   }
   
   dat <- dat %>% mutate(sex = ifelse(sex == "F", "Female", "Male"))
+  print(head(dat))
   
   if(var == "both"){
     p <- ggplot(dat, aes(x = group, y = normalised_counts, colour = transcript)) + 
@@ -166,7 +171,7 @@ plot_trans_exp_individual <- function(transcript=NULL, classfiles, Norm_transcou
     }else{
       p <- ggplot(dat, aes(x = !!rlang::sym(var), y = log10(normalised_counts), fill = !!rlang::sym(var))) + geom_boxplot(outlier.shape = NA) +
         labs(x = "", y = "log10 normalized counts", 
-             title = paste0(gene, ": ", transcript,"")) 
+             title = paste0(gene," ", transcript,"")) 
     }
   }
 
@@ -278,6 +283,49 @@ num_disease_focus_DTE <- function(sigResults, geneList, title=NULL){
   return(p)
 }
 
+tabulateIF <- function(classf, countcol){
+  
+  Counts <- classf %>% select(isoform,contains(countcol))
+  rownames(Counts) <- Counts$isoform
+  Counts <- Counts %>% select(-isoform)
+  
+  
+  # Calculate the mean of normalised expression across all the samples per isoform
+  meandf <- data.frame(meanvalues = apply(Counts,1,mean)) %>%
+    rownames_to_column("isoform") %>% 
+    # annotate isoforms with associated_gene and structural category
+    left_join(., classf[,c("isoform","associated_gene","structural_category")], by = "isoform")  
+  
+  # Group meandf by associated_gene and calculate the sum of mean values for each group
+  grouped <- aggregate(meandf$meanvalues, by=list(associated_gene=meandf$associated_gene), FUN=sum)
+  
+  # Calculate the proportion by merging back, and divide the meanvalues by the grouped values (x)
+  merged <- meandf %>% 
+    left_join(grouped, by = "associated_gene") %>%
+    mutate(perc = meanvalues / x * 100) 
+  return(merged)
+}
+
+plotIFGenes <- function(dat){
+  dat <- dat %>% mutate(structural_category = factor(structural_category, levels = c("FSM","ISM","NIC","NNC", "Genic_Genomic")))
+  p <- ggplot(dat, aes(x = associated_gene, y = as.numeric(perc), fill = forcats::fct_rev(structural_category))) +
+    geom_bar(stat = "identity", color = "black", size = 0.2) +
+    #scale_color_manual(values = rep(NA, length(unique(minorgrouped$gene)))) + 
+    labs(x = "Gene", y = "Isoform fraction (%)") +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
+  
+  if(length(unique(dat$structural_category)) == 4){
+    p <- p + scale_fill_manual(name = "Isoform Classification", values = rev(c(alpha("#00BFC4",0.8),alpha("#00BFC4",0.3),
+                                                                               alpha("#F8766D",0.8),alpha("#F8766D",0.3)))) 
+  }else{
+    p <- p + scale_fill_manual(name = "Isoform Classification", values = rev(c(alpha("#00BFC4",0.8),alpha("#00BFC4",0.3),
+                                                                               alpha("#F8766D",0.8),alpha("#F8766D",0.3),"gray"))) 
+  }
+  #+
+  #theme(legend.position = "None")
+  
+  return(p)
+}
 
 ## ---------- read lenths pre and post-QC -----------------
 
@@ -465,15 +513,19 @@ plotIFTargetedbyGene <- function(gene, pathDIU){
 }
 
 plotIFWholebyGene <- function(gene, pathDIU,facetTranscriptsFeature,sexFeature){
-  
-  if(isFALSE(sex)){
-    iExp <- fread(paste0(pathDIU,"/whole/allGroup/",gene,"_normalised_expression.txt"), data.table = F)
-  }else{
-    iExp <- fread(paste0(pathDIU,"/whole/allSex/",gene,"_normalised_expression.txt"), data.table = F)
-  }
+
+  iExp <- fread(pathDIU, data.table = F)
   iExp <- iExp %>% tidyr::spread(sample,normalised_counts) %>% tibble::column_to_rownames(var = "isoform") %>% select(contains("Whole"))
   p <- plotIF(gene=gene,ExpInput=iExp,pheno=phenotype,cfiles=class.files$glob_targ_SQ,design="case_control",rank=5,majorIso=NULL,facetTranscripts=facetTranscriptsFeature,sex=sexFeature)
   return(p)
   
+}
+
+fourvenndiagrams <- function(set1, set2,set3,set4,name1, name2, name3,name4){
+  p <- venn.diagram(x = list(set1,set2, set3, set4), 
+                    label_alpha = 0, category.names = c(name1,name2, name3, name4),filename = NULL, output=TRUE, lwd = 0.2,lty = 'blank', 
+                    fill = c("#B3E2CD", "#FDCDAC","red","blue"), main = "\n", cex = 1,fontface = "bold",fontfamily = "ArialMT",
+                    print.mode = "raw")
+  return(p)
 }
 
