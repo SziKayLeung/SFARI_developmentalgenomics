@@ -17,13 +17,6 @@ pAge <- ages(phenotype$WholeTargeted)
 # sensitivity curve of filtering in targeted dataset
 no_of_isoforms_sample(class.files$targ_SQ)
 
-# comparison of whole vs targeted datasets across matched samples
-comp = whole_vs_targeted_plots(classfiles=class.files$glob_targ_SQ_counts, wholeSamples=wholematchedsamples, targetedSamples=targetedmatchedsamples, targetGene=selectedTargetGenes)
-pdf(paste0(output_dir,"/UniqueIsoformsWholeDataset.pdf"), width = 10, height = 30)
-comp[[1]]
-plot_grid(comp[[3]])
-dev.off()
-
 plot_grid(plotlist = comp[1:6], labels = c("A","B","C","D","E","F"))
 
 plot_cupcake_collapse_sensitivity(class.files$targ_SQ,"All target genes")

@@ -34,9 +34,11 @@ dirnames <- list(
   massSpec = paste0(root_sfari,"C_Whole_Targeted/13_massSpec/v2/"),
   
   # whole dataset differential expression analysis
-  DGE = paste0(root_sfari, "A_Whole/10_deseq/1_DGE/"), 
-  DTE = paste0(root_sfari, "A_Whole/10_deseq/2_DTE/"),
-  DIU = paste0(root_sfari, "A_Whole/10_deseq/3_DIU/")
+  DGE = paste0(root_sfari, "C_Whole_Targeted/18_deseq/1_DGE/"), 
+  DTE = paste0(root_sfari, "C_Whole_Targeted/18_deseq/2_DTE/"),
+  DIU = paste0(root_sfari, "C_Whole_Targeted/18_deseq/3_DIU/"),
+
+  ficle = "/lustre/projects/Research_Project-MRC148213/vc362/ficle/results/TargetGenes/"
 )
 
 
@@ -198,6 +200,8 @@ DIU <- list(
   wholeSex = read_DIU(paste0(dirnames$DIU,"whole/allSex"))
 )
 DIUSig <- lapply(DIU, function(x) x[x$FDR <= 0.05, ])
+save(DIU, file = paste0(dirnames$DIU,"whole/DIU.RData"))
+save(DIUSig, file = paste0(dirnames$DIU,"whole/DIUSig.RData"))
 
 
 ## -------------- mass spectrometry ----------------
@@ -209,3 +213,11 @@ save(peptides, file = paste0(dirnames$massSpec,"AllPeptides.RData"))
 # novel peptides from alignment of mass-spectrometry data as outut of metamorpheus
 novelPeptides <- lapply(list.files(path = dirnames$massSpec, pattern = "SFARI.pacbio.novel_peptides.tsv", recursive = T, full.names = T), function(x) data.table::fread(x, data.table = FALSE, header = T))        
 save(novelPeptides, file = paste0(dirnames$massSpec,"NovelPeptides.RData"))
+
+
+## -------------- FICLE ----------------
+
+finalTranscriptClassification <- distinct(fread(paste0(dirnames$ficle,"/all_final_transcript_classifications.csv"), data.table = F))
+finalTranscriptClassification$isoform <- as.factor(finalTranscriptClassification$isoform)
+finalTranscriptClassification <- finalTranscriptClassification %>% mutate_if(is.character, as.numeric)
+finalTranscriptClassification$isoform <- as.character(finalTranscriptClassification$isoform)
