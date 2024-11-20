@@ -8,7 +8,7 @@
 #SBATCH --ntasks-per-node=16 # specify number of processors per node
 #SBATCH --mail-type=END # send email at job completion
 #SBATCH --mail-user=sl693@exeter.ac.uk # email address
-#SBATCH --array=0-8
+#SBATCH --array=0-7
 #SBATCH --output=rarefaction_whole-%A_%a.o
 #SBATCH --error=rarefaction_whole-%A_%a.e
 #SBATCH --job-name=whole_transcriptome_rarefaction
@@ -37,14 +37,14 @@ make_file_for_rarefaction(){
   echo "Working with $1"
   prefix=$1
   # make_file_for_subsampling_from_collapsed.py <sample_name_prefix>.input.file <sample_name_prefix>.output.file <sample_name_prefix>.classification.txt
-  python $CUPCAKE_ANNOTATION/make_file_for_subsampling_from_collapsed.py -i $2/$prefix -o $1.subsampling -m2 $4 &>> $1.makefile.log
+  python $CUPCAKE_ANNOTATION/make_file_for_subsampling_from_collapsed.py -i $2/$prefix -o $1.subsampling &>> $1.makefile.log
   python $CUPCAKE_ANNOTATION/subsample.py --by pbgene --min_fl_count 2 --step 1000 $1.subsampling.all.txt > $1.rarefaction.by_pbgene.min_fl_2.txt
   python $CUPCAKE_ANNOTATION/subsample.py --by pbid --min_fl_count 2 --step 1000 $1.subsampling.all.txt > $1.rarefaction.by_pbid.min_fl_2.txt
   
   # if running with sqanti_class file
-  python $CUPCAKE_ANNOTATION/subsample.py --by refgene --min_fl_count 2 --step 1000 $1.subsampling.all.txt > $1.rarefaction.by_refgene.min_fl_2.txt 
-  python $CUPCAKE_ANNOTATION/subsample.py --by refisoform --min_fl_count 2 --step 1000 $1.subsampling.all.txt > $1.rarefaction.by_refisoform.min_fl_2.txt
+  #python $CUPCAKE_ANNOTATION/subsample.py --by refgene --min_fl_count 2 --step 1000 $1.subsampling.all.txt > $1.rarefaction.by_refgene.min_fl_2.txt 
+  #python $CUPCAKE_ANNOTATION/subsample.py --by refisoform --min_fl_count 2 --step 1000 $1.subsampling.all.txt > $1.rarefaction.by_refisoform.min_fl_2.txt
   
 }
 
-make_file_for_rarefaction $samplePrefix $CUPCAKE $RAREFACTION $SQANTI 
+make_file_for_rarefaction $samplePrefix $CUPCAKE $RAREFACTION  
