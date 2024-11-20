@@ -103,6 +103,28 @@ WholeDTE$age %>% group_by(structural_category) %>% tally()
 17308/85428
 63204/85428
 
+## ------- whole vs targeted dataset ---------
+
+# matchSumTargeted generated from function
+# whole_vs_targeted_plots(classfiles=class.files$glob_targ_SQ, wholeSamples=wholematchedsamples, targetedSamples=manifest[manifest$ID %in% targetedmatchedsamples,"Sample"], targetGene=selectedTargetGenes)
+message("Number of transcripts detected whole only: ", length(unique(matchedSumTargeted[matchedSumTargeted$dataset == "Whole","isoform"])))
+message("Number of transcripts detected Targeted only: ", length(unique(matchedSumTargeted[matchedSumTargeted$dataset == "Targeted","isoform"])))
+message("Number of transcripts detected in both whole and targeted only: ", length(unique(matchedSumTargeted[matchedSumTargeted$dataset == "Both","isoform"])))
+
+intersect(unique(matchedSumTargeted[matchedSumTargeted$dataset == "Targeted","isoform"]),
+          unique(matchedSumTargeted[matchedSumTargeted$dataset == "Both","isoform"]))
+intersect(unique(matchedSumTargeted[matchedSumTargeted$dataset == "Whole","isoform"]),
+          unique(matchedSumTargeted[matchedSumTargeted$dataset == "Both","isoform"]))
+
+message("Percentage of transcripts validated in whole: ", 
+        round(length(unique(matchedSumTargeted[matchedSumTargeted$dataset == "Both","isoform"]))/
+          length(unique(matchedSumTargeted[matchedSumTargeted$dataset %in% c("Both","Whole"),"isoform"])) * 100,2))
+message("Percentage of novel transcripts validated in whole * 100: ",
+length(unique(matchedSumTargeted[matchedSumTargeted$dataset == "Both" & !matchedSumTargeted$structural_category %in% c("FSM","ISM"),"isoform"]))/
+length(unique(matchedSumTargeted[matchedSumTargeted$dataset %in% c("Both","Whole") & !matchedSumTargeted$structural_category %in% c("FSM","ISM"),"isoform"])))
+length(unique(matchedSumTargeted[matchedSumTargeted$dataset == "Targeted" & !matchedSumTargeted$structural_category %in% c("FSM","ISM"),"isoform"]))
+
+
 ## ------- long-read sequencing datasets comparisons -------
 
 # number of overlaps between Leung et al. 2021 and whole dataset
@@ -130,15 +152,7 @@ comparison_dataset(gfftmapComparisons$cellReports, class.files$glob_SQ, humanCTX
 comparison_dataset(gfftmapComparisons$directRNA, class.files$glob_SQ, directRNA)
 comparison_dataset(gfftmapComparisons$BDRNatureComms, class.files$glob_targ_SQ_20AD, BDRNatureComms)
 comparison_dataset(gfftmapComparisons$Patowary, class.files$glob_SQ, PatowaryCTX)
-
-ExpressionDiffPacBio <- rbind(Unique_RB %>% mutate(dataset = "Unique") %>% select(nreads, dataset),
-                              Common_RB %>% mutate(dataset = "Common") %>% select(nreads, dataset))
-res <- wilcox.test(nreads ~ dataset, ExpressionDiffPacBio, exact = FALSE)
-res
-res$p.value
-format(res$p.value, scientific = TRUE)
-
-
+comparison_dataset(gfftmapComparisons$PatowaryHerbele, PatowaryCTX, HerberleCTX)
 
 ## ------- differential transcript expression -------
 
@@ -212,6 +226,15 @@ TargetedDESeq2Sig$age %>% group_by(associated_gene) %>% tally() %>% filter(n==1)
 # list of genes escaping X inactivation in DTE by sex
 WholeDTE$sex
 XExcape$GeneName
+
+
+## ---------- Differential transcript usage ----------
+
+head(DIUSig$wholeAge %>% filter(DGE_Dev == FALSE, podiumChange == TRUE) %>% dplyr::arrange(FDR, -as.numeric(totalChange)))
+message("Number of genes with significant DIU across development: ", nrow(DIUSig$wholeAge))
+message("Number of genes with significant DIU across development and podium Change: ", nrow(DIUSig$wholeAge %>% filter(podiumChange == TRUE)))
+message("Number of genes with significant DIU across development and not podium Change: ", nrow(DIUSig$wholeAge %>% filter(podiumChange == FALSE)))
+message("Number of genes with significant DIU across development and not DGE: ", nrow(DIUSig$wholeAge %>% filter(DGE_Dev == FALSE)))
 
 
 ## ---------- Alternative splicing events ----------
@@ -313,14 +336,14 @@ message("Total number of novel trancripts with mass-spec validation:", nrow(clas
 novelPeptides <- bind_rows(novelPeptides)
 novelPeptides <- novelPeptides[novelPeptides$acc %in% class.files$glob_SQ$isoform,] %>% select(gene, acc, seq)
 novelPeptides <- novelPeptides %>% distinct()
-#novelPeptides[novelPeptides$acc == "ONT12_1620_26499",]
 
 novelPeptides <- novelPeptides %>% mutate(length = nchar(as.character(seq)))
 novelPeptidesunique <- novelPeptides %>% group_by(acc) %>% top_n(1, length)
 colnames(novelPeptides) <- c("gene","isoform","protein_seq")
 novelPeptides <- merge(novelPeptides,class.files$glob_SQ, by = "isoform") %>% select(isoform, associated_gene, structural_category, protein_seq)
 novelPeptidesTranscripts <- novelPeptides[!novelPeptides$structural_category %in% c("FSM","ISM"),]
-write.table(novelPeptidesTranscripts, paste0(dirnames$output,"novelTranscriptsPeptides.txt"), sep = "\t", quote = F)
+message("Total number of novel trancripts with mass-spec validation:", length(unique(novelPeptidesTranscripts$isoform)))
+write.csv(novelPeptidesTranscripts, paste0(output_dir,"novelTranscriptsPeptides.csv"), quote = F, row.names = F)
 
 
 ## ---------- bambu ----------
