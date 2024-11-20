@@ -29,6 +29,27 @@ colnames(geneNum)[1:4] <- c("associated_gene","totalTranscripts","totalKnownTran
 geneNum  <- geneNum %>% mutate(DiffGeneExp = ifelse(associated_gene %in% WholeDESeqGeneSig$age$associated_gene,TRUE,FALSE))
 write.csv(geneNum, paste0(output_dir,"NumberofTranscriptsPrevsPost.csv"), quote=F, row.names = F)
 
+# number of final transcripts per sample
+finalTranscripts <- class.files$glob_targ_SQ %>% select(contains(c("Whole","Targeted", ignore.case = FALSE))) 
+finalTranscripts <- colSums(finalTranscripts != 0)
+finalTranscripts <- as.data.frame(finalTranscripts) %>% tibble::rownames_to_column(., var = "ID")
+colnames(finalTranscripts) <- c("ID", "nFinal")
+WholeFinalTranscripts <- merge(finalTranscripts, manifest, by = "ID") 
+TargetedFinalTranscripts <- as.data.frame(finalTranscripts[grepl("Targeted",finalTranscripts$ID),])
+
+# number of transcripts collapsed per sample
+demux_filenames <- list.files(path = paste0(root_dir,"demux"), pattern = "fl", full.names = T)
+demux_files <- lapply(demux_filenames, function(x) data.table::fread(x, data.table = F))
+demux_files_stats <- lapply(demux_files, function(x) x %>% select(contains(c("Whole","Targeted", ignore.case = FALSE)))) 
+demux_files_stats <- lapply(demux_files_stats, function(x) as.data.frame(colSums(x != 0)))
+demux_files_stats <- lapply(demux_files_stats, function(x) x %>% tibble::rownames_to_column(var = "ID"))
+merged_demux_stats <- bind_rows(demux_files_stats)
+colnames(merged_demux_stats) <- c("ID", "nCollapsed")
+merged_demux_stats <- merged_demux_stats %>% group_by(ID) %>% tally(nCollapsed)
+WholeCollapsedTranscripts <- merge(merged_demux_stats, manifest, by = "ID") %>% select(Sample, n)
+TargetedCollapsedTranscripts <- as.data.frame(merged_demux_stats[grepl("Targeted",merged_demux_stats$ID),])
+
+
 
 ## ------- Differential expression analysis -------
 # DTE 
@@ -65,10 +86,11 @@ write.csv(TargetedDESeqGeneSigOut$age,paste0(output_dir,"/TargetedDGEGroup.csv")
 write.table(WholeDESeq2Sig$sex,paste0(dirnames$output,"anno_whole_sex_nomonointergenic_Sig.csv"),quote = F,row.names = F,col.names = T)
 write.table(WholeDESeq2Sig$age,paste0(dirnames$output,"anno_whole_group_nomonointergenic_Sig.csv"),quote = F,row.names = F,col.names = T)
 # DIU
-DIUColsRenamed <- c("Associated gene","p-value","FDR", "Podium change","Total change")
+DIUColsRenamed <- c("Associated gene","p-value","FDR", "Podium change","Total change","DGE_Dev","DGE_Sex")
 DIUSigOut <- lapply(DIUSig, function(x) x %>% arrange(FDR) %>% `colnames<-`(DIUColsRenamed))
-write.csv(DIUSigOut$targetedSex,paste0(output_dir,"/TargetedDIUSex.csv"))
-write.csv(DIUSigOut$targetedAge,paste0(output_dir,"/TargetedDIUGroup.csv"))
+head(DIUSigOut$wholeAge %>% filter(`Podium change` == TRUE))
+write.csv(DIUSigOut$wholeSex,paste0(output_dir,"DIUSex.csv"), row.names = F)
+write.csv(DIUSigOut$wholeAge,paste0(output_dir,"DIUGroup.csv"), row.names = F)
 
 # number of transcripts pre- and post-natal
 class.files$glob_SQ_annoGene %>% group_by(structural_category,DevStatus) %>% tally(name = "num") %>% 
