@@ -44,7 +44,7 @@ while IFS=, read -r col1; do
   ficle.py --genename=${gene}  --reference=${inputDir}/${gene}_gencode.gtf  --input_gtf=${inputDir}/${gene}.gtf    --input_class=${classFile}    --output_dir=${outputDir}
 done < "$input_file"
 
-cd /lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/15_ficle/remadeOutput/TargetGenes/
-find . -type f -name '*final_transcript_classifications.csv' -exec cat {} + > all_final_transcript_classifications.csv
+cd /lustre/projects/Research_Project-MRC148213/vc362/ficle/results/TargetGenes/
+find . -type f -name '*final_transcript_classifications.csv' -exec cat {} + > /lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/0_output/all_final_transcript_classifications.csv
 awk '{print $1}'  /lustre/projects/Research_Project-MRC148213/Rosie/SFARIdevelopmentalgenomics/6_sqanti3/WholeTargeted_cleaned_aligned_merged_collapsed_qced_RulesFilter_classification_2reads2samples_monomultirem.txt > retainedIso.txt
 grep -F retainedIso.txt all_final_transcript_classifications.csv > retained_final_transcript_classifications.csv
