@@ -242,21 +242,26 @@ class.files$glob_targ_SQ_20AD <- class.files$glob_targ_SQ[class.files$glob_targ_
 
 ## -------------- FICLE ----------------
 
-protein_coding_genes = read.table(paste0(root_dir, "utils/protein-coding-genes.txt"))
-FICLE_class <- fread("/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/15_ficle/TargetGenes/all_final_transcript_classifications.csv", data.table = F)
-FICLE_class <- FICLE_class[!duplicated(FICLE_class), ]
-FICLE_class <- FICLE_class %>% select(-isoform)
-FICLE_class_final <- FICLE_class %>% filter(isoform %in% class.files$glob_SQ_annoGene$isoform)
-protein_coding_genes_isoforms <- class.files$glob_SQ[class.files$glob_SQ$associated_gene %in% protein_coding_genes$V1,"isoform"]
-setdiff(rownames(FICLE_class_final$isoform), protein_coding_genes_isoforms)
-FICLENotProcessed <- setdiff(protein_coding_genes_isoforms, rownames(FICLE_class_final$isoform))
-FICLEProcessedGenes <- unique(class.files$glob_SQ[class.files$glob_SQ$isoform %in% FICLE_class_final$isoform,"associated_gene"])
-FICLENotProcessedGenes <- unique(class.files$glob_SQ[class.files$glob_SQ$isoform %in% FICLENotProcessed,"associated_gene"])
-unique(setdiff(FICLENotProcessedGenes,FICLEProcessedGenes))
+# read in FICLE transcript_classifications.csv merged
+finalTranscriptClassification <- distinct(fread(paste0(root_dir,"ficle/all_final_transcript_classifications.csv"), data.table = F))
+finalTranscriptClassification <- finalTranscriptClassification %>% filter(isoform %in% class.files$glob_SQ$isoform)
+finalTranscriptClassificationTranscript <- merge(finalTranscriptClassification, 
+                                                 class.files$glob_SQ[,c("isoform","associated_gene","DevStatus")], by = "isoform")
 
-FICLE_class_final_exp <- merge(FICLE_class_final[,c("isoform","A5A3","ES","IR","NE_All")], class.files$glob_SQ[,c("isoform","preReads","postReads")], by = "isoform")
-FICLE_class_final_exp <- merge(FICLE_class_final_exp, normWholeIsoform, by = "isoform", all.x = T)
+# numeric for columns responding to AS events
+finalTranscriptClassificationTranscript$isoform <- as.factor(finalTranscriptClassificationTranscript$isoform)
+finalTranscriptClassificationTranscript$associated_gene <- as.factor(finalTranscriptClassificationTranscript$associated_gene)
+finalTranscriptClassificationTranscript$DevStatus <- as.factor(finalTranscriptClassificationTranscript$DevStatus)
+finalTranscriptClassificationTranscript <- finalTranscriptClassificationTranscript %>% mutate_if(is.character, as.numeric)
 
+
+# aggregate the number of splicing events per column 
+finalTranscriptClassificationGene <- aggregate(. ~ associated_gene, finalTranscriptClassificationTranscript %>% select(-isoform, - DevStatus), sum)
+
+finalTranscriptClassificationGeneDev <- aggregate(. ~ associated_gene + DevStatus, 
+                                               finalTranscriptClassificationTranscript %>% select(-isoform), sum)
+finalTranscriptClassificationGeneDev <- reshape2::melt(finalTranscriptClassificationGeneDev, 
+                                                     variable.name = "AS", value.name = "Frequency", id = c("associated_gene","DevStatus"))
 
 ## ----- selected disease genes ------
 monoAllelicDDP = c('ADNP','ANK2','ANKRD11','ARID1B','ASH1L','AUTS2','BCL11A','BCL11B','CACNA1C','CACNA1G','CACNA1H','CDH1','CDH2','CDK13','CHD2','CHD8','CLCN3','CNOT1','DLG4','DMD','DYRK1A','EIF2S3','EP300','FMR1','FOXP1','FOXP2','GABBR2','GATA3','GATA4','GATA6','GLMN','GRIA3','GRIK2','GRIN1','GRIN2A','GRIN2B','H1-4','HNF1B','HNF4A','IL1RAPL1','ITPR1','KAT6B','KDM6A','KDM6B','KIRREL3','KMT2D','LMNA','MAGI2','MECP2','MED13L','MEIS2','MNX1','NF1','NFIA','NFIB','NLGN3','NLGN4X','NRXN1','OPA1','PAX6','PBX1','POGZ','POLA1','PTEN','QRICH1','RANBP2','RBFOX1','RPL10','SCN1A','SCN2A','SCN8A','SET','SETD1A','SHANK3','SHH','SLC9A9','SMARCE1','SON','SOX9','SRRM2','STAG1','STXBP1','SYNGAP1','SYP','TBL1XR1','TBR1','TCF4','TRIO','TSC1','TSC2','UBE3A','USP7','WFS1','ZBTB20','ZEB2','ZMYM2')

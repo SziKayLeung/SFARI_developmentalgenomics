@@ -9,6 +9,9 @@
 ## fig3:
 ## fig4: Targeted dataset
 
+suppressMessages(library("ggplot2"))
+suppressMessages(library("wesanderson"))
+
 SC_ROOT= "C:/Users/sl693/Dropbox/Scripts/SFARI_developmentalgenomics"
 SC_ROOT = "/lustre/projects/Research_Project-MRC148213/lsl693/scripts/SFARI_developmentalgenomics"
 source(paste0(SC_ROOT,"/Paper_Figures/SFARI_config.R"))
@@ -201,6 +204,20 @@ figPlots$Diff$DIUSex_GeneExp <- plot_trans_exp_individual(transcript=NULL,
 plot_grid(plot_grid(figPlots$Diff$DIUSex_Vis, labels = c("A")),
           plot_grid(figPlots$Diff$DIUSex, figPlots$Diff$DIUSex_GeneExp, nrow = 1, labels = c("B","C")), 
           ncol = 1, rel_widths = c(0.8,0.2))
+
+
+## ------ AS events from FICLE ------ 
+
+figPlots$ASEvents <- finalTranscriptClassificationGene2  %>% 
+  filter(AS %in% c("A5A3", "AF", "AT", "ES", "IR", "NE_1st", "NE_Int", "NE_Last")) %>%
+  mutate(DevStatus = factor(DevStatus, levels = c("prenatal","postnatal","Both"))) %>%
+  group_by(AS, DevStatus) %>% tally(Frequency) %>% 
+  ggplot(.,aes(x = reorder(AS, -n), y = n, fill = DevStatus)) + geom_bar(stat = "identity", position = position_dodge()) +
+  labs(x = "AS events", y = "Frequency") %>% 
+  scale_fill_manual(labels = c("Prenatal","Postnatal","Both"), name = "", values = c(wes_palette("Royal1")[2],wes_palette("Royal1")[1],wes_palette("Royal1")[4])) +
+  labs(x = "AS events", y = "Frequency") +
+  theme(legend.position = "top") +
+  theme_classic()
 
 
 ## ------ Targeted data ------ 
@@ -443,3 +460,8 @@ pdf(paste0(output_dir,"CACNA1G_Figure5C.pdf"), width = 10, height = 6)
 figPlots$CACNA1Gvis
 dev.off()
 
+
+# supplementary figures
+pdf(paste0(output_dir,"FICLEASEventsPerGene.pdf"), width = 10, height = 6)
+figPlots$ASEvents
+dev.off()
