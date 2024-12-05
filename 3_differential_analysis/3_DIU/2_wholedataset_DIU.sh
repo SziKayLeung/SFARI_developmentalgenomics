@@ -2,7 +2,7 @@
 #SBATCH --export=ALL # export all environment variables to the batch job
 #SBATCH -D . # set working directory to .
 #SBATCH -p mrcq # submit to the parallel queue
-#SBATCH --time=30:00:00 # maximum walltime for the job
+#SBATCH --time=120:00:00 # maximum walltime for the job
 #SBATCH -A Research_Project-MRC148213 # research project to submit under
 #SBATCH --nodes=1 # specify number of nodes
 #SBATCH --ntasks-per-node=16 # specify number of processors per node
@@ -27,7 +27,7 @@ export PATH=$PATH:${LOGEN_ROOT}/differential_analysis
 
 # directory paths
 SQANTIDIR=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/C_Whole_Targeted/9_sqanti_final
-DESEQDIR=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/C_Whole_Targeted/18_deseq
+DESEQDIR=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/C_Whole_Targeted/18_deseq/2_DTE
 DIUDIR=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/C_Whole_Targeted/18_deseq/3_DIU
 mkdir -p ${DIUDIR}
 mkdir -p ${DIUDIR}/whole
@@ -60,9 +60,20 @@ WholeGenesList=${WholeGenesLists[${SLURM_ARRAY_TASK_ID}]}
 # run DIU through each gene list
 source activate edgeR
 while read gene; do
-  echo "$gene"
-  # Whole group
-  python ${LOGEN_ROOT}/differential_analysis/subset_and_run_DIU.py ${SQANTIClassFile} ${DESEQDIR}/DESeq2_whole_transcript_development_normAll.csv -d ${DIUDIR}/whole/allGroup -I ${gene} -p ${WholeGroupPhenotype} -f ${WholeGroupFactor} -n "Whole"
-  # Whole sex
-  python ${LOGEN_ROOT}/differential_analysis/subset_and_run_DIU.py ${SQANTIClassFile} ${DESEQDIR}/DESeq2_whole_transcript_sex_normAll.csv -d ${DIUDIR}/whole/allSex -I ${gene} -p ${WholeSexPhenotype} -f ${WholeSexFactor} -n "Whole"
+  if [ -f "${DIUDIR}/whole/allGroup/${gene}_classification.txt" ]; then
+    echo "$gene already processed for group"
+  else
+    echo "To process ${gene} for group"
+    # Whole group
+    python ${LOGEN_ROOT}/differential_analysis/subset_and_run_DIU.py ${SQANTIClassFile} ${DESEQDIR}/DESeq2_whole_development_normAll.csv -d ${DIUDIR}/whole/allGroup -I ${gene} -p ${WholeGroupPhenotype} -f ${WholeGroupFactor} -n "Whole"
+  fi
+  
+  if [ -f "${DIUDIR}/whole/allSex/${gene}_classification.txt" ]; then
+    echo "$gene already processed for sex"
+  else
+    echo "To process ${gene} for sex"
+    # Whole sex
+    python ${LOGEN_ROOT}/differential_analysis/subset_and_run_DIU.py ${SQANTIClassFile} ${DESEQDIR}/DESeq2_whole_sex_normAll.csv -d ${DIUDIR}/whole/allSex -I ${gene} -p ${WholeSexPhenotype} -f ${WholeSexFactor} -n "Whole"
+  fi
+
 done < ${WholeGenesList}
