@@ -25,9 +25,13 @@ sapply(list.files(path = paste0(LOGEN,"longread_QC"), pattern="*.R", full = T), 
 root_dir <- "C:/Users/sl693/Dropbox/Scripts/SFARI_developmentalgenomics/data/"
 output_dir <- "C:/Users/sl693/Dropbox/Scripts/SFARI_developmentalgenomics/output/"
 
-TargetGene = read.table(paste0(root_dir, "metadata/Complete_TargetGenes_TargetedSequencing.txt"))[["V1"]]
-ProteinCodingGenes = read.table(paste0(root_dir, "/utils/WholeProteinCodingGenes.txt"))[["V1"]]
+TargetGene <- read.table(paste0(root_dir, "metadata/Complete_TargetGenes_TargetedSequencing.txt"))[["V1"]]
+ProteinCodingGenes <- read.table(paste0(root_dir, "/utils/protein-coding-genes.txt"))[["V1"]]
+message("Known protein coding genes: ", length(ProteinCodingGenes))
 
+MANEselectGenes <- fread(paste0(root_dir, "utils/MANE.GRCh38.v1.4.summary.txt"), data.table = F) %>% 
+  filter(MANE_status == "MANE Select")
+length(unique(MANEselectGenes$symbol)) == nrow(MANEselectGenes)
 
 ## ------------- Phenotype files -------------------
 
@@ -68,6 +72,8 @@ class.files$protein_filtered = fread(paste0(root_dir,"/proteomics/Whole.sqanti_p
 class.files$glob_SQ_annoGene_prenatal <- class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$preReads >= 1,]
 class.files$glob_SQ_annoGene_postnatal <- class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$postReads >= 1,]
 
+## transcripts annotated to known protein-coding genes
+class.files$glob_SQ_proteinGenes <- class.files$glob_SQ[class.files$glob_SQ$associated_gene %in% ProteinCodingGenes,]
 
 ## -------------- Bambu ---------------- 
 
@@ -149,6 +155,12 @@ rawCounts <- rawCounts %>% mutate(sample = word(file,c(1),sep=fixed(".")))
 rawCounts$sample[rawCounts$sample == "WholeN51"] <- "WholeN55"
 rawCounts <- merge(rawCounts, phenotype, by = "sample", all = T)
 
+# normalised counts for all transcripts
+normWhole <- fread(paste0(root_dir,"DTE/DESeq2_whole_development_normAll.csv"))
+WholePreNorm <- normWhole %>% filter(sample %in% preWhole) %>% group_by(isoform) %>% tally(normalised_counts)
+WholePostNorm <- normWhole %>% filter(sample %in% postWhole) %>% group_by(isoform) %>% tally(normalised_counts)
+normWholeIsoform <- merge(WholePreNorm %>% `colnames<-`(c("isoform", "normPre")) , WholePostNorm %>% `colnames<-`(c("isoform", "normPost")), by = "isoform")
+
 ## -------------- gtf ----------------
 
 gtf <- list()
@@ -221,7 +233,9 @@ gfftmapComparisons <- list(
   directRNA = data.table::fread(paste0(root_dir, "overlapDatasets/sfari_dRNA.sqantifiltered_monoexonicfiltered_2reads2samples.filtered.gtf.tmap"), data.table = FALSE),
   BDRNatureComms = data.table::fread(paste0(root_dir, "overlapDatasets/sfari_BDR.ontBDR_collapsed.filtered_counts_filtered.gtf.tmap"), data.table = FALSE),
   Patowary = data.table::fread(paste0(root_dir, "overlapDatasets/sfari_Patowary.cp_vz_0.75_min_7_recovery_talon_corrected.gtf.tmap"), data.table = FALSE),
-  PatowaryHerbele = data.table::fread(paste0(root_dir,"overlapDatasets/Heberle_Patowary.cp_vz_0.75_min_7_recovery_talon_corrected.gtf.tmap"), data.table = FALSE)
+  PatowaryHerberle = data.table::fread(paste0(root_dir,"overlapDatasets/Heberle_Patowary.cp_vz_0.75_min_7_recovery_talon_corrected.gtf.tmap"), data.table = FALSE),
+  Herberle = data.table::fread(paste0(root_dir,"overlapDatasets/Bamford_Heberle.extended_annotations.gtf.tmap"), data.table = FALSE),
+  HerberleBamford = data.table::fread(paste0(root_dir,"overlapDatasets/Heberle_Bamford.sqantifiltered_monoexonicfiltered_2reads2samples_whole_intergenicGenicIntron.filtered.gtf.tmap"), data.table = FALSE)
 )
 
 # from zenodo
@@ -245,8 +259,8 @@ class.files$glob_targ_SQ_20AD <- class.files$glob_targ_SQ[class.files$glob_targ_
 # read in FICLE transcript_classifications.csv merged
 finalTranscriptClassification <- distinct(fread(paste0(root_dir,"ficle/all_final_transcript_classifications.csv"), data.table = F))
 finalTranscriptClassification <- finalTranscriptClassification %>% filter(isoform %in% class.files$glob_SQ$isoform)
-finalTranscriptClassificationTranscript <- merge(finalTranscriptClassification, 
-                                                 class.files$glob_SQ[,c("isoform","associated_gene","DevStatus")], by = "isoform")
+finalTranscriptClassificationTranscript <- merge(finalTranscriptClassification, class.files$glob_SQ[,c("isoform","associated_gene","preReads", "postReads","DevStatus")], by = "isoform")
+finalTranscriptClassificationTranscript <- merge(finalTranscriptClassificationTranscript, normWholeIsoform, by = "isoform", all.x = T)
 
 # numeric for columns responding to AS events
 finalTranscriptClassificationTranscript$isoform <- as.factor(finalTranscriptClassificationTranscript$isoform)

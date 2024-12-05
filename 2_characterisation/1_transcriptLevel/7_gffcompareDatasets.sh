@@ -21,7 +21,7 @@ sqanti_whole_gtf=sqantifiltered_monoexonicfiltered_2reads2samples_whole_intergen
 sqanti_wholetargeted_gtf=sqantifiltered_monoexonicfiltered_2reads2samples_intergenicGenicIntron.filtered.gtf
 
 outputDir=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/C_Whole_Targeted/14_OverlapDatasets
-mkdir -p ${outputDir}/cellReports2021 ${outputDir}/directRNA ${outputDir}/BDRNatureComms2024 ${outputDir}/Patowary2024 ${outputDir}/Heberle2024
+mkdir -p ${outputDir}/cellReports2021 ${outputDir}/directRNA ${outputDir}/BDRNatureComms2024 ${outputDir}/Patowary2024 ${outputDir}/Heberle2024 ${outputDir}/Heberle2024Bamford
 
 ## ----- run gffcompare on PacBio dataset ---- 
 
@@ -96,3 +96,16 @@ Heberle_gtf=extended_annotations.gtf
 PATH="/lustre/projects/Research_Project-MRC148213/lsl693/software/gffcompare:$PATH"
 gffcompare -r ${Heberle_gtf} ${Patowary_gtf} -o Heberle_Patowary
 gffcompare -r ${Patowary_gtf} ${Heberle_gtf} -o Patowary_Heberle
+
+## ----- run gffcompare on Ebbert dataset and Bamford dataset ---- 
+source activate sqanti2_py3 
+cd ${outputDir}/Heberle2024Bamford
+cp ${sqantiDir}/${sqanti_whole_gtf} .
+# uploaded gtf from https://zenodo.org/records/8180677
+Heberle2024Transcriptome=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/C_Whole_Targeted/17_longReadDatasetComparisons/Ebbert2024/transcriptomic_analysis_output/bambu_raw_output
+cp ${Heberle2024Transcriptome}/extended_annotations.gtf .
+Heberle_gtf=extended_annotations.gtf
+
+PATH="/lustre/projects/Research_Project-MRC148213/lsl693/software/gffcompare:$PATH"
+gffcompare -r ${Heberle_gtf} ${sqanti_whole_gtf} -o Heberle_Bamford
+gffcompare -r ${sqanti_whole_gtf} ${Heberle_gtf} -o Bamford_Heberle

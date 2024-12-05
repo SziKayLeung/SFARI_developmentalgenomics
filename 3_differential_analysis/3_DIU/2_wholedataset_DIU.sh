@@ -29,7 +29,7 @@ export PATH=$PATH:${LOGEN_ROOT}/differential_analysis
 SQANTIDIR=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/C_Whole_Targeted/9_sqanti_final
 DESEQDIR=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/C_Whole_Targeted/18_deseq
 DIUDIR=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/C_Whole_Targeted/18_deseq/3_DIU
-mdkir -p ${DIUDIR}
+mkdir -p ${DIUDIR}
 mkdir -p ${DIUDIR}/whole
 mkdir -p $DIUDIR/whole/allGroup $DIUDIR/whole/allSex
 

@@ -15,12 +15,57 @@ wholecollapsed_annotatedGenes_summary_table <- descriptives_summary(class.files$
 # abundance of novel transcripts vs known transcripts of known genes 
 # sum the mean of the counts across all the whole samples
 # t-test 
-novelMean <- annoGenesStats$novelTrans %>% select(contains("Whole")) %>% apply(., 1, mean) 
-knownMean <- annoGenesStats$annoTrans %>% select(contains("Whole")) %>% apply(., 1, mean) 
+novelMean <- annoGenesStats$novelTrans %>% select(contains("Whole", ignore.case = FALSE)) %>% apply(., 1, mean) 
+knownMean <- annoGenesStats$annoTrans %>% select(contains("Whole", ignore.case = FALSE)) %>% apply(., 1, mean) 
 dat <- rbind(reshape2::melt(novelMean) %>% mutate(associated_transcript = "novel"), reshape2::melt(knownMean) %>% mutate(associated_transcript = "known"))
+dat %>% group_by(associated_transcript) %>% summarise(median = mean(value))
 res <- t.test(value ~ associated_transcript, data = dat)
 res$p.value
+message("Percentage of novel transcripts with less than 5 reads:", nrow(annoGenesStats$novelTrans %>% filter(whole_nreads <= 5))/nrow(annoGenesStats$novelTrans))
 class.files$glob_SQ_annoGene %>% filter(structural_category %in% c("NIC","NNC")) %>% mutate(FL = preReads + postReads) %>% arrange(-FL)
+
+# protein-coding genes
+numProteinCodingGenes <- length(unique(class.files$glob_SQ_proteinGenes$associated_gene))
+message("Number of protein-coding genes detected:", numProteinCodingGenes)
+mostAbundantTranscript <- class.files$glob_SQ_proteinGenes %>% 
+  # select transcript with the highest number of nreads and supported by nsamples
+  group_by(associated_gene) %>%
+  arrange(desc(whole_nreads), desc(whole_nsamples)) %>% slice(1)
+mostAbundantTranscript <- as.data.frame(mostAbundantTranscript)
+mostAbundantTranscript %>% group_by(structural_category) %>% tally(n = "numTranscripts") %>% mutate(perc = numTranscripts/sum(numTranscripts) * 100)
+numProteinCodingGenesFSMTranscript <- length(unique(mostAbundantTranscript[mostAbundantTranscript$structural_category == "FSM","associated_gene"]))
+message("Number of protein-coding genes with FSM as most abundant transcript: ", numProteinCodingGenesFSMTranscript)
+message("% of protein-coding genes with FSM as most abundant transcript: ", numProteinCodingGenesFSMTranscript/numProteinCodingGenes * 100)
+
+# only select for the base identifier (ignore the decimal point as that's for different versions of the same transcript)
+mostAbundantTranscriptFSM <- mostAbundantTranscript %>% filter(structural_category == "FSM") %>% 
+  mutate(transcript_firstPart = word(associated_transcript,c(1), sep = fixed(".")))
+MANEselectGenes <- MANEselectGenes %>% mutate(Ensembl_nuc_firstPart = word(Ensembl_nuc, c(1), sep = fixed(".")))
+nrow(mostAbundantTranscriptFSM %>% filter(associated_transcript %in% MANEselectGenes$Ensembl_nuc))
+nrow(mostAbundantTranscriptFSM %>% filter(transcript_firstPart %in% MANEselectGenes$Ensembl_nuc_firstPart))
+message("Missing protein-coding genes without a known MALE select:", length(setdiff(mostAbundantTranscriptFSM$associated_gene, MANEselectGenes$symbol)))
+
+# known genes with no FSM transcripts
+GenesWithFSM <- unique(class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$structural_category == "FSM","associated_gene"])
+GeneswithnoFSM <- setdiff(unique(class.files$glob_SQ_annoGene$associated_gene),GenesWithFSM)
+message("Number of genes with no FSM transcripts:", length(GeneswithnoFSM))
+message("Proporition to all known genes: ", length(GeneswithnoFSM)/ length(unique(class.files$glob_SQ_annoGene$associated_gene)) * 100)
+
+# protein coding genes with more than one transcript
+ProteinCodingGenes1 <- class.files$glob_SQ_proteinGenes %>% group_by(associated_gene) %>% tally() %>% filter(n == 1)
+ProteinCodingGenesMoreThan1 <- class.files$glob_SQ_proteinGenes %>% group_by(associated_gene) %>% tally() %>% filter(n > 1)
+class.files$glob_SQ_proteinGenes_morethan1 <- class.files$glob_SQ_proteinGenes %>% filter(associated_gene %in% ProteinCodingGenesMoreThan1$associated_gene)
+
+# protein coding genes with more than one transcript and no FSM transcripts
+ProteinGenesWithFSM <- unique(class.files$glob_SQ_proteinGenes_morethan1[class.files$glob_SQ_proteinGenes_morethan1$structural_category == "FSM","associated_gene"])
+ProteinGeneswithnoFSM <- setdiff(unique(class.files$glob_SQ_proteinGenes_morethan1$associated_gene),ProteinGenesWithFSM)
+
+message("Number of protein-coding genes more than one transcript but no FSM transcripts:", length(ProteinGeneswithnoFSM))
+message("Proportion to all protein-coding genes: ", length(ProteinGeneswithnoFSM)/ length(unique(class.files$glob_SQ_proteinGenes$associated_gene)) * 100)
+
+class.files$glob_SQ_annoGene %>% filter(structural_category %in% c("NIC","NNC")) %>% arrange(-whole_nreads)
+# ONT2.3331.23589 <- ONT2_3223_23974
+# ONT2.3331.23546 <- ONT2_3223_23931
 
 # proteogenomics pipeline
 proteinInput$t2p.collapse.AnnoGenes <- proteinInput$t2p.collapse %>% filter(base_acc %in% class.files$glob_SQ_annoGene$isoform)
@@ -41,7 +86,6 @@ nrow(noncoding_nmd)
 nrow(coding_nmd)
 binom.test(nrow(noncoding_nmd), nrow(Cpat$whole.AnnoGenes.noncoding))
 binom.test(nrow(coding_nmd), nrow(Cpat$whole.AnnoGenes.coding), p = 0.5)
-
 
 # novel transcripts of known genes
 proteinInput$t2p.collapse.novelTranscriptsAnnoGenes <- proteinInput$t2p.collapse %>% filter(base_acc %in% annoGenes_stats$novelTrans$isoform)
@@ -89,6 +133,29 @@ message("Number of transcripts unique to prenatal:", length(setdiff(class.files$
 message("Number of transcripts unique to postnatal:", length(setdiff(class.files$glob_SQ_annoGene_postnatal$isoform, class.files$glob_SQ_annoGene_prenatal$isoform)))
 message("% of unique postnatal to all:", length(setdiff(class.files$glob_SQ_annoGene_postnatal$isoform, class.files$glob_SQ_annoGene_prenatal$isoform))/nrow(class.files$glob_SQ_annoGene) * 100)
 message("% of unique prenatal to all:",length(setdiff(class.files$glob_SQ_annoGene_prenatal$isoform, class.files$glob_SQ_annoGene_postnatal$isoform))/nrow(class.files$glob_SQ_annoGene) * 100)
+
+genesPrenatal <- unique(class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$DevStatus == "prenatal","associated_gene"])
+genesPrePostnatal <- unique(class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$DevStatus == "Both","associated_gene"])
+genesPostnatal <- unique(class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$DevStatus == "postnatal","associated_gene"])
+genesPrenatalOnly <- setdiff(genesPrenatal, c(genesPrePostnatal, genesPostnatalOnly))
+genesPostnatalOnly <- setdiff(genesPostnatal,c(genesPrePostnatal, genesPrenatalOnly))
+
+message("Genes uniquely expressed in prenatal: ", length(genesPrenatalOnly))
+message("Genes unique expressed in prenatal and protein-coding: ", length(intersect(genesPrenatalOnly, unique(class.files$glob_SQ_proteinGenes$associated_gene))))
+message("Proportion: ", length(genesPrenatalOnly)/length(unique(class.files$glob_SQ_annoGene$associated_gene)) * 100)
+
+message("Genes uniquely expressed in postnatal: ", length(genesPostnatalOnly))
+message("Genes unique expressed in postnatal and protein-coding: ", length(intersect(genesPostnatalOnly, unique(class.files$glob_SQ_proteinGenes$associated_gene))))
+message("Proportion: ", length(genesPostnatalOnly)/length(unique(class.files$glob_SQ_annoGene$associated_gene)) * 100)
+
+length(genesPrePostnatal)
+length(genesPrePostnatal)/length(unique(class.files$glob_SQ_annoGene$associated_gene)) * 100
+
+# santiy check of genes capture correctly above
+length(genesPrenatalOnly) + length(genesPostnatalOnly) + length(genesPrePostnatal) == length(unique(class.files$glob_SQ_annoGene$associated_gene))
+genes <- c(genesPostnatalOnly, genesPrenatalOnly, genesPrePostnatal)
+setdiff(unique(class.files$glob_SQ_annoGene$associated_gene), genes)
+setdiff(genes, unique(class.files$glob_SQ_annoGene$associated_gene))
 
 # most abundant transcript in prenatal and not in postnatal
 class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$postReads == 0,] %>% arrange(-preReads) %>% .[1,]
@@ -145,14 +212,29 @@ comparison_dataset <- function(gfftmap, classfiles, altDataset){
         message("Number overlap from Bamford dataset: ", length(unique(Common_RB$isoform)))
         message("Percentage overlap from Bamford dataset: ", round(length(unique(Common_RB$isoform))/nrow(classfiles)* 100,2))
         message("Number unique to Bamford dataset: ", nrow(Unique_RB))
-
+        
+        output <- list(Unique_RB, Common_RB)
+        names(output) <- c("Unique_RB","Common_RB")
+        return(output)
+w
 }
 
-comparison_dataset(gfftmapComparisons$cellReports, class.files$glob_SQ, humanCTX)
+cellReportFurther <- comparison_dataset(gfftmapComparisons$cellReports, class.files$glob_SQ, humanCTX)
 comparison_dataset(gfftmapComparisons$directRNA, class.files$glob_SQ, directRNA)
 comparison_dataset(gfftmapComparisons$BDRNatureComms, class.files$glob_targ_SQ_20AD, BDRNatureComms)
+comparison_dataset(gfftmapComparisons$Herberle, class.files$glob_SQ, HerberleCTX)
 comparison_dataset(gfftmapComparisons$Patowary, class.files$glob_SQ, PatowaryCTX)
 comparison_dataset(gfftmapComparisons$PatowaryHerbele, PatowaryCTX, HerberleCTX)
+
+
+# expression difference between CellReports and Bamford dataset for unique transcripts
+ExpressionDiffPacBio <- rbind(cellReportFurther$Unique_RB %>% mutate(dataset = "Unique") %>% select(whole_nreads, dataset),
+                              cellReportFurther$Common_RB %>% mutate(dataset = "Common") %>% select(whole_nreads, dataset))
+ExpressionDiffPacBio %>% group_by(dataset) %>% summarise(median = mean(whole_nreads))
+res <- wilcox.test(whole_nreads ~ dataset, ExpressionDiffPacBio, exact = FALSE)
+
+res$p.value
+format(res$p.value, scientific = TRUE)
 
 ## ------- differential transcript expression -------
 
@@ -239,39 +321,24 @@ message("Number of genes with significant DIU across development and not DGE: ",
 
 ## ---------- Alternative splicing events ----------
 
-FICLE_class_final_exp <- FICLE_class_final_exp %>% mutate(A5A3 = as.numeric(A5A3), A5A3pre = A5A3 * normPre/sum(A5A3), A5A3post = A5A3 * normPost/sum(A5A3),
+# calculate AS events for pre-natal and post-natal detected transcripts 
+splicingExp <- finalTranscriptClassificationTranscript %>% mutate(A5A3 = as.numeric(A5A3), A5A3pre = A5A3 * normPre/sum(A5A3), A5A3post = A5A3 * normPost/sum(A5A3),
                                                           ES = as.numeric(ES), ESpre = ES * normPre/sum(ES), ESpost = ES * normPost/sum(ES),
                                                           IR = as.numeric(IR), IRpre = IR * normPre/sum(IR), IRpost = IR * normPost/sum(IR),
                                                           A5A3 = as.numeric(A5A3), A5A3pre = A5A3 * normPre/sum(A5A3), A5A3post = A5A3 * normPost/sum(A5A3))
 
-FICLEES <- FICLE_class_final_exp %>% select(isoform, ESpre, ESpost) %>% reshape2::melt(variable.name = "development", value.name = "normES") 
-FICLEIR <- FICLE_class_final_exp %>% select(isoform, IRpre, IRpost) %>% reshape2::melt(variable.name = "development", value.name = "normIR") 
-FICLEA5A3 <- FICLE_class_final_exp %>% select(isoform, A5A3pre, A5A3post) %>% reshape2::melt(variable.name = "development", value.name = "normA5A3") 
+# subset events
+FICLEES <- splicingExp %>% select(isoform, ESpre, ESpost) %>% reshape2::melt(variable.name = "development", value.name = "normES") 
+FICLEIR <- splicingExp %>% select(isoform, IRpre, IRpost) %>% reshape2::melt(variable.name = "development", value.name = "normIR") 
+FICLEA5A3 <- splicingExp %>% select(isoform, A5A3pre, A5A3post) %>% reshape2::melt(variable.name = "development", value.name = "normA5A3") 
 
 ggplot(FICLEES, aes(x = development, y = log10(normES))) + geom_boxplot()
 ggplot(FICLEIR, aes(x = development, y = log10(normIR))) + geom_boxplot()
 ggplot(FICLEA5A3, aes(x = development, y = log10(normA5A3))) + geom_boxplot()
 
-
 t.test(normES ~ development, FICLEES)
 t.test(normA5A3 ~ development, FICLEA5A3)
 t.test(normIR ~ development, FICLEIR)
-
-row.names(FICLE_class) <- FICLE_class$isoform
-FICLE_class <- FICLE_class %>% mutate_if(is.character, as.numeric)
-FICLE_class <- FICLE_class[complete.cases(FICLE_class), ]
-
-
-count = 1
-AS_events <- data.frame()
-for(i in colnames(FICLE_class)){
-  AS_events[count,1] <- i
-  AS_events[count,2] <- sum(FICLE_class[[i]])
-  count <- count + 1
-}
-colnames(AS_events) <- c("AS_event","Number")
-ggplot(AS_events, aes(x = reorder(AS_event,-Number), y = Number)) + geom_bar(stat = "identity")
-
 
 
 ## ---------- Proteogenomics ----------

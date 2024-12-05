@@ -62,6 +62,16 @@ figPlots$comp
 # note there will be NA reads due to isoforms that are detected in the other samples that are not matching in the whole+targeted
 # unique(matchedSumTargeted[matchedSumTargeted$dataset == "NA",])
 
+# novel vs known transcripts: difference in expression
+novelMean <- annoGenesStats$novelTrans %>% select(contains("Whole", ignore.case = FALSE)) %>% apply(., 1, mean) 
+knownMean <- annoGenesStats$annoTrans %>% select(contains("Whole", ignore.case = FALSE)) %>% apply(., 1, mean) 
+dat <- rbind(reshape2::melt(novelMean) %>% mutate(associated_transcript = "novel"), reshape2::melt(knownMean) %>% mutate(associated_transcript = "known"))
+figPlots$novelKnownTranscriptExp <- ggplot(dat, aes(x = log10(value), fill = associated_transcript)) + 
+  geom_histogram(alpha = 0.3, position = "identity") + 
+  theme_classic() +
+  theme(legend.position = "bottom") +
+  labs(x = "FL mean read count (log10)", y  = "Frequency", fill = "Transcript")
+
 
 ## ------ Figure 2: Targeted dataset descriptives ------ 
 
