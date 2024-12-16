@@ -22,6 +22,7 @@ dat %>% group_by(associated_transcript) %>% summarise(median = mean(value))
 res <- t.test(value ~ associated_transcript, data = dat)
 res$p.value
 message("Percentage of novel transcripts with less than 5 reads:", nrow(annoGenesStats$novelTrans %>% filter(whole_nreads <= 5))/nrow(annoGenesStats$novelTrans))
+message("Percentage of novel transcripts with less than 5 reads:", nrow(annoGenesStats$annoTrans %>% filter(whole_nreads <= 5))/nrow(annoGenesStats$annoTrans))
 class.files$glob_SQ_annoGene %>% filter(structural_category %in% c("NIC","NNC")) %>% mutate(FL = preReads + postReads) %>% arrange(-FL)
 
 # protein-coding genes
@@ -134,6 +135,10 @@ message("Number of transcripts unique to postnatal:", length(setdiff(class.files
 message("% of unique postnatal to all:", length(setdiff(class.files$glob_SQ_annoGene_postnatal$isoform, class.files$glob_SQ_annoGene_prenatal$isoform))/nrow(class.files$glob_SQ_annoGene) * 100)
 message("% of unique prenatal to all:",length(setdiff(class.files$glob_SQ_annoGene_prenatal$isoform, class.files$glob_SQ_annoGene_postnatal$isoform))/nrow(class.files$glob_SQ_annoGene) * 100)
 
+novelTranscripts <- class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$associated_transcript == "novel",]
+message("Number of novel transcripts detected in both prenatal and postnatal: ", nrow(novelTranscripts[novelTranscripts$DevStatus == "Both",]))
+message("%: ", nrow(novelTranscripts[novelTranscripts$DevStatus == "Both",])/nrow(novelTranscripts) * 100)
+
 genesPrenatal <- unique(class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$DevStatus == "prenatal","associated_gene"])
 genesPrePostnatal <- unique(class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$DevStatus == "Both","associated_gene"])
 genesPostnatal <- unique(class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$DevStatus == "postnatal","associated_gene"])
@@ -169,6 +174,9 @@ nrow(WholeDESeq2Sig$age %>% group_by(associated_gene) %>% tally())
 WholeDTE$age %>% group_by(structural_category) %>% tally()
 17308/85428
 63204/85428
+
+# ERCC
+ercc_usage <- plot_usage_persample(ercc.class.file, ercc.demux)
 
 ## ------- whole vs targeted dataset ---------
 
@@ -220,7 +228,7 @@ w
 }
 
 cellReportFurther <- comparison_dataset(gfftmapComparisons$cellReports, class.files$glob_SQ, humanCTX)
-comparison_dataset(gfftmapComparisons$directRNA, class.files$glob_SQ, directRNA)
+directRNAFurther <- comparison_dataset(gfftmapComparisons$directRNA, class.files$glob_SQ, directRNA)
 comparison_dataset(gfftmapComparisons$BDRNatureComms, class.files$glob_targ_SQ_20AD, BDRNatureComms)
 comparison_dataset(gfftmapComparisons$Herberle, class.files$glob_SQ, HerberleCTX)
 comparison_dataset(gfftmapComparisons$Patowary, class.files$glob_SQ, PatowaryCTX)
@@ -233,6 +241,16 @@ ExpressionDiffPacBio <- rbind(cellReportFurther$Unique_RB %>% mutate(dataset = "
 ExpressionDiffPacBio %>% group_by(dataset) %>% summarise(median = mean(whole_nreads))
 res <- wilcox.test(whole_nreads ~ dataset, ExpressionDiffPacBio, exact = FALSE)
 
+res$p.value
+format(res$p.value, scientific = TRUE)
+
+
+# expression difference between cDNA and dRNA for unique transcripts
+ExpressionDiffcDNAdRNA <- rbind(directRNAFurther$Unique_RB %>% mutate(dataset = "Unique") %>% select(whole_nreads, dataset),
+                                directRNAFurther$Common_RB %>% mutate(dataset = "Common") %>% select(whole_nreads, dataset))
+ExpressionDiffcDNAdRNA %>% group_by(dataset) %>% summarise(median = mean(whole_nreads))
+res <- wilcox.test(whole_nreads ~ dataset, ExpressionDiffcDNAdRNA, exact = FALSE)
+res
 res$p.value
 format(res$p.value, scientific = TRUE)
 
