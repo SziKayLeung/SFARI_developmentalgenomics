@@ -21,3 +21,6 @@ grep -wF -f ${filteredID} sqantifiltered_monoexonicfiltered_2reads2samples.filte
 
 source activate nanopore 
 seqtk subseq WholeTargeted_collapsedAllChr_corrected.fasta ${filteredID} > ${outputName}.fasta
+outputName=sqantifiltered_monoexonicfiltered_10reads10samples
+filteredID=sqantifiltered_monoexonic_10reads10samplesfiltered_ID.txt 
+grep -wF -f ${filteredID} WholeTargeted_collapsedAllChr.filtered.gtf > ${outputName}.filtered.gtf
