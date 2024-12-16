@@ -12,6 +12,7 @@ suppressMessages(library("data.table"))
 suppressMessages(library("ggrepel"))
 suppressMessages(library("forcats"))
 suppressMessages(library("ggh4x"))
+suppressMessages(library("tibble"))
 suppressMessages(library(gridExtra))
 suppressMessages(library(grid))
 suppressMessages(library(VennDiagram))
@@ -527,5 +528,140 @@ fourvenndiagrams <- function(set1, set2,set3,set4,name1, name2, name3,name4){
                     fill = c("#B3E2CD", "#FDCDAC","red","blue"), main = "\n", cex = 1,fontface = "bold",fontfamily = "ArialMT",
                     print.mode = "raw")
   return(p)
+}
+
+tabulateIF <- function(classf, countcol){
+  
+  Counts <- classf %>% select(isoform,contains(countcol))
+  rownames(Counts) <- Counts$isoform
+  Counts <- Counts %>% select(-isoform)
+  
+  # Calculate the mean of normalised expression across all the samples per isoform
+  meandf <- data.frame(meanvalues = apply(Counts,1,mean)) %>%
+    rownames_to_column("isoform") %>% 
+    # annotate isoforms with associated_gene and structural category
+    left_join(., classf[,c("isoform","associated_gene","structural_category")], by = "isoform")  
+  
+  # Group meandf by associated_gene and calculate the sum of mean values for each group
+  grouped <- aggregate(meandf$meanvalues, by=list(associated_gene=meandf$associated_gene), FUN=sum)
+  
+  # Calculate the proportion by merging back, and divide the meanvalues by the grouped values (x)
+  merged <- meandf %>% 
+    left_join(grouped, by = "associated_gene") %>%
+    mutate(perc = meanvalues / x * 100) 
+  return(merged)
+}
+
+plotIFGenes <- function(dat){
+  dat <- dat %>% mutate(structural_category = factor(structural_category, levels = c("FSM","ISM","NIC","NNC", "Genic_Genomic")))
+  p <- ggplot(dat, aes(x = associated_gene, y = as.numeric(perc), fill = forcats::fct_rev(structural_category))) +
+    geom_bar(stat = "identity", color = "black", size = 0.2) +
+    #scale_color_manual(values = rep(NA, length(unique(minorgrouped$gene)))) + 
+    labs(x = "Gene", y = "Isoform fraction (%)") +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
+  
+  if(length(unique(dat$structural_category)) == 4){
+    p <- p + scale_fill_manual(name = "Isoform Classification", values = rev(c(alpha("#00BFC4",0.8),alpha("#00BFC4",0.3),
+                                                                               alpha("#F8766D",0.8),alpha("#F8766D",0.3)))) 
+  }else{
+    p <- p + scale_fill_manual(name = "Isoform Classification", values = rev(c(alpha("#00BFC4",0.8),alpha("#00BFC4",0.3),
+                                                                               alpha("#F8766D",0.8),alpha("#F8766D",0.3),"gray"))) 
+  }
+  #+
+  #theme(legend.position = "None")
+  
+  return(p)
+}
+
+
+# n in table output refers to the number of transcripts for plotting
+# note n = NA for full-splice match as 1 transcript
+plot_usage_persample <- function(ERCC_classFile, ERCC_demux) {
+  
+  # Merge data
+  ERCC_classFileDemux <- merge(ERCC_classFile, ERCC_demux, by.x = "isoform", by.y = "id")
+  
+  plots <- list()
+  plotsFSM <- list()
+  percentages <- list()
+  
+  # Iterate over each sample column
+  for (sample in colnames(ERCC_demux)[-1]) {
+    dat <- ERCC_classFileDemux %>%
+      select(all_of(c(sample, "isoform", "structural_category", "chrom"))) %>%
+      filter(!!sym(sample) >= 1) %>%
+      group_by(chrom) %>%
+      mutate(
+        perc = (!!sym(sample)) / sum(!!sym(sample)) * 100,
+        major = ifelse(perc < 5, "minor", "major")
+      ) %>%
+      ungroup()
+    
+    # Separate major and minor isoforms
+    major <- dat %>% filter(major != "minor") %>% select(chrom, perc, isoform, structural_category)
+    minor <- dat %>% filter(major == "minor")
+    
+    # Group minor isoforms and sum percentages
+    minorgrouped <- aggregate(minor$perc, by = list(chrom = minor$chrom), FUN = sum) %>%
+      mutate(isoform = "minor", structural_category = "minor") %>%
+      dplyr::rename(perc = x)
+    
+    # Tally minor isoforms
+    minortally <- minor %>% group_by(chrom) %>% tally() %>% mutate(isoform = "minor")
+    
+    # Combine data for table output
+    percentage_table <- rbind(major, minorgrouped) %>%
+      full_join(minortally, by = c("isoform", "chrom")) %>%
+      arrange(chrom, desc(perc))
+    
+    # Store the table
+    percentages[[sample]] <- percentage_table
+    
+    # Create the plot
+    plots[[sample]] <- percentage_table %>%
+      group_by(structural_category, chrom,n) %>% tally(perc) %>% 
+      as.data.frame() %>% 
+      ggplot(aes(x = chrom, y = as.numeric(nn), fill = forcats::fct_rev(structural_category))) +
+      geom_bar(stat = "identity", color = "black", size = 0.2) +
+      theme_classic() +
+      labs(x = "ERCC", y = "Isoform fraction (%)") +
+      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+      scale_fill_manual(
+        name = "Isoform Classification",
+        values = rev(c(alpha("#00BFC4", 0.8), alpha("#00BFC4", 0.3),
+                       alpha("#F8766D", 0.8), alpha("#F8766D", 0.3),
+                       alpha("#808080", 0.3)))
+      ) +
+      geom_text(aes(label = n), color = "black", size = 2, position = position_stack(vjust = 0.5)) +
+      theme(legend.position = "bottom")
+    
+    plotsFSM[[sample]] <- percentage_table %>%
+      mutate(n = ifelse(structural_category == "genic", 1, n)) %>%
+      mutate(structural_category = ifelse(structural_category == "full-splice_match", "FSM","non-FSM")) %>%
+      group_by(structural_category, chrom, n) %>% tally(perc) %>% 
+      as.data.frame() %>% 
+      ggplot(aes(x = chrom, y = as.numeric(nn), fill = forcats::fct_rev(structural_category))) +
+      geom_bar(stat = "identity", color = "black", size = 0.2) +
+      theme_classic() +
+      labs(x = "ERCC", y = "Isoform fraction (%)") +
+      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+      scale_fill_manual(
+        name = "Isoform Classification",
+        values = rev(c(alpha("#F8766D", 0.8), alpha("#808080", 0.3)))
+      ) +
+      geom_text(aes(label = n), color = "black", size = 2, position = position_stack(vjust = 0.5)) +
+      theme(legend.position = "bottom")
+    
+    # mean percentage of FSM across each ERCC (caveat that summing all FSM transcripts)
+    meanFSMSum <- percentage_table %>% filter(structural_category == "full-splice_match") %>%
+      group_by(chrom) %>% tally(perc) 
+    message("Mean FSM across all ERCCs: ", mean(meanFSMSum$n))
+    message("Number of ERCCs detected", length(unique(percentage_table$chrom)))
+  }
+  
+  dat <<- dat
+  
+  # Return both plots and tables
+  return(list(plots = plots, tables = percentages, plotsFSM = plotsFSM))
 }
 
