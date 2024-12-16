@@ -22,6 +22,7 @@ sapply(list.files(path = paste0(LOGEN,"longread_QC"), pattern="*.R", full = T), 
 
 ## ------------ directory names --------------- 
 
+LOGEN <- "C:/Users/sl693/Dropbox/Scripts/LOGen/"
 root_dir <- "C:/Users/sl693/Dropbox/Scripts/SFARI_developmentalgenomics/data/"
 output_dir <- "C:/Users/sl693/Dropbox/Scripts/SFARI_developmentalgenomics/output/"
 
@@ -174,6 +175,7 @@ gtf$DLGAP5 <- as.data.frame(rtracklayer::import(paste0(root_dir,"sqanti/DLGAP5.g
 gtf$FOXP2 <- as.data.frame(rtracklayer::import(paste0(root_dir,"sqanti/FOXP2.gtf"))) 
 gtf$DAGLA <- as.data.frame(rtracklayer::import(paste0(root_dir,"sqanti/DAGLA.gtf"))) 
 gtf$CACNA1G <- as.data.frame(rtracklayer::import(paste0(root_dir,"sqanti/CACNA1G.gtf"))) 
+gtf$RPS27A <- as.data.frame(rtracklayer::import(paste0(root_dir,"sqanti/RPS27A.gtf"))) 
 
 gtf$ref <- data.table::fread(paste0(root_dir,"utils/refExons.gtf")) %>% dplyr::rename("gene_id" = "gene_name") %>% mutate(type = "exon")
 gtf <- lapply(gtf, function(x) x[,c("seqnames","strand","start","end","type","transcript_id","gene_id")])
@@ -188,6 +190,7 @@ gtf$merged <- rbind(gtf$ONT18.5258.1932[,c("seqnames","strand","start","end","ty
                     gtf$DAGLA[,c("seqnames","strand","start","end","type","transcript_id","gene_id")],
                     gtf$DLGAP5[,c("seqnames","strand","start","end","type","transcript_id","gene_id")],
                     gtf$CACNA1G[,c("seqnames","strand","start","end","type","transcript_id","gene_id")],
+                    gtf$RPS27A[,c("seqnames","strand","start","end","type","transcript_id","gene_id")],
                     gtf$ref[,c("seqnames","strand","start","end","type","transcript_id","gene_id")])
 
 GI <- c("GRIN2A","GRIA3","SEPTIN4","RTN4","MBP","RPS4Y1","XIST","ADD3","CNTNAP2","ANKRD12","VXN","PKM","MORF4L2","GNAS","RSP27A","CHN1","GPM6A")
@@ -215,7 +218,7 @@ load(paste0(root_dir,"proteomics/proteinInputWhole.RData"))
 # filter protein input to only the class files (pb_accs as this was the original pb_accs before being collapsed)
 proteinInput$t2p.collapse <- proteinInput$t2p.collapse %>% filter(pb_accs %in% class.files$glob_SQ$isoform)
 
-proteinInput$filtered <- read.table(paste0(root_dir,"proteomics/Whole.classification_filtered.tsv"), sep = "\t", header = T)
+proteinInput$filtered <- read.table(paste0(root_dir,"proteomics/Whole.classification_filtered.tsv"), sep = "/t", header = T)
 
 
 ## -------------- mass spectrometry ----------------
@@ -224,6 +227,13 @@ load(paste0(root_dir,"proteomics/AllPeptides.RData"))
 
 # Novel peptides
 load(paste0(root_dir,"proteomics/NovelPeptides.RData"))
+
+
+## -------------- ERCC ----------------
+
+ercc.class.file <- fread(paste0(root_dir,"ERCC/AlessiaERCC_collapsed_RulesFilter_result_classification.txt"), sep = "\t") %>% filter(filter_result == "Isoform")
+ercc.demux <- fread(paste0(root_dir,"ERCC/demux_fl_count.csv"))
+ercc.stats <- fread(paste0(root_dir,"ERCC/ERCC_Stats.csv"))
 
 ## -------------- comparison with Leung et al.(2021) dataset ----------------
 
@@ -242,9 +252,9 @@ gfftmapComparisons <- list(
 humanCTX <- read.table(paste0(root_dir, "overlapDatasets/HumanCTX.collapsed_classification.filtered_lite_classification.txt"), header = TRUE)
 humanCTX$totalFL <- humanCTX %>% dplyr::select(contains("FL.")) %>% apply(.,1,sum)
 # copied from here: /lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/dRNA/Rosie/9_sqanti_final
-directRNA <- read.table(paste0(root_dir, "overlapDatasets/sqantifiltered_monoexonicfiltered_2reads2samples_classification.txt"), header = TRUE, sep = "\t", as.is = T)
+directRNA <- fread(paste0(root_dir, "overlapDatasets/sqantifiltered_monoexonicfiltered_2reads2samples_classification.txt"), data.table = FALSE)
 # copied from here: /lustre/projects/Research_Project-MRC148213/lsl693/AD_BDR/D_ONT/5_cupcake/7_sqanti3
-BDRNatureComms <- read.table(paste0(root_dir, "ontBDR_collapsed_RulesFilter_result_classification.targetgenes_counts_filtered.txt"), header = TRUE, sep = "\t", as.is = T)
+BDRNatureComms <- read.table(paste0(root_dir, "ontBDR_collapsed_RulesFilter_result_classification.targetgenes_counts_filtered.txt"), header = TRUE, sep = "/t", as.is = T)
 PatowaryCTX <- data.table::fread(paste0(root_dir, "overlapDatasets/cp_vz_0.75_min_7_recovery_talon_classification.txt"), data.table = FALSE)
 HerberleCTX <- data.table::fread(paste0(root_dir, "overlapDatasets/fullLengthCounts_transcript.txt"), data.table = FALSE) %>% mutate(isoform = TXNAME)
 

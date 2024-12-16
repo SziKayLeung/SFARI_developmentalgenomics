@@ -100,6 +100,17 @@ DLGAP5Iso$colour <- NA
 figPlots$DLGAP5Vis <- ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$glob_SQ, isoList = c(as.character(DLGAP5Iso$Isoform)), 
                                   selfDf = DLGAP5Iso, gene = "DLGAP5")
 
+RSP27A <- tabulateIF(class.files$glob_SQ %>% filter(associated_gene %in% "RPS27A"), "Whole") %>% 
+  mutate(label = ifelse(perc > 10, isoform, NA), perc = perc / 100) %>% 
+  plotIFGenes(.) + mytheme +
+  labs(x = "") + scale_x_discrete(guide = guide_axis(angle = 0)) +
+  theme(legend.position = "right") + labs(y = "Isoform fracction")
+
+RSP27AVis <- ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$glob_SQ,
+                         isoList = c("ONT2.3331.23546","ONT2.3331.23589","ENST00000272317.11"),
+                         colours = c(rep(alpha("#F8766D",0.3),2),"black"),
+                         simple=TRUE)
+
 ## ------ Differential expression analysis ------
 
 figPlots$Diff <- list()
@@ -291,6 +302,11 @@ figPlots$CACNA1Gvis <- ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$gl
                           isoList = c(as.character(CACNA1GIso$Isoform)),
                           selfDf = CACNA1GIso, gene = "CACNA1G")
 
+##--- ERCC ---
+
+ercc_usage <- plot_usage_persample(ercc.class.file, ercc.demux)
+figPlots$ERCC <- plot_grid(plotlist = ercc_usage$plotsFSM, ncol = 1, labels = c("A","B","C"))
+
 
 ## ------ Output ------ 
 
@@ -408,6 +424,10 @@ pdf(paste0(output_dir,"/Differential.pdf"), width = 20, height = 20)
 Fig3
 dev.off()
 
+pdf(paste0(output_dir,"/ERCC.pdf"), width = 10, height = 15)
+figPlots$ERCC
+dev.off()
+
 plot_volcano(diff_results=WholeDESeq$sex,interaction="sex")
 
 p <- plot_volcano(diff_results=WholeDESeqSig$age)
@@ -474,4 +494,8 @@ dev.off()
 # supplementary figures
 pdf(paste0(output_dir,"FICLEASEventsPerGene.pdf"), width = 10, height = 6)
 figPlots$ASEvents
+dev.off()
+
+pdf("RSP27A_Supplementary.pdf", width = 10, height = 6)
+plot_grid(RSP27AVis,RSP27A, rel_widths = c(0.4,0.6))
 dev.off()
