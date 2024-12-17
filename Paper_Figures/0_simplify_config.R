@@ -144,10 +144,16 @@ save(class.files, file = paste0(dirnames$wholetarg_SQ,"sqantifiltered_monoexonic
 class.files <- class.files[c("glob_targ_SQ", "glob_SQ", "glob_SQ_annoGene", "targ_SQ")]
 save(class.files, file = paste0(dirnames$wholetarg_SQ,"sqantifiltered_monoexonicfiltered_2reads2samples.RData"))
 write.table(class.files$glob_SQ, paste0(dirnames$wholetarg_SQ,"sqantifiltered_monoexonicfiltered_2reads2samples_whole_intergenicGenicIntron_classification.txt"), quote = F, row.names = F, sep = "\t")
-write.table(class.files$glob_SQ$isoform, paste0(dirnames$wholetarg_SQ,"sqantifiltered_monoexonic_2reads2samplesfiltered_intergenicGenicIntron.ID.txt"), quote = F, row.names = F, col.names = F)
+write.table(class.files$glob_SQ$isoform, paste0(dirnames$wholetarg_SQ,"sqantifiltered_monoexonic_2reads2samples_whole_filtered_intergenicGenicIntron.ID.txt"), quote = F, row.names = F, col.names = F)
 # bash
-# grep -wF -f sqantifiltered_monoexonic_2reads2samplesfiltered_intergenicGenicIntron.ID.txt sqantifiltered_monoexonicfiltered_2reads2samples.filtered.gtf > sqantifiltered_monoexonicfiltered_2reads2samples_intergenicGenicIntron.filtered.gtf
+# grep -wF -f sqantifiltered_monoexonic_2reads2samples_whole_filtered_intergenicGenicIntron.ID.txt sqantifiltered_monoexonicfiltered_2reads2samples.filtered.gtf > sqantifiltered_monoexonicfiltered_2reads2samples_whole_intergenicGenicIntron.filtered.gtf
 
+## ------ final whole+targeted gtf ------
+write.table(class.files$glob_targ_SQ, paste0(dirnames$wholetarg_SQ,"sqantifiltered_monoexonicfiltered_2reads2samples_intergenicGenicIntron_classification.txt"), quote = F, row.names = F, sep = "\t")
+write.table(class.files$glob_targ_SQ$isoform, paste0(dirnames$wholetarg_SQ,"sqantifiltered_monoexonic_2reads2samples_filtered_intergenicGenicIntron.ID.txt"), quote = F, row.names = F, col.names = F)
+# bash
+# grep -wF -f sqantifiltered_monoexonic_2reads2samples_filtered_intergenicGenicIntron.ID.txt sqantifiltered_monoexonicfiltered_2reads2samples.filtered.gtf > sqantifiltered_monoexonicfiltered_2reads2samples_intergenicGenicIntron.filtered.gtf
+                                  
 ## -------------- DESeq2
 
 # Expression
