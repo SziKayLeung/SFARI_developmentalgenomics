@@ -217,13 +217,13 @@ figPlots$Diff$DIUSex_Vis <- ggTranPlots(inputgtf=gtf$merged,classfiles=class.fil
             simple=TRUE)
 ExpGene$GNAS_whole_group <- ExpGene$whole_group %>% filter(associated_gene == "GNAS") %>% merge(., phenotype, by="sample")
 figPlots$Diff$DIUSex_GeneExp <- plot_trans_exp_individual(transcript=NULL,
-                                                          gene="GNAS",var="group",sqrt=FALSE, 
+                                                          gene="GNAS",var="sex",sqrt=FALSE, 
                                                           colourdots = "black",
                                                           classfiles=class.files$glob_SQ,Norm_transcounts=ExpGene$GNAS_whole_group) +
                                 scale_fill_manual(values = c("gray","gray"))
 
 plot_grid(plot_grid(figPlots$Diff$DIUSex_Vis, labels = c("A")),
-          plot_grid(figPlots$Diff$DIUSex, figPlots$Diff$DIUSex_GeneExp, nrow = 1, labels = c("B","C")), 
+          plot_grid(figPlots$Diff$DIUSex[[1]], figPlots$Diff$DIUSex_GeneExp, nrow = 1, labels = c("B","C")), 
           ncol = 1, rel_widths = c(0.8,0.2))
 
 
