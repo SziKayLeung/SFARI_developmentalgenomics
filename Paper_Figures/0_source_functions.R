@@ -517,8 +517,9 @@ plotIFWholebyGene <- function(gene, pathDIU,facetTranscriptsFeature,sexFeature){
 
   iExp <- fread(pathDIU, data.table = F)
   iExp <- iExp %>% tidyr::spread(sample,normalised_counts) %>% tibble::column_to_rownames(var = "isoform") %>% select(contains("Whole"))
+  stats <- plotIF(gene=gene,ExpInput=iExp,pheno=phenotype,cfiles=class.files$glob_targ_SQ,design="case_control",rank=5,majorIso=NULL,facetTranscripts=facetTranscriptsFeature,sex=sexFeature, stats = TRUE)
   p <- plotIF(gene=gene,ExpInput=iExp,pheno=phenotype,cfiles=class.files$glob_targ_SQ,design="case_control",rank=5,majorIso=NULL,facetTranscripts=facetTranscriptsFeature,sex=sexFeature)
-  return(p)
+  return(list(p, stats))
   
 }
 

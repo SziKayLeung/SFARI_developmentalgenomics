@@ -15,12 +15,23 @@ wholecollapsed_annotatedGenes_summary_table <- descriptives_summary(class.files$
 # abundance of novel transcripts vs known transcripts of known genes 
 # sum the mean of the counts across all the whole samples
 # t-test 
-novelMean <- annoGenesStats$novelTrans %>% select(contains("Whole", ignore.case = FALSE)) %>% apply(., 1, mean) 
-knownMean <- annoGenesStats$annoTrans %>% select(contains("Whole", ignore.case = FALSE)) %>% apply(., 1, mean) 
+
+normalized_glob_SQ <- class.files$glob_SQ %>% tibble::column_to_rownames(., var = "isoform") %>%
+  select(contains("Whole", ignore.case = FALSE)) %>%   # Select columns containing "Whole"
+  mutate(across(everything(), ~ .x / sum(.x, na.rm = TRUE) * 1000000))  # Normalize each column
+
+annotatedGenesNovelTranscripts <- class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$associated_transcript == "novel","isoform"]
+annotatedGenesKnownTranscripts <- class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$associated_transcript != "novel","isoform"]
+nrow(annoGenesStats$novelTrans) == length(annotatedGenesNovelTranscripts)
+nrow(annoGenesStats$annoTrans) == length(annotatedGenesKnownTranscripts)
+
+novelMean <- normalized_glob_SQ[annotatedGenesNovelTranscripts,] %>% apply(., 1, mean) 
+knownMean <- normalized_glob_SQ[annotatedGenesKnownTranscripts,] %>% apply(., 1, mean) 
 dat <- rbind(reshape2::melt(novelMean) %>% mutate(associated_transcript = "novel"), reshape2::melt(knownMean) %>% mutate(associated_transcript = "known"))
 dat %>% group_by(associated_transcript) %>% summarise(median = mean(value))
 res <- t.test(value ~ associated_transcript, data = dat)
 res$p.value
+
 message("Percentage of novel transcripts with less than 5 reads:", nrow(annoGenesStats$novelTrans %>% filter(whole_nreads <= 5))/nrow(annoGenesStats$novelTrans))
 message("Percentage of novel transcripts with less than 5 reads:", nrow(annoGenesStats$annoTrans %>% filter(whole_nreads <= 5))/nrow(annoGenesStats$annoTrans))
 class.files$glob_SQ_annoGene %>% filter(structural_category %in% c("NIC","NNC")) %>% mutate(FL = preReads + postReads) %>% arrange(-FL)
@@ -336,12 +347,20 @@ message("Number of genes with significant DIU across development and podium Chan
 message("Number of genes with significant DIU across development and not podium Change: ", nrow(DIUSig$wholeAge %>% filter(podiumChange == FALSE)))
 message("Number of genes with significant DIU across development and not DGE: ", nrow(DIUSig$wholeAge %>% filter(DGE_Dev == FALSE)))
 
+# GPM6A
+GPM6AStats <- plotIFWholebyGene("GPM6A",DIUnormExp$GMP6A_group,facetTranscriptsFeature=TRUE,sexFeature=FALSE)[[2]] 
+t.test(perc ~ group, GPM6AStats[GPM6AStats$isoform == "ONT4.13313.18545",])
+t.test(perc ~ group, GPM6AStats[GPM6AStats$isoform == "ONT4.13313.3469",])
+t.test(perc ~ group, GPM6AStats[GPM6AStats$isoform == "ONT4.13313.3457",])
+t.test(perc ~ group, GPM6AStats[GPM6AStats$isoform == "ONT4.13313.3461",])
+t.test(perc ~ group, GPM6AStats[GPM6AStats$isoform == "ONT4.13313.18565",])
 
 ## ---------- Alternative splicing events ----------
 
 # calculate AS events for pre-natal and post-natal detected transcripts 
 splicingExp <- finalTranscriptClassificationTranscript %>% mutate(A5A3 = as.numeric(A5A3), A5A3pre = A5A3 * normPre/sum(A5A3), A5A3post = A5A3 * normPost/sum(A5A3),
                                                           ES = as.numeric(ES), ESpre = ES * normPre/sum(ES), ESpost = ES * normPost/sum(ES),
+                                                          NE = as.numeric(NE_Int), NEpre = NE_Int * normPre/sum(NE_Int), NEpost = NE * normPost/sum(NE_Int),
                                                           IR = as.numeric(IR), IRpre = IR * normPre/sum(IR), IRpost = IR * normPost/sum(IR),
                                                           A5A3 = as.numeric(A5A3), A5A3pre = A5A3 * normPre/sum(A5A3), A5A3post = A5A3 * normPost/sum(A5A3))
 
@@ -349,6 +368,7 @@ splicingExp <- finalTranscriptClassificationTranscript %>% mutate(A5A3 = as.nume
 FICLEES <- splicingExp %>% select(isoform, ESpre, ESpost) %>% reshape2::melt(variable.name = "development", value.name = "normES") 
 FICLEIR <- splicingExp %>% select(isoform, IRpre, IRpost) %>% reshape2::melt(variable.name = "development", value.name = "normIR") 
 FICLEA5A3 <- splicingExp %>% select(isoform, A5A3pre, A5A3post) %>% reshape2::melt(variable.name = "development", value.name = "normA5A3") 
+FICLENE <- splicingExp %>% select(isoform, NEpre, NEpost) %>% reshape2::melt(variable.name = "development", value.name = "normNE") 
 
 ggplot(FICLEES, aes(x = development, y = log10(normES))) + geom_boxplot()
 ggplot(FICLEIR, aes(x = development, y = log10(normIR))) + geom_boxplot()
@@ -357,6 +377,47 @@ ggplot(FICLEA5A3, aes(x = development, y = log10(normA5A3))) + geom_boxplot()
 t.test(normES ~ development, FICLEES)
 t.test(normA5A3 ~ development, FICLEA5A3)
 t.test(normIR ~ development, FICLEIR)
+t.test(normNE ~ development, FICLENE)
+
+## ---- exon skipping events
+
+# identify transcripts with exon skipping events (ES > 0)
+ES <- finalTranscriptClassificationTranscript[finalTranscriptClassificationTranscript$ES > 0,]
+
+# identify transcripts in whole transcriptome dataset with exon skipping events
+class.files$glob_SQ_proteinGenes_ES <- class.files$glob_SQ_proteinGenes[class.files$glob_SQ_proteinGenes$isoform %in% ES$isoform,] 
+ES_glob_SQ <- ES %>% filter(isoform %in% class.files$glob_SQ_proteinGenes_ES$isoform)
+
+message("Number of transcripts from protein-coding genes with exon skipping events", nrow(class.files$glob_SQ_proteinGenes_ES))
+message("Number of those transcripts by development: ")
+table(class.files$glob_SQ_proteinGenes_ES$DevStatus)
+
+message("Total number of exon skipping events", sum(ES_glob_SQ$ES))
+message("Number of exon skipping events in prenatal: ", sum(ES_glob_SQ[ES_glob_SQ$DevStatus == "prenatal","ES"]))
+message("Number of exon skipping events in postnatal: ", sum(ES_glob_SQ[ES_glob_SQ$DevStatus == "postnatal","ES"]))
+message("Number of exon skipping events in postnatal and postnatal: ", sum(ES_glob_SQ[ES_glob_SQ$DevStatus == "Both","ES"]))
+
+message("Median number of exon skipping events per transcript: ", median(ES_glob_SQ$ES))
+message("Max number of exon skipping events in any given transcript: ", max(ES_glob_SQ$ES))
+message("Top-ranked transcripts with the most exon skipping events: ")
+ES_glob_SQ %>% arrange(-ES) %>% head(.)
+
+## ---- novel exon inclusion events
+
+# identify transcripts with novel exons 
+# retain only NIC and NNC transcripts 
+NE <- finalTranscriptClassificationTranscript[finalTranscriptClassificationTranscript$NE_Int > 0,]
+class.files$glob_SQ_proteinGenes_NE <- class.files$glob_SQ_proteinGenes[class.files$glob_SQ_proteinGenes$isoform %in% NE$isoform,] %>% filter(structural_category %in% c("NIC","NNC"))
+
+message("Number of transcripts from protein-coding genes with exon skipping events", nrow(class.files$glob_SQ_proteinGenes_NE))
+message("% of all transcripts annotated to protein-coding genes", nrow(class.files$glob_SQ_proteinGenes_NE)/nrow(class.files$glob_SQ_proteinGenes))
+
+message("Number of those transcripts by development: ")
+table(class.files$glob_SQ_proteinGenes_NE$DevStatus)
+
+message("Median number of reads (expression) of transcripts with novel exons: ", median(class.files$glob_SQ_proteinGenes_NE$whole_nreads))
+message("Top-ranked most abundantly expressed transcripts with novel exons")
+class.files$glob_SQ_proteinGenes_NE %>% select(isoform, associated_gene, whole_nreads, whole_nsamples) %>% arrange(-whole_nreads) %>% head(.)
 
 
 ## ---------- Proteogenomics ----------
