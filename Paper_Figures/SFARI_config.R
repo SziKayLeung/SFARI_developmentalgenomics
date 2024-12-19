@@ -10,15 +10,6 @@ suppressMessages(library("dplyr"))
 suppressMessages(library("vroom"))
 suppressMessages(library("tidyr"))
 
-LOGEN <- "/lustre/projects/Research_Project-MRC148213/lsl693/scripts/LOGen/"
-LOGEN_ROOT <- "/lustre/projects/Research_Project-MRC148213/lsl693/scripts/LOGen/"
-source(paste0(LOGEN,"transcriptome_stats/read_sq_classification.R"))
-source(paste0(LOGEN,"transcriptome_stats/sample_sensitivity.R"))
-source(paste0(LOGEN,"compare_datasets/dataset_identifer.R"))
-source(paste0(LOGEN,"merge_characterise_dataset/run_ggtranscript.R"))
-sapply(list.files(path = paste0(LOGEN,"transcriptome_stats"), pattern="*.R", full = T), source,.GlobalEnv)
-sapply(list.files(path = paste0(LOGEN,"longread_QC"), pattern="*.R", full = T), source,.GlobalEnv)
-
 
 ## ------------ directory names --------------- 
 
@@ -75,6 +66,10 @@ class.files$glob_SQ_annoGene_postnatal <- class.files$glob_SQ_annoGene[class.fil
 
 ## transcripts annotated to known protein-coding genes
 class.files$glob_SQ_proteinGenes <- class.files$glob_SQ[class.files$glob_SQ$associated_gene %in% ProteinCodingGenes,]
+
+## intergenic and fusion (from K.Chundru with strict filters)
+fusion <- read.csv(paste0(root_dir, "/sqanti/fusion.csv"))
+intergenic <- read.csv(paste0(root_dir, "/sqanti/intergenic.csv"))
 
 ## -------------- Bambu ---------------- 
 
@@ -148,13 +143,6 @@ ExpGene <- list(
   whole_group = vroom(paste0(root_dir,"DGE/DESeq2_whole_development_normAll.csv"),delim = ",", show_col_types = FALSE),
   whole_sex = vroom(paste0(root_dir,"DGE/DESeq2_whole_sex_normAll.csv"),delim = ",", show_col_types = FALSE)
 )
-
-# raw counts 
-rawCounts <- read.table(paste0(root_sfari, "/4_transcriptClean/cluster_report_counts.txt"), col.names = c("counts","file")) 
-rawCounts <- rawCounts %>% mutate(sample = word(file,c(1),sep=fixed(".")))
-# corrected phenotype sample to match
-rawCounts$sample[rawCounts$sample == "WholeN51"] <- "WholeN55"
-rawCounts <- merge(rawCounts, phenotype, by = "sample", all = T)
 
 # normalised counts for all transcripts
 normWhole <- fread(paste0(root_dir,"DTE/DESeq2_whole_development_normAll.csv"))

@@ -249,7 +249,7 @@ comparison_dataset(gfftmapComparisons$PatowaryHerbele, PatowaryCTX, HerberleCTX)
 # expression difference between CellReports and Bamford dataset for unique transcripts
 ExpressionDiffPacBio <- rbind(cellReportFurther$Unique_RB %>% mutate(dataset = "Unique") %>% select(whole_nreads, dataset),
                               cellReportFurther$Common_RB %>% mutate(dataset = "Common") %>% select(whole_nreads, dataset))
-ExpressionDiffPacBio %>% group_by(dataset) %>% summarise(median = mean(whole_nreads))
+ExpressionDiffPacBio %>% group_by(dataset) %>% summarise(median = median(whole_nreads))
 res <- wilcox.test(whole_nreads ~ dataset, ExpressionDiffPacBio, exact = FALSE)
 
 res$p.value
@@ -259,11 +259,18 @@ format(res$p.value, scientific = TRUE)
 # expression difference between cDNA and dRNA for unique transcripts
 ExpressionDiffcDNAdRNA <- rbind(directRNAFurther$Unique_RB %>% mutate(dataset = "Unique") %>% select(whole_nreads, dataset),
                                 directRNAFurther$Common_RB %>% mutate(dataset = "Common") %>% select(whole_nreads, dataset))
-ExpressionDiffcDNAdRNA %>% group_by(dataset) %>% summarise(median = mean(whole_nreads))
+ExpressionDiffcDNAdRNA %>% group_by(dataset) %>% summarise(median = median(whole_nreads))
 res <- wilcox.test(whole_nreads ~ dataset, ExpressionDiffcDNAdRNA, exact = FALSE)
-res
+  res
 res$p.value
 format(res$p.value, scientific = TRUE)
+
+# novel genes and fusion transcripts with direct RNA validation 
+fusion <- fusion %>% mutate(directRNA = ifelse(isoform %in% directRNAFurther$Common_RB$isoform, TRUE,FALSE))
+intergenic <- intergenic %>% mutate(directRNA = ifelse(isoform %in% directRNAFurther$Common_RB$isoform, TRUE,FALSE))
+
+write.csv(intergenic, paste0(output_dir, "intergenic.csv"))
+write.csv(fusion, paste0(output_dir, "fusion.csv"))
 
 ## ------- differential transcript expression -------
 
