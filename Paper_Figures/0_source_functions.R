@@ -616,7 +616,11 @@ plot_usage_persample <- function(ERCC_classFile, ERCC_demux) {
       arrange(chrom, desc(perc))
     
     # Store the table
-    percentages[[sample]] <- percentage_table
+    percentages[[sample]] <- percentage_table %>%
+      mutate(n = ifelse(structural_category == "genic", 1, n)) %>%
+      mutate(structural_category = ifelse(structural_category == "full-splice_match", "FSM","non-FSM")) %>%
+      group_by(structural_category, chrom, n) %>% tally(perc) %>% 
+      as.data.frame()
     
     # Create the plot
     plots[[sample]] <- percentage_table %>%
@@ -666,3 +670,38 @@ plot_usage_persample <- function(ERCC_classFile, ERCC_demux) {
   return(list(plots = plots, tables = percentages, plotsFSM = plotsFSM))
 }
 
+
+# Input: output tables from plot_usage_persample()
+plot_average_usage_across_all_samples <- function(ercc_usage_tables){
+  
+  # combine all ercc usage across all 3 other samples
+  dat <- rbindlist(ercc_usage_tables, idcol = "sample") 
+  
+  # for average need to account that for the 100% samples with FSM or non-FSM, need 0% 
+  # otherwise messes up with the determining the average across all the samples
+  dat2 <- dat[dat$nn == "100",] %>% mutate(
+    structural_category = ifelse(structural_category == "FSM","non-FSM","FSM"),
+    nn = 0)
+  
+  # plot the average
+  p <- rbind(dat, dat2) %>% 
+    group_by(structural_category, chrom) %>%
+    summarise(
+      average_perc = mean(nn, na.rm = TRUE),
+      average_num = ceiling(mean(n, na.rm = TRUE)), 
+      .groups = "drop"
+    ) %>% 
+    ggplot(., aes(x = chrom, y = as.numeric(average_perc), fill = forcats::fct_rev(structural_category))) +
+    geom_bar(stat = "identity", color = "black", size = 0.2) +
+    theme_classic() +
+    labs(x = "ERCC", y = "Isoform fraction (%)") +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+    scale_fill_manual(
+      name = "Isoform Classification",
+      values = rev(c(alpha("#F8766D", 0.8), alpha("#808080", 0.3)))
+    ) +
+    geom_text(aes(label = average_num), color = "black", size = 2, position = position_stack(vjust = 0.5)) +
+    theme(legend.position = "bottom")
+  
+  return(p)
+}

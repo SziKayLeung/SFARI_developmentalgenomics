@@ -306,6 +306,7 @@ figPlots$CACNA1Gvis <- ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$gl
 
 ercc_usage <- plot_usage_persample(ercc.class.file, ercc.demux)
 figPlots$ERCC <- plot_grid(plotlist = ercc_usage$plotsFSM, ncol = 1, labels = c("A","B","C"))
+ercc_usage_average <- plot_average_usage_across_all_samples(ercc_usage$tables) 
 
 
 ## ------ Output ------ 
