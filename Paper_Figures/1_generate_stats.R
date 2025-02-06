@@ -192,7 +192,7 @@ ercc_usage <- plot_usage_persample(ercc.class.file, ercc.demux)
 ## ------- whole vs targeted dataset ---------
 
 # matchSumTargeted generated from function
-# whole_vs_targeted_plots(classfiles=class.files$glob_targ_SQ, wholeSamples=wholematchedsamples, targetedSamples=manifest[manifest$ID %in% targetedmatchedsamples,"Sample"], targetGene=selectedTargetGenes)
+whole_vs_targeted_plots(classfiles=class.files$glob_targ_SQ, wholeSamples=wholematchedsamples, targetedSamples=manifest[manifest$ID %in% targetedmatchedsamples,"Sample"], targetGene=selectedTargetGenes)
 message("Number of transcripts detected whole only: ", length(unique(matchedSumTargeted[matchedSumTargeted$dataset == "Whole","isoform"])))
 message("Number of transcripts detected Targeted only: ", length(unique(matchedSumTargeted[matchedSumTargeted$dataset == "Targeted","isoform"])))
 message("Number of transcripts detected in both whole and targeted only: ", length(unique(matchedSumTargeted[matchedSumTargeted$dataset == "Both","isoform"])))

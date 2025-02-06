@@ -10,3 +10,5 @@
 *outputFigs*
 *png*
 .Rproj.user
+data/*
+output/*

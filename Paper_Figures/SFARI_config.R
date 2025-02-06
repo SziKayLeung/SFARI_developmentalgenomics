@@ -71,6 +71,11 @@ class.files$glob_SQ_proteinGenes <- class.files$glob_SQ[class.files$glob_SQ$asso
 fusion <- read.csv(paste0(root_dir, "/sqanti/fusion.csv"))
 intergenic <- read.csv(paste0(root_dir, "/sqanti/intergenic.csv"))
 
+## generate FL reads for QC report
+wholeTargetedDemux <- class.files$glob_targ_SQ %>% select(isoform, contains("Whole"), -whole_nreads, -whole_nsamples) 
+colnames(wholeTargetedDemux)[1] <- "id"
+write.csv(wholeTargetedDemux, paste0(output_dir, "/wholeTargeted_demux_fl_count.csv"), row.names = F)
+
 ## -------------- Bambu ---------------- 
 
 # bambu collapsed from pbmm2 aligned files (whole + targeted)

@@ -66,11 +66,12 @@ figPlots$comp
 novelMean <- annoGenesStats$novelTrans %>% select(contains("Whole", ignore.case = FALSE)) %>% apply(., 1, mean) 
 knownMean <- annoGenesStats$annoTrans %>% select(contains("Whole", ignore.case = FALSE)) %>% apply(., 1, mean) 
 dat <- rbind(reshape2::melt(novelMean) %>% mutate(associated_transcript = "novel"), reshape2::melt(knownMean) %>% mutate(associated_transcript = "known"))
-figPlots$novelKnownTranscriptExp <- ggplot(dat, aes(x = log10(value), fill = associated_transcript)) + 
+figPlots$novelKnownTranscriptExp <- ggplot(dat, aes(x = value, fill = associated_transcript)) + 
   geom_histogram(alpha = 0.3, position = "identity") + 
   theme_classic() +
   theme(legend.position = "bottom") +
-  labs(x = "FL mean read count (log10)", y  = "Frequency", fill = "Transcript")
+  labs(x = "FL mean read count across all samples", y  = "Frequency", fill = "Transcript") +
+  scale_x_continuous(trans='log10')
 
 
 ## ------ Figure 2: Targeted dataset descriptives ------ 
@@ -307,7 +308,11 @@ figPlots$CACNA1Gvis <- ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$gl
 ercc_usage <- plot_usage_persample(ercc.class.file, ercc.demux)
 figPlots$ERCC <- plot_grid(plotlist = ercc_usage$plotsFSM, ncol = 1, labels = c("A","B","C"))
 ercc_usage_average <- plot_average_usage_across_all_samples(ercc_usage$tables) 
-
+mean(
+  mean(ercc_usage$tables$BC01[ercc_usage$tables$BC01$structural_category == "FSM","nn"]),
+  mean(ercc_usage$tables$BC04[ercc_usage$tables$BC04$structural_category == "FSM","nn"]),
+  mean(ercc_usage$tables$BC06[ercc_usage$tables$BC06$structural_category == "FSM","nn"])
+)
 
 ## ------ Output ------ 
 

@@ -9,15 +9,6 @@ suppressMessages(library("data.table"))
 suppressMessages(library("dplyr"))
 suppressMessages(library("vroom"))
 
-LOGEN <- "/lustre/projects/Research_Project-MRC148213/lsl693/scripts/LOGen/"
-LOGEN_ROOT <- "/lustre/projects/Research_Project-MRC148213/lsl693/scripts/LOGen/"
-source(paste0(LOGEN,"transcriptome_stats/read_sq_classification.R"))
-source(paste0(LOGEN,"transcriptome_stats/sample_sensitivity.R"))
-source(paste0(LOGEN,"compare_datasets/dataset_identifer.R"))
-sapply(list.files(path = paste0(LOGEN,"transcriptome_stats"), pattern="*.R", full = T), source,.GlobalEnv)
-sapply(list.files(path = paste0(LOGEN,"longread_QC"), pattern="*.R", full = T), source,.GlobalEnv)
-
-
 ## ------------ directory names --------------- 
 
 root_dir <- "/lustre/projects/Research_Project-MRC148213/lsl693/"
