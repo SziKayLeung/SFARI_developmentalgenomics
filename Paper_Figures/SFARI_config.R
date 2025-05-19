@@ -13,9 +13,9 @@ suppressMessages(library("tidyr"))
 
 ## ------------ directory names --------------- 
 
-LOGEN <- "C:/Users/sl693/Dropbox/Scripts/LOGen/"
-root_dir <- "C:/Users/sl693/Dropbox/Scripts/SFARI_developmentalgenomics/data/"
-output_dir <- "C:/Users/sl693/Dropbox/Scripts/SFARI_developmentalgenomics/output/"
+LOGEN <- "C:/Users/sl693/OneDrive - University of Exeter/ExeterPostDoc/2_Scripts/LOGen"
+root_dir <- "C:/Users/sl693/OneDrive - University of Exeter/ExeterPostDoc/1_Projects/SFARI/PaperZenodo/"
+output_dir <- "C:/Users/sl693/OneDrive - University of Exeter/ExeterPostDoc/1_Projects/SFARI/Output"
 
 TargetGene <- read.table(paste0(root_dir, "metadata/Complete_TargetGenes_TargetedSequencing.txt"))[["V1"]]
 ProteinCodingGenes <- read.table(paste0(root_dir, "/utils/protein-coding-genes.txt"))[["V1"]]
@@ -224,7 +224,7 @@ load(paste0(root_dir,"proteomics/NovelPeptides.RData"))
 
 ## -------------- ERCC ----------------
 
-ercc.class.file <- fread(paste0(root_dir,"ERCC/AlessiaERCC_collapsed_RulesFilter_result_classification.txt"), sep = "\t") %>% filter(filter_result == "Isoform")
+ercc.class.file <- fread(paste0(root_dir,"ERCC/AlessiaERCC_collapsed_RulesFilter_result_classification.txt"), sep = "/t") %>% filter(filter_result == "Isoform")
 ercc.demux <- fread(paste0(root_dir,"ERCC/demux_fl_count.csv"))
 ercc.stats <- fread(paste0(root_dir,"ERCC/ERCC_Stats.csv"))
 

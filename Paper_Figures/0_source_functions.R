@@ -20,8 +20,8 @@ futile.logger::flog.threshold(futile.logger::ERROR, name = "VennDiagramLogger")
 
 ## ---------- Packages -----------------
 
-LOGEN = "C:/Users/sl693/Dropbox/Scripts/LOGen/"
-LOGEN_ROOT = "C:/Users/sl693/Dropbox/Scripts/LOGen/"
+LOGEN = "C:/Users/sl693/OneDrive - University of Exeter/ExeterPostDoc/2_Scripts/LOGen/"
+LOGEN_ROOT = "C:/Users/sl693/OneDrive - University of Exeter/ExeterPostDoc/2_Scripts/LOGen/"
 source(paste0(LOGEN, "aesthetics_basics_plots/pthemes.R"))
 source(paste0(LOGEN, "transcriptome_stats/read_sq_classification.R"))
 source(paste0(LOGEN, "compare_datasets/whole_vs_targeted.R"))

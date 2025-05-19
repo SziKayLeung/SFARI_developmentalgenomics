@@ -24,18 +24,17 @@ suppressMessages(library("RColorBrewer"))
 
 ## ---------- source functions -----------------
 
-LOGEN <- "C:/Users/sl693/Dropbox/Scripts/LOGen/"
-source(paste0(LOGEN, "/transcriptome_stats/read_sq_classification.R"))
+LOGEN <- "C:/Users/sl693/OneDrive - University of Exeter/ExeterPostDoc/2_Scripts/LOGEN/"
+source(paste0(LOGEN, "transcriptome_stats/read_sq_classification.R"))
 source(paste0(LOGEN, "differential_analysis/run_DESeq2.R"))
-source(paste0(LOGEN, "differential_analysis/plot_transcript_level.R"))
 source(paste0(LOGEN, "aesthetics_basics_plots/pthemes.R"))
 
 
 ## ---------- input -----------------
 
 # directory names
-root_dir <- "C:/Users/sl693/Dropbox/Scripts/SFARI_developmentalgenomics/data/"
-output_dir <- "C:/Users/sl693/Dropbox/Scripts/SFARI_developmentalgenomics/output/"
+root_dir <- "C:/Users/sl693/OneDrive - University of Exeter/ExeterPostDoc/1_Projects/SFARI/PaperZenodo/"
+output_dir <- "C:/Users/sl693/OneDrive - University of Exeter/ExeterPostDoc/1_Projects/SFARI/PaperZenodo/DTE"
 
 # classfiles
 load(file = paste0(root_dir,"sqanti/sqantifiltered_monoexonicfiltered_2reads2samples.RData"))
