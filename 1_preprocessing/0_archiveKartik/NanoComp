@@ -1,0 +1,29 @@
+#!/bin/bash
+#SBATCH --export=ALL # export all environment variables to the batch job
+#SBATCH -D .
+#SBATCH -p mrcq # submit to the parallel queue
+#SBATCH --time=08:00:00 # maximum walltime for the job e.g. 01:00:00
+#SBATCH -A Research_Project-MRC148213 # research project to submit under
+#SBATCH --nodes=1 # specify number of nodes
+#SBATCH --ntasks-per-node=16 # specify number of processors per node
+#SBATCH --mem=100G # specify bytes of memory to reserve
+#SBATCH --mail-type=END # send email at job completion
+#SBATCH --mail-user=rb520@exeter.ac.uk # email address
+
+
+#https://github.com/wdecoster/nanocomp
+#Useful tool for comparing multiple runs of long read sequencing data and alignments. 
+
+source "/lustre/home/rb520/miniconda3/etc/profile.d/conda.sh"
+conda activate Nanoplot
+
+#Compare different PromethION flow cell runs
+#NanoComp --summary summary01.txt.gz summary02.txt.gz  --names P0027 P0032 --outputdir compare_flowcell --format pdf
+
+#Compare barcodes (up to 3) within a PromethION flow cell run
+#NanoComp --fastq barcode01.fq.gz barcode02.fq.gz --names barcode01 barcode02 --outputdir compare_barcodes --format pdf
+
+#Compare alignment files between barcodes/runs
+#NanoComp --bam alignment1.bam alignment2.bam --names alignment1 alignment2 --outputdir compare_alignment --format pdf
+
+NanoComp --fastq "/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/Gorilla/P0112_20231117_RB/Gorilla/20231117_1915_2G_PAS59504_8481076b/fastq_pass/barcode02/PAS59504_pass_barcode02_8481076b_95d34aff_0.fastq.gz" "/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/Gorilla/P0112_20231117_RB/Gorilla/20231117_1915_2G_PAS59504_8481076b/fastq_pass/barcode03/PAS59504_pass_barcode03_8481076b_95d34aff_0.fastq.gz" --names barcode02 barcode03 --outdir compare_barcodes --format pdf

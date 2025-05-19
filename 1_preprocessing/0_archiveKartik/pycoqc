@@ -1,0 +1,17 @@
+#!/bin/bash
+#SBATCH --export=ALL # export all environment variables to the batch job
+#SBATCH -D .
+#SBATCH -p mrcq # submit to the parallel queue
+#SBATCH --time=144:00:00 # maximum walltime for the job e.g. 01:00:00
+#SBATCH -A Research_Project-MRC148213 # research project to submit under
+#SBATCH --nodes=1 # specify number of nodes
+#SBATCH --ntasks-per-node=16 # specify number of processors per node
+#SBATCH --mem=200G # specify bytes of memory to reserve
+#SBATCH --mail-type=END # send email at job completion
+#SBATCH --mail-user=rb520@exeter.ac.uk # email address
+
+
+#pycoQC -h
+pycoQC -f PATH/sequencing_summary_PAS59504_8481076b_95d34aff.txt -o PATH/output_html
+
+

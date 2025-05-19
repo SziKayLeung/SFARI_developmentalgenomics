@@ -1,0 +1,41 @@
+#!/bin/bash
+#SBATCH --export=ALL # export all environment variables to the batch job
+#SBATCH -D .
+#SBATCH -p mrcq # submit to the parallel queue
+#SBATCH --time=144:00:00 # maximum walltime for the job e.g. 01:00:00
+#SBATCH -A Research_Project-MRC148213 # research project to submit under
+#SBATCH --nodes=1 # specify number of nodes
+#SBATCH --ntasks-per-node=16 # specify number of processors per node
+#SBATCH --mem=100G # specify bytes of memory to reserve
+#SBATCH --mail-type=END # send email at job completion
+#SBATCH --mail-user=rb520@exeter.ac.uk # email address
+
+#https://github.com/mortazavilab/TranscriptClean
+#TranscriptClean is a Python program that corrects mismatches, microindels, and noncanonical splice junctions in long reads that have been mapped to the genome. 
+#Transcript Clean is an optional step (but highly recommended to do) which corrects mismatches etc. in long read sequencing data that has been aligned.
+#The input is a sam file so the first step is to convert the bam file from the minimap step using samtools.
+
+source "/lustre/home/rb520/miniconda3/etc/profile.d/conda.sh"
+conda activate tools
+
+PROJECT="/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/Targeted_transcriptome/10780_batch1/P0059_20220813_10780/P0059_20220813_10780/Batch1/20220813_1259_3G_PAM33351_84e820b3/"
+
+REF="/lustre/projects/Research_Project-MRC190311/scripts/sequencing/longReadseq/Reference/Hg38.fa" 
+SOFTWARE="/lustre/projects/Research_Project-MRC190311/scripts/sequencing/longReadseq/scripts/TranscriptClean-master/"
+
+cd ${PROJECT}
+
+#For a single file
+#samtools view -h -o BC02_aligned.sam BC02_aligned.bam
+#python ${SOFTWARE}/TranscriptClean.py --sam BC02_aligned.sam --genome ${REF} --outprefix "Transcript_Clean"
+
+#For targeted transcriptome files
+for folder in {00..01}; do
+	cd "Porechop_"$folder""
+       	echo "Porechop_"$folder""
+	for bc in {01..02}; do
+		samtools view -h -o "BC"$bc"_aligned.sam" "BC"$bc"_aligned.bam"
+		python ${SOFTWARE}/TranscriptClean.py --sam "BC"$bc"_aligned.sam" --genome ${REF} --threads 16 --outprefix "BC"$bc"_Transcript_Clean_aligned"
+	done
+	cd ..
+done
