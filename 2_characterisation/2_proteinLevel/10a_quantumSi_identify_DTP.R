@@ -21,8 +21,8 @@ suppressMessages(library("ggplot2"))
 ## ---------- input -----------------
 
 # directory names
-root_dir <- "C:/Users/sl693/Dropbox/Scripts/SFARI_developmentalgenomics/data/"
-output_dir <- "C:/Users/sl693/Dropbox/Scripts/SFARI_developmentalgenomics/output/"
+root_dir <- "C:/Users/sl693/OneDrive - University of Exeter/ExeterPostDoc/2_Scripts/SFARI_developmentalgenomics/data/"
+output_dir <- "C:/Users/sl693/OneDrive - University of Exeter/ExeterPostDoc/1_Projects/SFARI/PaperZenodo/"
 
 # differentially expressed transcripts collapsed (output of 8_protein_deseq2.R)
 ResTran <- readRDS(paste0(output_dir, "/IsoProtein_Whole_DESeq2TranscriptLevel.RDS"))
