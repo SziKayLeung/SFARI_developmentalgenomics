@@ -104,33 +104,6 @@ pdf("Figure6Mid.pdf", width = 30, height = 6)
 plot_grid(DAGLAp, FOXP2p, CACNA1Gp, nrow = 1)
 dev.off()
 
-
-# DAGLA
-DAGLAES <- input_FICLE_splicing_results(paste0(dirnames$ficle,"/DAGLA"),"ES_events_counts.csv") %>% arrange(-numEvents) 
-DAGLANE <- input_FICLE_splicing_results(paste0(dirnames$ficle,"/DAGLA"),"NE_transcript_counts.csv") %>% arrange(-numNovelExons) 
-DAGLAAll <- read.csv(paste0(dirnames$ficle,"/DAGLA/Stats/", "DAGLA_final_transcript_classifications.csv"))
-DAGLAAF <- DAGLAAll[DAGLAAll$AF == 1,"isoform"]
-DAGLAAllAT <-DAGLAAll[DAGLAAll$AT == 1,"isoform"]
-
-DAGLAIso <- data.frame(
-  Isoform = unlist(DAGLAIso <- list(
-    Reference = as.character(unique(gtf$ref[gtf$ref$gene_id == "DAGLA","transcript_id"])),
-    `ES` = as.character(DAGLAES[,c("transcriptID")][2:5]),
-    `AF, ES` = as.character(c("ONT11_3341_9216", "ONT11_3341_9215")),
-    `AF` = as.character(c("ONT11_3341_9238")),
-    `AL` = as.character("ONT11_3341_9502"),
-    `AF, AL` = as.character("ONT11_3341_9213", "ONT11_3341_9222","ONT11_3341_9234", "ONT11_3341_9267")
-    #`Pre-AF` = c("ONT14_1685_3519","ONT14_1685_3255","ONT14_1685_3463", "ONT14_1685_3439", "ONT14_1685_3180"),
-    #`Pre-AT` = c("ONT14_1685_3369", "ONT14_1685_3371", "ONT14_1685_3465","ONT14_1685_3273", "ONT14_1685_3190")
-  )),
-  Category = rep(names(DAGLAIso), lengths(DAGLAIso))
-)
-DAGLAIso$colour <- NA
-DAGLAvis <- ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$glob_targ_SQ,
-            isoList = c(as.character(DAGLAIso$Isoform)),
-            selfDf = DAGLAIso, gene = "DAGLA")
-
-
 FOXP2ES <- input_FICLE_splicing_results(paste0(dirnames$ficle,"/FOXP2"),"ES_events_counts.csv") %>% arrange(-numEvents) 
 FOXP2NE <- input_FICLE_splicing_results(paste0(dirnames$ficle,"/FOXP2"),"NE_transcript_counts.csv") %>% arrange(-numNovelExons) 
 FOXP2All <- read.csv(paste0(dirnames$ficle,"/FOXP2/Stats/", "FOXP2_final_transcript_classifications.csv"))
@@ -144,11 +117,6 @@ FOXP2Iso <- data.frame(
     `AP, NE` = as.character(c("ONT7_4543_4529","ONT7_4543_4470","ONT7_4543_3377", "ONT7_4543_3385", "ONT7_4543_3061", "ONT7_4543_34", "ONT7_4543_3173")),
     `AF, NE` = as.character(c("ONT7_4543_2880", "ONT7_4543_2688", "ONT7_4543_2789", "ONT7_4543_2785")),
     `AF` = as.character(c("ONT7_4543_2660","ONT7_4543_2823"))
-    #`AF` = as.character(c("ONT11_3341_9238")),
-    #`AL` = as.character("ONT11_3341_9502"),
-    #`AF, AL` = as.character("ONT11_3341_9213", "ONT11_3341_9222","ONT11_3341_9234", "ONT11_3341_9267")
-    #`Pre-AF` = c("ONT14_1685_3519","ONT14_1685_3255","ONT14_1685_3463", "ONT14_1685_3439", "ONT14_1685_3180"),
-    #`Pre-AT` = c("ONT14_1685_3369", "ONT14_1685_3371", "ONT14_1685_3465","ONT14_1685_3273", "ONT14_1685_3190")
   )),
   Category = rep(names(FOXP2Iso), lengths(FOXP2Iso))
 )

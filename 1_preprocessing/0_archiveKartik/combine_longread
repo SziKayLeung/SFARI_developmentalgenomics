@@ -1,0 +1,94 @@
+#!/bin/bash
+#SBATCH --export=ALL # export all environment variables to the batch job
+#SBATCH -D .
+#SBATCH -p mrcq # submit to the parallel queue
+#SBATCH --time=10:00:00 # maximum walltime for the job e.g. 01:00:00
+#SBATCH -A Research_Project-MRC148213 # research project to submit under
+#SBATCH --nodes=1 # specify number of nodes
+#SBATCH --ntasks-per-node=16 # specify number of processors per node
+#SBATCH --mem=100G # specify bytes of memory to reserve
+#SBATCH --mail-type=END # send email at job completion
+#SBATCH --mail-user=rb520@exeter.ac.uk # email address
+
+# This script is designed to combine files with the same barcode across folders of long read sequencing data after Transcript Clean.
+# Please be careful to check input file names - I try to be consistent but sometimes things get randomly changed!
+# It is best to work through each step one-by-one, and ensure that the correct files are being made before moving on.
+
+source "/lustre/home/rb520/miniconda3/etc/profile.d/conda.sh"
+conda activate tools
+
+# The first step is to convert each Transcript Clean sam file to a bam file.
+
+PROJECT=PATH
+
+cd ${PROJECT} 
+
+#echo "$PROJECT"
+
+
+for folder in {00..19}; do
+	cd "Porechop_"$folder""
+	echo "Porechop_"$folder""
+
+	for bc in {02..18}; do
+       
+		samtools view -h -o "BC"$bc"_Transcript_Clean_targeted_aligned_clean.bam" "BC"$bc"_Transcript_Clean_aligned_clean.sam"
+	done
+	cd ..
+done
+
+# Each bam file needs to be renamed to make it unique (which is done by adding in the folder number)
+
+#for folder in {00..19}; do
+#	cd "Porechop_"$folder""
+#	echo "Porechop_"$folder""
+
+#        for bc in {02..18}; do
+
+#                cp "BC"$bc"_Transcript_Clean_targeted_aligned_clean.bam" "BC"$bc"_F"$folder"_aligned.bam"
+
+#        done
+#        cd ..
+#done
+
+# Each bam file with the same barcode is combined to make a single file in a new folder. You should end up with a single file for each barcode.
+# This step is a bit clunky - I'm sure there is a better way but since I wrote it out I'm just going with it
+
+#mkdir combined
+
+#for folder in {00..19}; do
+#	cd "Porechop_"$folder""
+#	echo "Porechop_"$folder""
+
+#	for bc in {03..09}; do
+
+#	cat Porechop_00/BC"$bc".fastq.gz Porechop_01/BC"$bc".fastq.gz Porechop_02/BC"$bc".fastq.gz Porechop_03/BC"$bc".fastq.gz Porechop_04/BC"$bc".fastq.gz Porechop_05/BC"$bc".fastq.gz Porechop_06/BC"$bc".fastq.gz Porechop_07/BC"$bc".fastq.gz Porechop_08/BC"$bc".fastq.gz Porechop_09/BC"$bc".fastq.gz Porechop_10/BC"$bc".fastq.gz Porechop_11/BC"$bc".fastq.gz Porechop_12/BC"$bc".fastq.gz Porechop_13/BC"$bc".fastq.gz Porechop_14/BC"$bc".fastq.gz Porechop_15/BC"$bc".fastq.gz Porechop_16/BC"$bc".fastq.gz Porechop_17/BC"$bc".fastq.gz Porechop_18/BC"$bc".fastq.gz Porechop_19/BC"$bc".fastq.gz > combined/Targeted"$bc".fastq.gz
+
+#	done
+#	cd ..
+#done
+
+#for folder in {00..19}; do
+#        cd "Porechop_"$folder""
+#        echo "Porechop_"$folder""
+
+#        for bc in {02..18}; do
+
+#        samtools merge combined/combined_BC"$bc"_aligned.bam Porechop_00/BC"$bc"_F00_aligned.bam Porechop_01/BC"$bc"_F01_aligned.bam Porechop_02/BC"$bc"_$
+
+#        done
+#        cd ..
+#done
+
+# This bit is for switching the combined bam files back to sam for TALON. It involves sorting the bam files, converting then sorting again.
+
+#cd ${PROJECT}/combined
+
+#for bc in {02..18}; do
+	
+#	samtools sort combined_BC"$bc"_aligned.bam
+#	samtools view -h -o combined_BC"$bc"_aligned.sam combined_BC"$bc"_aligned.bam
+#	samtools sort combined_BC"$bc"_aligned.sam
+
+#done
+

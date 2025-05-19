@@ -1,0 +1,13 @@
+{
+    "full-splice_match": [
+        {
+            "perc_A_downstream_TTS":[0,59]
+        }
+    ],
+    "rest": [
+        {
+            "perc_A_downstream_TTS":[0,59],
+            "RTS_stage":"FALSE"
+        }
+     ]
+}

@@ -6,7 +6,7 @@
 ## ---------------------------------
 
 
-SC_ROOT = "/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/scripts/SFARI_developmentalgenomics"
+SC_ROOT = "/lustre/projects/Research_Project-MRC148213/lsl693/scripts/SFARI_developmentalgenomics"
 source(paste0(SC_ROOT,"/Paper_Figures/SFARI_config.R"))
 source(paste0(SC_ROOT,"/Paper_Figures/0_source_functions.R"))
 output_dir = paste0(SC_ROOT,"/Paper_Figures/outputFigs")
@@ -17,20 +17,10 @@ pAge <- ages(phenotype$WholeTargeted)
 # sensitivity curve of filtering in targeted dataset
 no_of_isoforms_sample(class.files$targ_SQ)
 
-# comparison of whole vs targeted datasets across matched samples
-comp = whole_vs_targeted_plots(classfiles=class.files$glob_targ_SQ_counts, wholeSamples=wholematchedsamples, targetedSamples=targetedmatchedsamples, targetGene=selectedTargetGenes)
-pdf(paste0(output_dir,"/UniqueIsoformsWholeDataset.pdf"), width = 10, height = 30)
-comp[[1]]
-plot_grid(comp[[3]])
-dev.off()
-
 plot_grid(plotlist = comp[1:6], labels = c("A","B","C","D","E","F"))
 
 plot_cupcake_collapse_sensitivity(class.files$targ_SQ,"All target genes")
 
-# prenatal vs postnatal 
-ggplot(geneNum, aes(x = prenatalTranscripts, y = postnatalTranscripts)) + geom_point() +
-  theme_classic() + labs(x = "Number of transcripts: prenatal", y = "Number of transcripts: postnatal")
 
 # Number of DTEs in development by structural category
 WholeDTE$age %>% group_by(structural_category, dirAcrossDev) %>% tally() %>% 
@@ -52,16 +42,6 @@ WholeDTE$age %>% group_by(structural_category, dirAcrossDev) %>% tally() %>%
 devVennNums <- twovenndiagrams(class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$preReads >= 1,"isoform"],
                                class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$postReads >= 1,"isoform"],"Pre-natal","Post-natal")
 grid.draw(devVennNums)
-
-class.files$glob_SQ_annoGene %>% group_by(structural_category, DevStatus) %>% tally() %>% 
-  mutate(DevStatus = factor(DevStatus,levels = c("prenatal","postnatal","Both"))) %>%
-  ggplot(., aes(x = structural_category, y = n, fill = DevStatus)) + 
-  geom_bar(stat="identity", position = position_dodge()) +
-  mytheme + scale_fill_manual(name = "", 
-                                labels = c("Prenatal","Postnatal","Both"), 
-                                values = c(wes_palette("Royal1")[2],wes_palette("Royal1")[1],wes_palette("Royal1")[4])) +
-  labs(x = "Structural category", y = "Number of transcripts of annotated genic features") +
-  theme(legend.position = "top")
 
 
 pIF <- list(
@@ -129,3 +109,51 @@ dev.off()
 pdf(paste0(output_dir,"/targeted_schema.pdf"), width = 10, height = 10)
 num_disease_focus_DTE(TargetedDESeq2Sig$age,disease_list$SCHEMA$Gene,"SCHEMA")
 dev.off()
+
+tallyReads <- class.files$glob_targ_SQ_counts %>% filter(!grepl("novel", associated_gene)) %>% 
+  group_by(nreads, nsamples) %>% 
+  tally()
+tallyReads <- as.data.frame(tallyReads) %>% mutate(perc = n/sum(n) * 100)
+
+
+tallyReads <- tallyReads %>%
+  arrange(nreads, nsamples) %>%  # Sort the data (optional, depending on the desired order)
+  mutate(cum_sum = cumsum(n),
+         cum_percentage = cum_sum / sum(n) * 100)
+
+tallyReads <- tallyReads %>% mutate(label = ifelse(cum_percentage < 70, paste0(nreads, "reads,", nsamples, "samples"), ""))
+ggplot(tallyReads, aes(x = nreads, y = cum_percentage, colour = factor(nsamples), label = label)) + geom_point() +
+  scale_x_continuous(breaks = seq(min(tallyReads$nreads), max(tallyReads$nreads), by = 50000)) +
+  geom_label_repel(show.legend = FALSE) +
+  theme_classic() +
+  labs(x = "Number of reads", y = "Cumulative percentage of transcripts annotated to known genes", colour = "Number of samples")
+
+
+## ----- correlation of RIN with number of transcripts -------
+
+datWholeCounts <- class.files$glob_targ_SQ %>% select(contains("Whole"),-"whole_nsamples",-"whole_nreads")
+## to check below command about colSums
+#length(datWholeCounts[,"Whole11831"][datWholeCounts[,"Whole11831"] != 0])
+#length(datWholeCounts[,"Whole11831"][datWholeCounts[,"Whole11831"] == 0])
+#nrow(datWholeCounts) == length(datWholeCounts[,"Whole11831"][datWholeCounts[,"Whole11831"] != 0]) + length(datWholeCounts[,"Whole11831"][datWholeCounts[,"Whole11831"] == 0])
+
+# tally the occurences in each column, not equal to 0 i.e. a read detected for transcript, and therefore transcript detected in dataset
+TranscriptPerSample <- colSums(datWholeCounts  != 0) %>%  reshape2::melt(., value.name = "counts") %>% tibble::rownames_to_column(., var = "ID")
+
+# merge with manifest to get the RIN numbers
+TranscriptPerSample <- merge(TranscriptPerSample, manifest, by = "ID")
+
+# postnatal dataset
+PostnatalTranscriptPerSample <- TranscriptPerSample[TranscriptPerSample$Group == "Postnatal",]
+cor.test(PostnatalTranscriptPerSample$RIN, PostnatalTranscriptPerSample$counts)
+
+# postnatal dataset (with RIN > 5)
+PostnatalTranscriptPerSampleGoodRIN <- TranscriptPerSample[TranscriptPerSample$Group == "Postnatal" & TranscriptPerSample$RIN >= 4.5,]
+cor.test(PostnatalTranscriptPerSampleGoodRIN$RIN, PostnatalTranscriptPerSampleGoodRIN$counts)
+
+cor.test(TranscriptPerSample$RIN, TranscriptPerSample$counts)
+pRINTranscripts <- ggplot(TranscriptPerSample, aes(x = RIN, y = counts, colour = Group)) + 
+  geom_point(size = 3) +
+  labs(x = "RIN", y = "Number of Transcripts") + 
+  theme_classic()
+

@@ -35,7 +35,7 @@ summarise_longread_data(){
   --output_fasta $NAME.6frame.fasta
   
   echo "#*************************************** Summarise long-read transcriptome"
-  python $LREAD/transcriptome_summary/src/transcriptome_summary_ck.py \
+  python $LOGEN/transcriptome_summary.py \
   --sq_out $ISO_CLASSFILE \
   --ensg_to_gene $WKD_ROOT/3_reference_tables/ensg_gene.tsv \
   --enst_to_isoname $WKD_ROOT/3_reference_tables/enst_isoname.tsv \
@@ -77,13 +77,14 @@ refine_calledorf(){
   echo "#*************************************** Filter on called open reading frames"
   mkdir -p $WKD_ROOT/6_refined_database; cd $WKD_ROOT/6_refined_database
   
-  python $LREAD/refine_orf_database/src/refine_orf_database.py \
+  source activate sqanti2_py3
+  python $LOGEN/refine_orf_database.py \
   --name $NAME \
   --orfs $WKD_ROOT/5_calledOrfs/$NAME"_best_orf.tsv"  \
   --pb_fasta $ISO_FASTA \
   --coding_score_cutoff $coding_score_cutoff &> refine_org.log
   
-  python $LREAD/visualization_track/src/make_pacbio_cds_gtf.py \
+  python $LOGEN/make_pacbio_cds_gtf.py \
   --name $NAME \
   --sample_gtf $ISO_GTF \
   --refined_database $NAME"_orf_refined.tsv" \
@@ -92,7 +93,7 @@ refine_calledorf(){
   --include_transcript yes &> make_cds_gtf1.log
   
   # modified make_pacbio_cds_gtf.py to remove cpm
-  python $LREAD/visualization_track/src/make_pacbio_cds_gtf.py \
+  python $LOGEN/make_pacbio_cds_gtf.py \
   --name $NAME"_no_transcript" \
   --sample_gtf $ISO_GTF \
   --refined_database $NAME"_orf_refined.tsv" \
@@ -105,6 +106,8 @@ refine_calledorf(){
 classify_protein(){
   mkdir -p $WKD_ROOT/7_classified_protein; cd $WKD_ROOT/7_classified_protein
   
+  source activate sqanti2_py3
+  
   python $LREAD/rename_cds_to_exon/src/rename_cds_to_exon.py \
   --sample_gtf $WKD_ROOT/6_refined_database/$NAME"_with_cds.gtf" \
   --sample_name $NAME \
@@ -112,7 +115,7 @@ classify_protein(){
   --reference_name gencode \
   --num_cores 2 &> rename_cds_to_exon.log
   
-  python $LREAD/sqanti_protein/src/sqanti3_protein.py $NAME.transcript_exons_only.gtf \
+  python $LOGEN/sqanti3_protein.py $NAME.transcript_exons_only.gtf \
   $NAME.cds_renamed_exon.gtf \
   $WKD_ROOT/5_calledOrfs/$NAME"_best_orf.tsv" \
   gencode.transcript_exons_only.gtf \

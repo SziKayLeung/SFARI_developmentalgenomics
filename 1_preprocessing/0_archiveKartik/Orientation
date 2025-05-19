@@ -1,0 +1,88 @@
+#!/bin/bash
+#SBATCH --export=ALL # export all environment variables to the batch job
+#SBATCH -D .
+#SBATCH -p mrcq # submit to the parallel queue, bioseq is the parallel queue
+#SBATCH --time=144:00:00 # maximum walltime for the job e.g. 01:00:00
+#SBATCH -A Research_Project-MRC148213 # research project to submit under
+#SBATCH --nodes=1 # specify number of nodes
+#SBATCH --ntasks-per-node=16 # specify number of processors per node
+#SBATCH --mem=200G # specify bytes of memory to reserve
+#SBATCH --mail-type=END # send email at job completion
+#SBATCH --mail-user=rb520@exeter.ac.uk # email address
+# #SBATCH --array=1-20
+
+#This script is designed to orientate the targeted long read sequencing data for downstream analysis. 
+#The input data is the demultiplexed fastq files from Porechop.
+#Around half of the transcripts sequenced will be in the reverse orientation (a string of T bases on the 5'). 
+#These need to be selected and then reverse complemented (seqtk). 
+#They can be concatenated with the remaining data (which has a string of A bases on the 3').
+#The adaptors are then trimmed off the end using CutAdapt. 
+#Downstream analysis can then be taken forward.
+#Previously my test data was small enough that I didn't need to use a batch array. But the input data is now separated into folders. 
+
+source "/lustre/home/rb520/miniconda3/etc/profile.d/conda.sh" 
+conda activate tools 
+
+# Move to the directory where your demultiplexed fastq pass files are:
+PROJECT="/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/Targeted_transcriptome/10780_batch1/P0059_20220813_10780/P0059_20220813_10780/Batch1/20220813_1259_3G_PAM33351_84e820b3/"
+
+SOFTWARE="/lustre/projects/Research_Project-MRC190311/scripts/sequencing/longReadseq/scripts/seqtk"
+
+cd ${PROJECT}
+
+# Ignore the non.fastq file (and there may be an input.fastq file too)
+
+for folder in {00..01}; do
+	cd "Porechop_"$folder""
+	echo "Porechop_"$folder""
+
+	for bc in {01..02}; do
+		gunzip "BC"$bc".fastq.gz" # If the file is gzip then it will need to be unzipped
+		${SOFTWARE}/seqtk seq -a "BC"$bc".fastq" > "BC"$bc".fasta" # Changes from a fastq file to a fasta file (removes unnecessary information)
+		grep -B 1 ^TTTTTTTTTT "BC"$bc".fasta" > "BC"$bc"_reverse.fasta" # Finds any lines which have a run of T bases and includes the line of information before too
+		echo "BC"$bc"_reverse.fasta" 
+			for bc in {01..02}; do # For the lines which have a run of T bases the sequence is reverse complemented (and will now have a run of A bases)
+      				"${SOFTWARE}/seqtk" seq -r "BC"$bc"_reverse.fasta" > "BC"$bc"_orientated.fasta"
+				echo "BC"$bc"_orientated.fasta"
+			done
+	done
+	for bc in {01..02}; do
+		grep -B 1 AAAAAAAAAA $"BC"$bc".fasta" > "BC"$bc"_forward.fasta" # Back to the original file, the lines which have a run of A bases are selected and the line of information before too
+		echo "BC"$bc"_forward.fasta"
+      
+		cat "BC"$bc"_orientated.fasta" "BC"$bc"_forward.fasta" > "BC"$bc"_combined.fasta" # The data is concatenated together
+
+		cutadapt -a "A{30}" -o "BC"$bc"_trimmed.fasta" "BC"$bc"_combined.fasta" # CutAdapt removes the A bases on the end
+	done
+	cd ..
+done
+
+
+### When the porechop output is not done as an array and the fastq files are in one folder
+
+#for folder in {00..19}; do
+#cd porechop_output
+#        echo "porechop_output."$folder""
+
+#for bc in {03..09}; do
+#	gunzip "BC"$bc".fastq.gz" # If the file is gzip then it will need to be unzipped
+#	${SOFTWARE}/seqtk seq -a "BC"$bc".fastq" > "BC"$bc".fasta" # Changes from a fastq file to a fasta file (removes unnecessary information)
+#        grep -B 1 ^TTTTTTTTTT "BC"$bc".fasta" > "BC"$bc"_reverse.fasta" # Finds any lines which have a run of T bases and includes the line of information before too
+#        echo "BC"$bc"_reverse.fasta"
+#        for bc in {03..09}; do # For the lines which have a run of T bases the sequence is reverse complemented (and will now have a run of A bases)
+#        	"${SOFTWARE}/seqtk" seq -r "BC"$bc"_reverse.fasta" > "BC"$bc"_orientated.fasta"
+#        	echo "BC"$bc"_orientated.fasta"
+#        done
+#done
+#for bc in {03..09}; do
+#                grep -B 1 AAAAAAAAAA $"BC"$bc".fasta" > "BC"$bc"_forward.fasta" # Back to the original file, the lines which have a run of A bases are selected and the line o$
+#                echo "BC"$bc"_forward.fasta"
+
+#                cat "BC"$bc"_orientated.fasta" "BC"$bc"_forward.fasta" > "BC"$bc"_combined.fasta" # The data is concatenated together
+
+#                cutadapt -a "A{30}" -o "BC"$bc"_trimmed.fasta" "BC"$bc"_combined.fasta" # CutAdapt removes the A bases on the end
+#done
+#cd ..
+#done
+
+
