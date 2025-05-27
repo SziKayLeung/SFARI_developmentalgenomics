@@ -16,6 +16,7 @@
 # 30/01/2024: perform DIU on protein-coding genes from whole dataset
 # 06/02/2024: repeat but with filtered SQANTI3 classification after removal of mono-exonic transcripts within multiexonic genes
 # 05/11/2024: repeat after re-running whole+targeted analyis
+# 27/05/2024: repeat with 10reads,10samples, recount data
 
 ##-------------------------------------------------------------------------
 
@@ -34,7 +35,7 @@ mkdir -p ${DIUDIR}/whole
 mkdir -p $DIUDIR/whole/allGroup $DIUDIR/whole/allSex
 
 # classification file and target genes
-SQANTIClassFile=${SQANTIDIR}/sqantifiltered_monoexonicfiltered_2reads2samples_classification_finalversion.txt
+SQANTIClassFile=${SQANTIDIR}/sqantifiltered_monoexonicfiltered_10reads10samplesRecount_classification.txt
 METADIR=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/C_Whole_Targeted/18_deseq/3_DIU/metadata
   
 WholeGroupPhenotype=${METADIR}/WholeGroupPhenotype.csv
