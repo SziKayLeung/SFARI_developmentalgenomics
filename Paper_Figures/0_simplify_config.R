@@ -9,6 +9,9 @@ suppressMessages(library("data.table"))
 suppressMessages(library("dplyr"))
 suppressMessages(library("vroom"))
 
+LOGEN = "/lustre/projects/Research_Project-MRC148213/lsl693/scripts/LOGen/"
+source(paste0(LOGEN, "compare_datasets/dataset_identifer.R"))
+
 ## ------------ directory names --------------- 
 
 root_dir <- "/lustre/projects/Research_Project-MRC148213/lsl693/"
@@ -20,6 +23,7 @@ dirnames <- list(
   utils = paste0(root_sfari,"/0_utils/"),
 
   whole = paste0(root_sfari,"A_Whole/"),
+  wholetarg_SQ_default = paste0(root_sfari,"C_Whole_Targeted/9_sqanti_default/"),
   wholetarg_SQ = paste0(root_sfari,"C_Whole_Targeted/9_sqanti_final/"),
   protein = paste0(root_sfari, "C_Whole_Targeted/10_longReadProteogenomics/"),
   massSpec = paste0(root_sfari,"C_Whole_Targeted/13_massSpec/v2/"),
@@ -64,7 +68,8 @@ manifest <- fread(paste0(root_sfari, "0_metadata/WholeTargetedphenotype_manifest
 
 class.names.files <- list(
   glob_targ_SQ = paste0(dirnames$wholetarg_SQ,"sqantifiltered_monoexonicfiltered_2reads2samples_classification_finalversion.txt"),
-  glob_collapsed = paste0(dirnames$whole,"6_sqanti/Whole_cleaned_aligned_merged_collapsed_qced_RulesFilter_2reads2samples_classification.txt")
+  glob_collapsed = paste0(dirnames$whole,"6_sqanti/Whole_cleaned_aligned_merged_collapsed_qced_RulesFilter_2reads2samples_classification.txt"),
+  glob_targ_SQ_default = paste0(dirnames$wholetarg_SQ_default,"sqantifiltered_monoexonicfiltered_2reads2samples_classification.txt")
 )
 class.files <- lapply(class.names.files, function(x) fread(x, sep = "\t", data.table = FALSE))
 
@@ -131,9 +136,8 @@ postMedianReads <- class.files$glob_SQ %>% select(all_of(postWhole)) %>% apply(.
 preMedianReads <- class.files$glob_SQ %>% select(all_of(preWhole)) %>% apply(., 1, median)
 class.files$glob_SQ <- class.files$glob_SQ %>% mutate(FReads_median = femaleMedianReads, MReads_median = maleMedianReads, 
                                                       preReads_median = preMedianReads, postReads_median = postMedianReads)
-save(class.files, file = paste0(dirnames$wholetarg_SQ,"sqantifiltered_monoexonicfiltered_2reads2samples_all.RData"))
-class.files <- class.files[c("glob_targ_SQ", "glob_SQ", "glob_SQ_annoGene", "targ_SQ")]
-save(class.files, file = paste0(dirnames$wholetarg_SQ,"sqantifiltered_monoexonicfiltered_2reads2samples.RData"))
+class.files <- class.files[c("glob_targ_SQ", "glob_targ_SQ_default", "glob_SQ", "glob_SQ_annoGene", "targ_SQ")]
+save(class.files, file = paste0(dirnames$wholetarg_SQ,"sqantifiltered_monoexonicfiltered_2reads2samples_v2.RData"))
 write.table(class.files$glob_SQ, paste0(dirnames$wholetarg_SQ,"sqantifiltered_monoexonicfiltered_2reads2samples_whole_intergenicGenicIntron_classification.txt"), quote = F, row.names = F, sep = "\t")
 write.table(class.files$glob_SQ$isoform, paste0(dirnames$wholetarg_SQ,"sqantifiltered_monoexonic_2reads2samples_whole_filtered_intergenicGenicIntron.ID.txt"), quote = F, row.names = F, col.names = F)
 # bash
