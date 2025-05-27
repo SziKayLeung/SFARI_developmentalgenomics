@@ -15,7 +15,7 @@ suppressMessages(library("tidyr"))
 
 LOGEN <- "C:/Users/sl693/OneDrive - University of Exeter/ExeterPostDoc/2_Scripts/LOGen"
 root_dir <- "C:/Users/sl693/OneDrive - University of Exeter/ExeterPostDoc/1_Projects/SFARI/PaperZenodo/"
-output_dir <- "C:/Users/sl693/OneDrive - University of Exeter/ExeterPostDoc/1_Projects/SFARI/Output"
+output_dir <- "C:/Users/sl693/OneDrive - University of Exeter/ExeterPostDoc/1_Projects/SFARI/Output/"
 
 TargetGene <- read.table(paste0(root_dir, "metadata/Complete_TargetGenes_TargetedSequencing.txt"))[["V1"]]
 ProteinCodingGenes <- read.table(paste0(root_dir, "/utils/protein-coding-genes.txt"))[["V1"]]
@@ -63,7 +63,7 @@ class.files$glob_targ_SQ_default <- class.files$glob_targ_SQ_default %>% filter(
 class.files$glob_SQ_default <- class.files$glob_targ_SQ_default %>% filter(whole_nreads >= 10 & whole_nsamples >= 10)
 class.files$glob_SQ_default_annoGene <- class.files$glob_targ_SQ_default_annoGene %>% filter(whole_nreads >= 10 & whole_nsamples >= 10) 
 class.files$glob_SQ_annoGene <- class.files$glob_SQ_annoGene %>% filter(whole_nreads >= 10 & whole_nsamples >= 10) 
-class.files$glob_SQ <- class.files$glob_targ_SQ %>% filter(whole_nreads >= 10 & whole_nsamples >= 10)
+class.files$glob_SQ <- class.files$glob_SQ %>% filter(whole_nreads >= 10 & whole_nsamples >= 10)
 # targeted: targeted_nreads, targeted_nsamples
 class.files$targ_SQ <- class.files$glob_SQ_annoGene %>% filter(targeted_nreads >= 10 & targeted_nsamples >= 10)
 
@@ -113,6 +113,10 @@ wholeTargetedDemux <- class.files$glob_targ_SQ %>% select(isoform, contains("Who
 colnames(wholeTargetedDemux)[1] <- "id"
 #write.csv(wholeTargetedDemux, paste0(output_dir, "/wholeTargeted_demux_fl_count.csv"), row.names = F)
 
+# write output
+write.table(class.files$glob_SQ, paste0(root_dir, "sqanti/sqantifiltered_monoexonicfiltered_10reads10samplesRecount_whole_classification.txt"), sep = "\t", row.names = F, quote = F)
+write.table(class.files$glob_targ_SQ, paste0(root_dir, "sqanti/sqantifiltered_monoexonicfiltered_10reads10samplesRecount_classification.txt"), sep = "\t", row.names = F, quote = F)
+
 # genrate gtf for recount
 write.table(class.files$glob_targ_SQ$isoform, paste0(root_dir, "sqanti/sqantifiltered_monoexonicfiltered_10reads10samplesRecount_isoform.txt"), 
             sep = "\t", col.names = F, row.names = F, quote = F)
@@ -156,13 +160,13 @@ WholeDTEAll$sex <- merge(WholeDTEAll$sex, class.files$glob_targ_SQ[,c("isoform",
 ## -------------- differential gene expression -------------
 
 WholeDESeqGeneSig <- list(
-  sex = as.data.frame(fread(paste0(root_dir,"DTE/DESeq2_whole_gene_sex_resSig.csv"))),
-  age = as.data.frame(fread(paste0(root_dir,"DTE/DESeq2_whole_gene_development_resSig.csv")))
+  sex = as.data.frame(fread(paste0(root_dir,"DGE/DESeq2_whole_gene_sex_resSig.csv"))),
+  age = as.data.frame(fread(paste0(root_dir,"DGE/DESeq2_whole_gene_development_resSig.csv")))
 )
 
 WholeDESeqGene <- list(
-  sex = as.data.frame(fread(paste0(root_dir,"DTE/DESeq2_whole_gene_sex_resSig.csv"))),
-  age = as.data.frame(fread(paste0(root_dir,"DTE/DESeq2_whole_gene_development_resSig.csv")))
+  sex = as.data.frame(fread(paste0(root_dir,"DGE/DESeq2_whole_gene_sex_resSig.csv"))),
+  age = as.data.frame(fread(paste0(root_dir,"DGE/DESeq2_whole_gene_development_resSig.csv")))
 )
 
 ## -------------- differential isoform usage ----------------
@@ -206,6 +210,7 @@ gtf <- list()
 gtf$ONT10.5139.1910 <- as.data.frame(rtracklayer::import(paste0(root_dir,"sqanti/ONT10.5139.1910.gtf"))) %>% mutate(gene_id = "ADD3", transcript_id = "ONT10.5139.1910")
 gtf$ONT18.5258.1932 <- as.data.frame(rtracklayer::import(paste0(root_dir,"sqanti/ONT18.5258.1932.gtf"))) %>% mutate(gene_id = "MBP", transcript_id = "ONT18.5258.1932")
 gtf$ONT2.10213.11813 <- as.data.frame(rtracklayer::import(paste0(root_dir,"sqanti/ONT2.10213.11813.gtf"))) %>% mutate(gene_id = "CHN1", transcript_id = "ONT2.10213.11813")
+gtf$ONT12.2697.32229 <- as.data.frame(rtracklayer::import(paste0(root_dir,"sqanti/ONT12.2697.32229.gtf"))) %>% mutate(gene_id = "CSRP2", transcript_id = "ONT2.10213.11813")
 gtf$GNAS <- as.data.frame(rtracklayer::import(paste0(root_dir,"sqanti/GNAS.gtf"))) 
 gtf$MORfL2 <- as.data.frame(rtracklayer::import(paste0(root_dir,"sqanti/MORf4L2.gtf"))) 
 gtf$GPM6A <- as.data.frame(rtracklayer::import(paste0(root_dir,"sqanti/GPM6A.gtf"))) 
@@ -221,6 +226,7 @@ gtf <- lapply(gtf, function(x) x[,c("seqnames","strand","start","end","type","tr
 gtf$merged <- rbind(gtf$ONT18.5258.1932[,c("seqnames","strand","start","end","type","transcript_id","gene_id")],
                     gtf$ONT10.5139.1910[,c("seqnames","strand","start","end","type","transcript_id","gene_id")],
                     gtf$ONT2.10213.11813[,c("seqnames","strand","start","end","type","transcript_id","gene_id")],
+                    gtf$ONT12.2697.32229[,c("seqnames","strand","start","end","type","transcript_id","gene_id")],
                     gtf$GNAS[,c("seqnames","strand","start","end","type","transcript_id","gene_id")],
                     gtf$MORfL2[,c("seqnames","strand","start","end","type","transcript_id","gene_id")],
                     gtf$GPM6A[,c("seqnames","strand","start","end","type","transcript_id","gene_id")],
@@ -231,7 +237,7 @@ gtf$merged <- rbind(gtf$ONT18.5258.1932[,c("seqnames","strand","start","end","ty
                     gtf$RPS27A[,c("seqnames","strand","start","end","type","transcript_id","gene_id")],
                     gtf$ref[,c("seqnames","strand","start","end","type","transcript_id","gene_id")])
 
-GI <- c("GRIN2A","GRIA3","SEPTIN4","RTN4","MBP","RPS4Y1","XIST","ADD3","CNTNAP2","ANKRD12","VXN","PKM","MORF4L2","GNAS","RSP27A","CHN1","GPM6A")
+GI <- c("GRIN2A","GRIA3","SEPTIN4","RTN4","MBP","RPS4Y1","XIST","ADD3","CNTNAP2","ANKRD12","VXN","PKM","MORF4L2","GNAS","RSP27A","CHN1","GPM6A","CSRP2")
 RefIsoforms <- lapply(GI, function(x) unique(gtf$ref[gtf$ref$gene_id == x & !is.na(gtf$ref$transcript_id), "transcript_id"]))
 names(RefIsoforms) <- GI
 

@@ -45,7 +45,8 @@ figPlots$comp = whole_vs_targeted_plots(classfiles=class.files$glob_targ_SQ,
                                wholeSamples=wholematchedsamples, 
                                targetedSamples=manifest[manifest$ID %in% targetedmatchedsamples,"Sample"], 
                                targetGene=selectedTargetGenes)
-figPlots$comp
+figPlots$comp + theme(axis.text.x=element_blank(),
+                      axis.ticks.x=element_blank())
 
 # note there will be NA reads due to isoforms that are detected in the other samples that are not matching in the whole+targeted
 # unique(matchedSumTargeted[matchedSumTargeted$dataset == "NA",])
@@ -120,11 +121,11 @@ figPlots$Diff$topRankedGroupVis <- ggTranPlots(inputgtf=gtf$merged,classfiles=cl
                                                isoList = c("ONT18.5258.1932",RefIsoforms$MBP$transcript_id), 
                                                colours = c("#00BFC4","black"), simple = TRUE)
 
-figPlots$Diff$topRankedGroup2 <- plot_trans_exp_individual("ONT2.10213.11813",class.files$glob_SQ,Exp$whole_group,"group", 
+figPlots$Diff$topRankedGroup2 <- plot_trans_exp_individual("ONT12.2697.32229",class.files$glob_SQ,Exp$whole_group,"group", 
                                                           sqrt=TRUE, colourdots = alpha("#F8766D",0.3))
 
 figPlots$Diff$topRankedGroup2Vis <- ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$glob_SQ, 
-                                               isoList = c("ONT2.10213.11813",RefIsoforms$CHN1$transcript_id), 
+                                               isoList = c("ONT12.2697.32229",RefIsoforms$CHN1$transcript_id), 
                                                colours = c(alpha("#F8766D",0.3),"black"), simple = TRUE)
 
 # differential expressed by sex
@@ -390,8 +391,12 @@ fig2Targeted$numIso
 fig2Targeted$numIsoCate
 dev.off()
 
-pdf(paste0(output_dir,"DTESexDevelopment_Supp.pdf"), width = 12, height=8)
+pdf(paste0(output_dir,"DTESexDevelopment_Supp.pdf"), width = 14, height=8)
 plot_grid(plotlist = figPlots$WholeDTEsexAge)
+dev.off()
+
+pdf(paste0(output_dir, "DevVolcano.pdf"), width = 12, height = 8)
+figPlots$Diff$volGroup
 dev.off()
 
 pdf(paste0(output_dir, "SexVolcano.pdf"), width = 12, height = 8)
@@ -450,11 +455,7 @@ figPlots$DLGAP5Dendro
 dev.off()
 
 # Figure 4
-pdf(paste0(output_dir, "Figure4A_DevelopmentVolcano.pdf"), width = 12, height= 8)
-plot_grid(figPlots$Diff$topRankedGroup2Vis,figPlots$Diff$topRankedGroup2, ncol = 1)
-dev.off()
-
-pdf(paste0(output_dir, "Figure4B_NovelTopRankedDevDiff.pdf"), width = 10, height= 8)
+pdf(paste0(output_dir, "NovelTopRankedDevDiff.pdf"), width = 10, height= 8)
 plot_grid(figPlots$Diff$topRankedGroup2Vis,figPlots$Diff$topRankedGroup2, ncol = 1, rel_widths = c(0.2,0.8))
 dev.off()
 

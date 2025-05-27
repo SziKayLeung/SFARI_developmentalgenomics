@@ -36,6 +36,8 @@ finalTranscripts <- as.data.frame(finalTranscripts) %>% tibble::rownames_to_colu
 colnames(finalTranscripts) <- c("ID", "nFinal")
 WholeFinalTranscripts <- merge(finalTranscripts, manifest, by = "ID") 
 TargetedFinalTranscripts <- as.data.frame(finalTranscripts[grepl("Targeted",finalTranscripts$ID),])
+write.csv(WholeFinalTranscripts,paste0(output_dir,"/WholeFinalNumbersPerSample.csv"), row.names = F)
+write.csv(TargetedFinalTranscripts,paste0(output_dir,"/TargetedFinalNumbersPerSample.csv"), row.names = F)
 
 # number of transcripts collapsed per sample
 demux_filenames <- list.files(path = paste0(root_dir,"demux"), pattern = "fl", full.names = T)
@@ -60,7 +62,6 @@ WholeDTEOut <- lapply(WholeDTE, function(x) x %>% arrange(padj) %>% select(all_o
 WholeDTEOut <- lapply(WholeDTEOut, function(x) merge(x, class.files$glob_SQ %>% select(contains("median"), "isoform"), by.x = "Isoform", by.y = "isoform"))
 write.csv(WholeDTEOut$sex %>% arrange(FDR),paste0(output_dir,"/WholeDTESex.csv"), row.names = F)
 write.csv(WholeDTEOut$age %>% arrange(FDR),paste0(output_dir,"/WholeDTEGroup.csv"), row.names= F)
-
 
 WholeDTENumGene <- WholeDTE$age %>% group_by(associated_gene, dirAcrossDev) %>% tally() %>% 
   as.data.frame() %>% reshape(., idvar = "associated_gene", timevar = "dirAcrossDev", direction = "wide")
