@@ -46,9 +46,41 @@ manifest <- fread(paste0(root_dir, "metadata/WholeTargetedphenotype_manifest.csv
 
 ## -------------- Final classification files ------------- 
 
-load(file = paste0(root_dir,"sqanti/sqantifiltered_monoexonicfiltered_2reads2samples.RData"))
-class.files$glob_SQ_annoGene <- class.files$glob_SQ %>% filter(!grepl("novelGene", associated_gene))
-class.files$glob_SQ_annoGene <- class.files$glob_SQ_annoGene %>% mutate(novelTranscript = ifelse(associated_transcript == "novel","Novel","Known"))
+# load glob_targ_SQ, glob_SQ, glob_SQ_annoGene, targ_SQ
+load(file = paste0(root_dir,"sqanti/sqantifiltered_monoexonicfiltered_2reads2samples_v2.RData"))
+class.files$glob_SQ_annoGene <- class.files$glob_SQ %>% filter(!grepl("novelGene", associated_gene)) %>% mutate(novelTranscript = ifelse(associated_transcript == "novel","Novel","Known"))
+class.files$glob_targ_SQ_default_annoGene <- class.files$glob_targ_SQ_default %>% filter(!grepl("novelGene", associated_gene)) %>% mutate(novelTranscript = ifelse(associated_transcript == "novel","Novel","Known"))
+
+# recount support 
+recountSupport <- fread(paste0(root_dir, "sqanti/sqanti_final_recount_support.txt.gz"))
+
+# further filtering of 10 reads, 10 samples 
+# more stringent filtering beyond 2 reads, 2 samples
+# whole+targeted, nreads, nsamples
+class.files$glob_targ_SQ <- class.files$glob_targ_SQ %>% filter(nreads >= 10 & nsamples >= 10)
+class.files$glob_targ_SQ_default <- class.files$glob_targ_SQ_default %>% filter(nreads >= 10 & nsamples >= 10)
+# glob_SQ: whole_nreads, whole_nsamples
+class.files$glob_SQ_default <- class.files$glob_targ_SQ_default %>% filter(whole_nreads >= 10 & whole_nsamples >= 10)
+class.files$glob_SQ_default_annoGene <- class.files$glob_targ_SQ_default_annoGene %>% filter(whole_nreads >= 10 & whole_nsamples >= 10) 
+class.files$glob_SQ_annoGene <- class.files$glob_SQ_annoGene %>% filter(whole_nreads >= 10 & whole_nsamples >= 10) 
+class.files$glob_SQ <- class.files$glob_targ_SQ %>% filter(whole_nreads >= 10 & whole_nsamples >= 10)
+# targeted: targeted_nreads, targeted_nsamples
+class.files$targ_SQ <- class.files$glob_SQ_annoGene %>% filter(targeted_nreads >= 10 & targeted_nsamples >= 10)
+
+# only keep if full support
+recountSupport <- recountSupport %>% mutate(ToKeep = ifelse(propsupportedjunctions == 1, TRUE, FALSE))
+# To keep ISM and FSM regardless of recount support
+recountSupport <- recountSupport %>% mutate(ToKeep = ifelse(structural_category %in% c("FSM","ISM"), TRUE, ToKeep))
+# unique(recountSupport[recountSupport$structural_category == "FSM","ToKeep"])
+# unique(recountSupport[recountSupport$structural_category == "ISM","ToKeep"])
+# unique(recountSupport[!recountSupport$structural_category %in% c("FSM","ISM") & recountSupport$ToKeep == TRUE, "propsupportedjunctions"])
+supportedRecountSupport <- recountSupport[recountSupport$ToKeep == TRUE, ]
+class.files <- lapply(class.files, function(x) x %>% filter(isoform %in% supportedRecountSupport$isoform))
+
+# check all transcripts in glob_SQ_annoGene in glob_SQ
+if(length(setdiff(class.files$glob_SQ_annoGene$isoform, class.files$glob_SQ$isoform)) != 0){
+  message("Error: isoforms in class.files$glob_SQ_annoGene not in class.files$glob_SQ")
+}
 
 annoGenesStats <- list(
   novelTrans = class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$associated_transcript == "novel",],
@@ -59,6 +91,11 @@ annoGenesStats <- list(
 
 ## Protein level 
 class.files$protein_filtered = fread(paste0(root_dir,"/proteomics/Whole.sqanti_protein_classification.tsv"),data.table = F)
+# keep only 10 reads, 10 samples isoforms
+class.files$protein_filtered <- class.files$protein_filtered %>% filter(pb %in% class.files$glob_targ_SQ$isoform)
+
+# cpat
+cpat <- fread(paste0(root_dir,"/proteomics/WholeTargeted_filtered_finalversion.ORF_prob.best.tsv"), stringsAsFactors = F, data.table = F)
 
 ## prenatal vs postnatal
 class.files$glob_SQ_annoGene_prenatal <- class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$preReads >= 1,]
@@ -74,7 +111,15 @@ intergenic <- read.csv(paste0(root_dir, "/sqanti/intergenic.csv"))
 ## generate FL reads for QC report
 wholeTargetedDemux <- class.files$glob_targ_SQ %>% select(isoform, contains("Whole"), -whole_nreads, -whole_nsamples) 
 colnames(wholeTargetedDemux)[1] <- "id"
-write.csv(wholeTargetedDemux, paste0(output_dir, "/wholeTargeted_demux_fl_count.csv"), row.names = F)
+#write.csv(wholeTargetedDemux, paste0(output_dir, "/wholeTargeted_demux_fl_count.csv"), row.names = F)
+
+# genrate gtf for recount
+write.table(class.files$glob_targ_SQ$isoform, paste0(root_dir, "sqanti/sqantifiltered_monoexonicfiltered_10reads10samplesRecount_isoform.txt"), 
+            sep = "\t", col.names = F, row.names = F, quote = F)
+# gtf 
+#originalGtf=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/C_Whole_Targeted/9_sqanti_final/sqantifiltered_monoexonicfiltered_2reads2samples.filtered.gtf
+#cd /lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/C_Whole_Targeted/9_sqanti_final/
+#grep -f sqantifiltered_monoexonicfiltered_10reads10samplesRecount_isoform.txt ${originalGtf} > sqantifiltered_monoexonicfiltered_10reads10samplesRecount.gtf
 
 ## -------------- Bambu ---------------- 
 
@@ -247,7 +292,7 @@ humanCTX$totalFL <- humanCTX %>% dplyr::select(contains("FL.")) %>% apply(.,1,su
 # copied from here: /lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/dRNA/Rosie/9_sqanti_final
 directRNA <- fread(paste0(root_dir, "overlapDatasets/sqantifiltered_monoexonicfiltered_2reads2samples_classification.txt"), data.table = FALSE)
 # copied from here: /lustre/projects/Research_Project-MRC148213/lsl693/AD_BDR/D_ONT/5_cupcake/7_sqanti3
-BDRNatureComms <- read.table(paste0(root_dir, "ontBDR_collapsed_RulesFilter_result_classification.targetgenes_counts_filtered.txt"), header = TRUE, sep = "/t", as.is = T)
+BDRNatureComms <- data.table::fread(paste0(root_dir, "overlapDatasets/ontBDR_collapsed_RulesFilter_result_classification.targetgenes_counts_filtered.txt"),data.table = FALSE)
 PatowaryCTX <- data.table::fread(paste0(root_dir, "overlapDatasets/cp_vz_0.75_min_7_recovery_talon_classification.txt"), data.table = FALSE)
 HerberleCTX <- data.table::fread(paste0(root_dir, "overlapDatasets/fullLengthCounts_transcript.txt"), data.table = FALSE) %>% mutate(isoform = TXNAME)
 
