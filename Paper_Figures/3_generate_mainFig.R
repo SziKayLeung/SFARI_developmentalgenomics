@@ -22,19 +22,7 @@ figPlots <- list()
 
 ## ------ Figure 1: Whole dataset descriptives ------ 
 
-fig1Whole <- list(
-  # number of isoforms 
-  #numIso = total_num_iso(class.files$glob_SQ, input_title = "", glimit = 10),
-  # number of genes
-  # class.files$glob_SQ %>% group_by(associated_gene) %>% tally()
-  #numIsogene = numIsoGene(class.files$glob_SQ %>% filter(novelGene == "Annotated Genes")),
-  # number of isoforms by category
-  numIsoCate = plot_structural_cate(class.files$glob_SQ_annoGene,rotate=TRUE) + theme(axis.title.y=element_blank(),
-                                                                             axis.text.y=element_blank(),
-                                                                             axis.ticks.y=element_blank())
-  # cpat
-  #cpat = plot_cpat(Cpat$whole, class.files$glob_SQ)
-)
+pNum <- summary_plots()
 
 # prenatal vs postnatal 
 #geneNum <- read.csv(paste0(output_dir,"NumberofTranscriptsPrevsPost.csv"))
@@ -387,11 +375,14 @@ ggTranPlots(inputgtf=gtf$glob_targ,classfiles=class.files$glob_targ_SQ,isoList=c
 
 ## ------ Output ------ 
 
-pdf(paste0(output_dir,"/WholeDescriptive.pdf"), width = 10, height = 10)
-fig1Whole$numIsogene
-fig1Whole$numIso
-fig1Whole$numIsoCate
+pdf(paste0(output_dir,"/numKnownGenicFeatures_1c.pdf"), width = 10, height = 10)
+pNum[[2]]
 dev.off()
+
+pdf(paste0(output_dir,"/numKnownGenicFeatures_1d_1e.pdf"), width = 15, height = 10)
+pNum[[1]]
+dev.off()
+
 
 pdf(paste0(output_dir,"/TargetedDescriptive.pdf"), width = 10, height = 10)
 fig2Targeted$numIsogene
