@@ -10,7 +10,15 @@ grep -w ONT14.1780 ${input}/sqantifiltered_monoexonicfiltered_2reads2samples_who
 grep -w ONT4.13313 ${input}/sqantifiltered_monoexonicfiltered_2reads2samples_whole_intergenicGenicIntron.filtered.gtf > ${output}/GPM6A.gtf
 grep -w ONTX.6284 ${input}/sqantifiltered_monoexonicfiltered_2reads2samples_whole_intergenicGenicIntron.filtered.gtf > ${output}/MORF4L2.gtf
 grep -w ONT20.3125 ${input}/sqantifiltered_monoexonicfiltered_2reads2samples_whole_intergenicGenicIntron.filtered.gtf > ${output}/GNAS.gtf
+grep -w ONT14.3644 ${input}/sqantifiltered_monoexonicfiltered_2reads2samples_whole_intergenicGenicIntron.filtered.gtf > ${output}/HSP90AA1.gtf
 grep -w ONT18.5258.1932 ${input}/sqantifiltered_monoexonicfiltered_2reads2samples_whole_intergenicGenicIntron.filtered.gtf > ${output}/ONT18.5258.1932.gtf
 grep -w ONT10.5139.1910 ${input}/sqantifiltered_monoexonicfiltered_2reads2samples_whole_intergenicGenicIntron.filtered.gtf > ${output}/ONT10.5139.1910.gtf
 grep -w ONT2.10213.11813 ${input}/sqantifiltered_monoexonicfiltered_2reads2samples_whole_intergenicGenicIntron.filtered.gtf > ${output}/ONT2.10213.11813.gtf
 grep -w ONT12.2697.32229 ${input}/sqantifiltered_monoexonicfiltered_2reads2samples_whole_intergenicGenicIntron.filtered.gtf > ${output}/ONT12.2697.32229.gtf
+
+# isoforms with novel peptides validation from mass-spec, generated from SFARI_config.R
+grep -f ${input}/novelPeptideTranscriptsValidation.txt ${input}/sqantifiltered_monoexonicfiltered_2reads2samples.filtered.gtf > ${output}/novelPeptideTranscriptsValidation.gtf
+
+# create bed file of novel peptides based on latest stringent data [10 samples, 10 reads, recount filtered]
+inputProteomics=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/C_Whole_Targeted/13_massSpec/v2
+grep -f ${inputProteomics}/novelPeptideTranscriptsValidation_seq.txt ${inputProteomics}/Allsfari_novel_peptides_unique.bed12 > ${inputProteomics}/Allsfari_novel_peptides_unique_stringentFiltering.bed12
