@@ -19,6 +19,7 @@ View(class.files$glob_SQ %>% group_by(structural_category) %>% tally())
 
 
 # HNRPNK
+class.files$glob_SQ %>% group_by(associated_gene) %>% tally() %>% arrange(-n) %>% head(.)
 message("Number of isoforms annotated to HNRPNK: ", nrow(class.files$glob_SQ_annoGene %>% filter(associated_gene == "HNRNPK")))
 
 # abundance of novel transcripts vs known transcripts of known genes 
@@ -164,9 +165,11 @@ message("%: ", nrow(novelTranscripts[novelTranscripts$DevStatus == "Both",])/nro
 
 genesPrenatal <- unique(class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$DevStatus == "prenatal","associated_gene"])
 genesPrePostnatal <- unique(class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$DevStatus == "Both","associated_gene"])
+# add RP11-1I2.1 with one transcript
+genesPrePostnatal <- c(genesPrePostnatal, "RP11-1I2.1")
 genesPostnatal <- unique(class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$DevStatus == "postnatal","associated_gene"])
-genesPrenatalOnly <- setdiff(genesPrenatal, c(genesPrePostnatal, genesPostnatalOnly))
-genesPostnatalOnly <- setdiff(genesPostnatal,c(genesPrePostnatal, genesPrenatalOnly))
+genesPrenatalOnly <- setdiff(genesPrenatal, c(genesPrePostnatal, genesPostnatal))
+genesPostnatalOnly <- setdiff(genesPostnatal,c(genesPrePostnatal, genesPrenatal))
 
 message("Genes uniquely expressed in prenatal: ", length(genesPrenatalOnly))
 message("Genes unique expressed in prenatal and protein-coding: ", length(intersect(genesPrenatalOnly, unique(class.files$glob_SQ_proteinGenes$associated_gene))))
@@ -181,6 +184,7 @@ length(genesPrePostnatal)/length(unique(class.files$glob_SQ_annoGene$associated_
 
 # santiy check of genes capture correctly above
 length(genesPrenatalOnly) + length(genesPostnatalOnly) + length(genesPrePostnatal) == length(unique(class.files$glob_SQ_annoGene$associated_gene))
+setdiff(unique(class.files$glob_SQ_annoGene$associated_gene), c(genesPrenatalOnly, genesPostnatalOnly, genesPrePostnatal))
 genes <- c(genesPostnatalOnly, genesPrenatalOnly, genesPrePostnatal)
 setdiff(unique(class.files$glob_SQ_annoGene$associated_gene), genes)
 setdiff(genes, unique(class.files$glob_SQ_annoGene$associated_gene))
@@ -201,6 +205,14 @@ WholeDTE$age %>% group_by(structural_category) %>% tally()
 # ERCC
 ercc_usage <- plot_usage_persample(ercc.class.file, ercc.demux)
 
+# fusion
+message("Number of fusion transcripts: ", nrow(class.files$glob_SQ[class.files$glob_SQ$structural_category == "Fusion",]))
+message("% of fusion transcripts: ", nrow(class.files$glob_SQ[class.files$glob_SQ$structural_category == "Fusion",])/nrow(class.files$glob_SQ) * 100)
+message("Number of genes involved: ", length(unique(class.files$glob_SQ[class.files$glob_SQ$structural_category == "Fusion","associated_gene"])) * 2)
+message("% of genes involved: ", length(unique(class.files$glob_SQ[class.files$glob_SQ$structural_category == "Fusion","associated_gene"])) * 2/ length(unique(class.files$glob_SQ_annoGene$associated_gene)) * 100)
+message("number of transcripts from stringent filter fusion: ", nrow(fusion))
+message("Number of genes involved: ", length(unique(c(fusion$gene1, fusion$gene2))))
+
 ## ------- whole vs targeted dataset ---------
 
 # matchSumTargeted generated from function
@@ -209,6 +221,8 @@ message("Number of transcripts detected whole only: ", length(unique(matchedSumT
 message("Number of transcripts detected Targeted only: ", length(unique(matchedSumTargeted[matchedSumTargeted$dataset == "Targeted","isoform"])))
 message("Number of transcripts detected in both whole and targeted only: ", length(unique(matchedSumTargeted[matchedSumTargeted$dataset == "Both","isoform"])))
 
+message("Number of novel transcripts detected in Targeted only: ", length(unique(matchedSumTargeted[matchedSumTargeted$dataset == "Targeted" & !matchedSumTargeted$structural_category %in% c("FSM","ISM"),"isoform"])))
+              
 intersect(unique(matchedSumTargeted[matchedSumTargeted$dataset == "Targeted","isoform"]),
           unique(matchedSumTargeted[matchedSumTargeted$dataset == "Both","isoform"]))
 intersect(unique(matchedSumTargeted[matchedSumTargeted$dataset == "Whole","isoform"]),
@@ -275,7 +289,7 @@ ExpressionDiffcDNAdRNA <- rbind(directRNAFurther$Unique_RB %>% mutate(dataset = 
                                 directRNAFurther$Common_RB %>% mutate(dataset = "Common") %>% select(whole_nreads, dataset))
 ExpressionDiffcDNAdRNA %>% group_by(dataset) %>% summarise(median = median(whole_nreads))
 res <- wilcox.test(whole_nreads ~ dataset, ExpressionDiffcDNAdRNA, exact = FALSE)
-  res
+res
 res$p.value
 format(res$p.value, scientific = TRUE)
 
@@ -372,8 +386,9 @@ message("Number of genes with significant DIU across development and podium Chan
 message("Number of genes with significant DIU across development and not podium Change: ", nrow(DIUSig$wholeAge %>% filter(podiumChange == FALSE)))
 message("Number of genes with significant DIU across development and not DGE: ", nrow(DIUSig$wholeAge %>% filter(DGE_Dev == FALSE)))
 
-# GPM6A
-GPM6AStats <- plotIFWholebyGene("GPM6A",DIUnormExp$GMP6A_group,facetTranscriptsFeature=TRUE,sexFeature=FALSE)[[2]] 
+# GMP6A
+GMP6AStats <- plotIFWholebyGene("GMP6A",DIUnormExp$GMP6A_group,facetTranscriptsFeature=TRUE,sexFeature=FALSE)
+WholeDESeqGene$age[WholeDESeqGene$age$associated_gene == "GPM6A",]
 t.test(perc ~ group, GPM6AStats[GPM6AStats$isoform == "ONT4.13313.18545",])
 t.test(perc ~ group, GPM6AStats[GPM6AStats$isoform == "ONT4.13313.3469",])
 t.test(perc ~ group, GPM6AStats[GPM6AStats$isoform == "ONT4.13313.3457",])
@@ -535,8 +550,15 @@ message("Mean number of exons, (sd): ", round(mean(class.files$bambu_annoGene$ex
 message("Number of transcripts detected to HNRNPK: ", nrow(class.files$bambu_annoGene[class.files$bambu_annoGene$associated_gene == "HNRNPK",]))
 
 # most isoformic novel transcript
-class.files$glob_targ_SQ_counts[class.files$glob_targ_SQ_counts$associated_transcript == "novel",] %>% arrange(-nreads) %>% select(isoform, structural_category, exons, associated_gene, associated_transcript, nreads, nsamples)
+class.files$glob_SQ[class.files$glob_SQ$associated_transcript == "novel",] %>% arrange(-whole_nreads) %>% select(isoform, structural_category, exons, associated_gene, associated_transcript, nreads, nsamples) %>% head(.)
 class.files$bambu[class.files$bambu$associated_gene == "RPS27A",]
+
+# isoform fraction of novel transcript
+tabulateIF(class.files$glob_SQ %>% filter(associated_gene %in% "RPS27A"), "Whole") %>% 
+  mutate(label = ifelse(perc > 10, isoform, NA), perc = perc / 100)  %>% filter(isoform == "ONT2.3331.23589")
+tabulateIF(class.files$glob_SQ %>% filter(associated_gene %in% "RPS27A"), "Whole") %>% 
+  mutate(label = ifelse(perc > 10, isoform, NA), perc = perc / 100)  %>% filter(isoform == "ONT2.3331.23546")
+
 
 novelPeptidesTranscripts <- read.table(paste0(dirnames$output,"novelTranscriptsPeptides.txt"))
 class.files$glob_targ_SQ_counts[class.files$glob_targ_SQ_counts$isoform %in% novelPeptidesTranscripts$isoform,] %>% arrange(-nreads) 
