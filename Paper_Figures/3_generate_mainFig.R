@@ -125,7 +125,7 @@ figPlots$Diff$topRankedGroup2 <- plot_trans_exp_individual("ONT12.2697.32229",cl
                                                           sqrt=TRUE, colourdots = alpha("#F8766D",0.3))
 
 figPlots$Diff$topRankedGroup2Vis <- ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$glob_SQ, 
-                                               isoList = c("ONT12.2697.32229",RefIsoforms$CHN1$transcript_id), 
+                                               isoList = c("ONT12.2697.32229",RefIsoforms$CSRP2$transcript_id), 
                                                colours = c(alpha("#F8766D",0.3),"black"), simple = TRUE)
 
 # differential expressed by sex
@@ -160,11 +160,15 @@ Fig4Targeted <- list(
   GRIA3DTE2 = plot_trans_exp_lifetime("ONTX_7115_973",class.files$glob_targ_SQ,Exp$targeted_group)
 )
 
+## ------ Mass spectrometry -------------------
+novelPeptidesTranscripts %>% group_by(associated_gene) %>% tally() %>% arrange(-n) %>% head(.)
+novelPeptideTranscriptsValidation <- novelPeptidesTranscripts[novelPeptidesTranscripts$associated_gene %in% c("GAPDH","TUBA1A","HSP90AB1","TUBA1B"),]
+write.table(novelPeptideTranscriptsValidation$isoform, paste0(root_dir,"proteomics/novelPeptideTranscriptsValidation.txt"), quote = F, col.names = F, row.names = F)
+write.table(novelPeptideTranscriptsValidation$protein_seq, paste0(root_dir,"proteomics/novelPeptideTranscriptsValidation_seq.txt"), quote = F, col.names = F, row.names = F)
 
 ## ------ DTE across sex and development ------ 
 
 figPlots$WholeDTEsexAge <- lapply(intersect(WholeDTE$sex$isoform, WholeDTE$age$isoform), function(x) plot_trans_exp_individual(x,class.files$glob_SQ,Exp$whole_group,"both", sqrt=TRUE))
-
 
 ## ------ Differential transcript usage ------ 
 
@@ -198,24 +202,21 @@ plot_grid(plot_grid(figPlots$Diff$DIUDev_Vis, labels = c("A")),
 
 # by sex
 DIUSummarySex <- DIUSig$wholeSex %>% mutate(totalChange = as.numeric(totalChange)) %>% filter(DGE_Sex == FALSE, podiumChange == TRUE) %>% dplyr::arrange(FDR, as.numeric(totalChange))
-DIUSummarySex[DIUSummarySex$DGE_Dev == FALSE & DIUSummarySex$DGE_Sex == FALSE,]
+DIUSummarySex[DIUSummarySex$DGE_Dev == FALSE & DIUSummarySex$DGE_Sex == FALSE,] %>% dplyr::arrange(FDR, as.numeric(totalChange)) %>% head(.)
 
-figPlots$Diff$DIUSex <- plotIFWholebyGene("GNAS",DIUnormExp$GNAS_sex,facetTranscriptsFeature=TRUE,sexFeature=TRUE)[[1]]
+figPlots$Diff$DIUSex <- plotIFWholebyGene("HSP90AA1",DIUnormExp$HSP90AA1_sex,facetTranscriptsFeature=TRUE,sexFeature=TRUE)[[1]]
 figPlots$Diff$DIUSex_Vis <- ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$glob_SQ,
-            isoList = rev(c("ENST00000371085.8","ONT20.3125.11081","ONT20.3125.7140","ONT20.3125.9226","ONT20.3125.11276","ONT20.3125.10225")),
-            colours = rev(c("black",alpha("#00BFC4",0.3),rep("#00BFC4",2),alpha("#00BFC4",0.3),"#00BFC4")), 
+            isoList = rev(c("ENST00000216281.13","ONT14.3644.5564","ONT14.3644.10472","ONT14.3644.10471","ONT14.3644.10489","ONT14.3644.10470")),
+            #colours = rev(c("black",alpha("#00BFC4",0.3),rep("#00BFC4",2),alpha("#00BFC4",0.3),"#00BFC4")), 
+            colours = rev(c("black","#00BFC4", alpha("#00BFC4",0.3),alpha("#00BFC4",0.3),alpha("#F8766D",0.3),alpha("#00BFC4",0.3))), 
             simple=TRUE)
-ExpGene$GNAS_whole_group <- ExpGene$whole_group %>% filter(associated_gene == "GNAS") %>% merge(., phenotype, by="sample")
+ExpGene$HSP90AA1_whole_group <- ExpGene$whole_group %>% filter(associated_gene == "HSP90AA1") %>% merge(., phenotype, by="sample")
 figPlots$Diff$DIUSex_GeneExp <- plot_trans_exp_individual(transcript=NULL,
-                                                          gene="GNAS",var="sex",sqrt=FALSE, 
+                                                          gene="HSP90AA1",var="sex",sqrt=FALSE, 
                                                           colourdots = "black",
-                                                          classfiles=class.files$glob_SQ,Norm_transcounts=ExpGene$GNAS_whole_group) +
+                                                          classfiles=class.files$glob_SQ,Norm_transcounts=ExpGene$HSP90AA1_whole_group) +
                                 scale_fill_manual(values = c("gray","gray"))
-
-plot_grid(plot_grid(figPlots$Diff$DIUSex_Vis, labels = c("A")),
-          plot_grid(figPlots$Diff$DIUSex[[1]], figPlots$Diff$DIUSex_GeneExp, nrow = 1, labels = c("B","C")), 
-          ncol = 1, rel_widths = c(0.8,0.2))
-
+WholeDESeqGene$sex[WholeDESeqGene$sex$associated_gene == "HSP90AA1",]
 
 ## ------ AS events from FICLE ------ 
 
@@ -455,7 +456,7 @@ figPlots$DLGAP5Dendro
 dev.off()
 
 # Figure 4
-pdf(paste0(output_dir, "NovelTopRankedDevDiff.pdf"), width = 10, height= 8)
+pdf(paste0(output_dir, "NovelTopRankedDevDiff_4b.pdf"), width = 10, height= 8)
 plot_grid(figPlots$Diff$topRankedGroup2Vis,figPlots$Diff$topRankedGroup2, ncol = 1, rel_widths = c(0.2,0.8))
 dev.off()
 
@@ -497,3 +498,11 @@ dev.off()
 pdf("RSP27A_Supplementary.pdf", width = 10, height = 6)
 plot_grid(RSP27AVis,RSP27A, rel_widths = c(0.4,0.6))
 dev.off()
+
+
+pdf(paste0(output_dir,"DTU_Sex.pdf"), width = 20, height = 10)
+plot_grid(plot_grid(figPlots$Diff$DIUSex_Vis, labels = c("A")),
+          plot_grid(figPlots$Diff$DIUSex, figPlots$Diff$DIUSex_GeneExp, nrow = 1, labels = c("B","C")), 
+          ncol = 1, rel_widths = c(0.8,0.2))
+dev.off()
+
