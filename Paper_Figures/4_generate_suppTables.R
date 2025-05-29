@@ -27,6 +27,12 @@ geneNum <- Reduce(function(...) merge(..., all=T, by = "associated_gene"),
 geneNum  <- geneNum %>% mutate(ratioPrevsPost = prenatalTranscripts/postnatalTranscripts, ratioPostvsPre = postnatalTranscripts/prenatalTranscripts)
 colnames(geneNum)[1:4] <- c("associated_gene","totalTranscripts","totalKnownTranscripts","totalNovelTranscripts")
 geneNum  <- geneNum %>% mutate(DiffGeneExp = ifelse(associated_gene %in% WholeDESeqGeneSig$age$associated_gene,TRUE,FALSE))
+# checking for the gene with most prenatal and postnatal transcripts
+geneNum %>% arrange(ratioPostvsPre) %>% head(.)
+geneNum %>% arrange(ratioPrevsPost) %>% head(.)
+geneNum %>% filter(DiffGeneExp == FALSE) %>% arrange(ratioPrevsPost, -postnatalTranscripts) %>%  head(.)
+geneNum %>% filter(DiffGeneExp == FALSE) %>% arrange(ratioPostvsPre, -prenatalTranscripts) %>%  head(.)
+geneNum %>% mutate(absoluteDiff = abs(prenatalTranscripts - postnatalTranscripts)) %>% arrange(-absoluteDiff) %>% head(.)
 write.csv(geneNum, paste0(output_dir,"NumberofTranscriptsPrevsPost.csv"), quote=F, row.names = F)
 
 # number of final transcripts per sample
