@@ -220,13 +220,13 @@ WholeDESeqGene$sex[WholeDESeqGene$sex$associated_gene == "HSP90AA1",]
 
 ## ------ AS events from FICLE ------ 
 
-figPlots$ASEvents <- finalTranscriptClassificationGene2  %>% 
+figPlots$ASEvents <- finalTranscriptClassificationGeneDev  %>% 
   filter(AS %in% c("A5A3", "AF", "AT", "ES", "IR", "NE_1st", "NE_Int", "NE_Last")) %>%
-  mutate(DevStatus = factor(DevStatus, levels = c("prenatal","postnatal","Both"))) %>%
+  mutate(DevStatus = factor(DevStatus, levels = c("Both","prenatal","postnatal"))) %>%
   group_by(AS, DevStatus) %>% tally(Frequency) %>% 
   ggplot(.,aes(x = reorder(AS, -n), y = n, fill = DevStatus)) + geom_bar(stat = "identity", position = position_dodge()) +
   labs(x = "AS events", y = "Frequency") %>% 
-  scale_fill_manual(labels = c("Prenatal","Postnatal","Both"), name = "", values = c(wes_palette("Royal1")[2],wes_palette("Royal1")[1],wes_palette("Royal1")[4])) +
+  scale_fill_manual(labels = c("Both","Prenatal","Postnatal"), name = "", values = c(wes_palette("Royal1")[2],wes_palette("Royal1")[1],wes_palette("Royal1")[4])) +
   labs(x = "AS events", y = "Frequency") +
   theme(legend.position = "top") +
   theme_classic()
@@ -234,7 +234,7 @@ figPlots$ASEvents <- finalTranscriptClassificationGene2  %>%
 
 ## ------ Targeted data ------ 
 
-SFARI = c('ADNP','AGAP1','ANK2','ANKRD11','ARID1B','ASH1L','ASPM','AUTS2','BCL11A','CACNA1C','CACNA1G','CACNA1H','CADPS','CADPS2','CD38','CDH13','CDH2','CDK13','CELF6','CHD2','CHD8','CLTCL1','CNOT1','CNTN4','CNTN6','CNTNAP2','CSMD1','CTNNA2','CYFIP1','DAGLA','DCC','DISC1','DLG4','DLGAP2','DMD','DPYD','DRD2','DRD3','DYRK1A','ELP4','EP300','FBXO40','FMR1','FOXP1','FOXP2','GABBR2','GPC6','GRIA3','GRIK2','GRIK3','GRIN1','GRIN2A','GRIN2B','H1-4','HERC1','IL1RAPL1','IMMP2L','ITPR1','KAT6B','KATNAL2','KCTD13','KDM6A','KDM6B','KIRREL3','LRBA','MAPT','MCM4','MCPH1','MECP2','MED13L','MEIS2','MET','NEGR1','NF1','NFIA','NFIB','NKX2-2','NLGN1','NLGN2','NLGN3','NLGN4X','NR3C2','NRXN1','NTNG1','NXPH1','OXTR','PARD3B','PAX6','PBX1','PCDH10','PCDH9','PHB','PJA1','POGZ','PRKN','PTEN','PTPRT','QRICH1','RBFOX1','RELN','RPL10','RUNX1T1','SCN1A','SCN2A','SCN8A','SET','SETD1A','SEZ6L2','SHANK3','SLC4A10','SLC9A9','SON','SRRM2','STAG1','STXBP1','SYNGAP1','SYP','TBL1XR1','TBR1','TCF4','TRIO','TSC1','TSC2','TSHZ3','UBE3A','USP7','VPS13B','WWOX','ZBTB16','ZBTB20','ZMYM2','ZNF18','ZNF804A')
+SFARI = c('ADNP','AGAP1','ANK2','ANKRD11','ARID1B','ASH1L','ASPM','AUTS2','BCL11A','CACNA1C','CACNA1G','CACNA1H','CADPS','CADPS2','CD38','CDH13','CDH2','CDK13','CELF6','CHD2','CHD8','CLTCL1','CNOT1','CNTN4','CNTN6','CNTNAP2','CSMD1','CTNNA2','CYFIP1','CUL1','DCC','DISC1','DLG4','DLGAP2','DMD','DPYD','DRD2','DRD3','DYRK1A','ELP4','EP300','FBXO40','FMR1','FOXP1','FOXP2','GABBR2','GPC6','GRIA3','GRIK2','GRIK3','GRIN1','GRIN2A','GRIN2B','H1-4','HERC1','IL1RAPL1','IMMP2L','ITPR1','KAT6B','KATNAL2','KCTD13','KDM6A','KDM6B','KIRREL3','LRBA','MAPT','MCM4','MCPH1','MECP2','MED13L','MEIS2','MET','NEGR1','NF1','NFIA','NFIB','NKX2-2','NLGN1','NLGN2','NLGN3','NLGN4X','NR3C2','NRXN1','NTNG1','NXPH1','OXTR','PARD3B','PAX6','PBX1','PCDH10','PCDH9','PHB','PJA1','POGZ','PRKN','PTEN','PTPRT','QRICH1','RBFOX1','RELN','RPL10','RUNX1T1','SCN1A','SCN2A','SCN8A','SET','SETD1A','SEZ6L2','SHANK3','SLC4A10','SLC9A9','SON','SRRM2','STAG1','STXBP1','SYNGAP1','SYP','TBL1XR1','TBR1','TCF4','TRIO','TSC1','TSC2','TSHZ3','UBE3A','USP7','VPS13B','WWOX','ZBTB16','ZBTB20','ZMYM2','ZNF18','ZNF804A')
 
 class.files$glob_targ_SQ_counts_matrix <- class.files$glob_targ_SQ %>% select(contains(c("Whole","Targeted"), ignore.case = FALSE)) 
 colnames(class.files$glob_targ_SQ_counts_matrix) <- paste(colnames(class.files$glob_targ_SQ_counts_matrix),"Reads",sep="_") 
@@ -242,56 +242,59 @@ class.files$glob_targ_SQ_counts_matrix <- cbind(class.files$glob_targ_SQ[,c("iso
 CombinedSFARI <- tabulateIF(class.files$glob_targ_SQ_counts_matrix %>% filter(associated_gene %in% SFARI), "Reads")
 figPlots$SFARIDIU <- plotIFGenes(CombinedSFARI)
 
-##--- DAGLA ---
-figPlots$DAGLADendro <- plot_dendro_Tgene(paste0(root_dir,"/ficle"),"DAGLA", cfiles = class.files$glob_targ_SQ)
-DAGLAIso <- data.frame(
-  Isoform = unlist(DAGLAIso <- list(
-    Reference = as.character(unique(gtf$ref[gtf$ref$gene_id == "DAGLA", "transcript_id"])),
-    `ES` = as.character(c("ONT11.3444.7446", "ONT11.3444.7443", "ONT11.3444.7427", "ONT11.3444.7422")),  
-    `AF, ES` = as.character(c("ONT11.3444.7620")),  
-    `AF` = as.character(c("ONT11.3444.7645","ONT11.3444.6615")),  
-    `AL` = as.character("ONT11.3444.7914"),  
-    `AF, AL` = as.character(c("ONT11.3444.7617"))  
+##--- EIF2S3 ---
+figPlots$EIF2S3Dendro <- plot_dendro_Tgene(paste0(root_dir,"/ficle"),"EIF2S3", cfiles = class.files$glob_targ_SQ)
+EIF2S3Iso <- data.frame(
+  Isoform = unlist(EIF2S3Iso <- list(
+    Ref = as.character(unique(gtf$ref[gtf$ref$gene_id == "EIF2S3", "transcript_id"])),
+    `ES` = as.character(paste0("ONTX.1042.",c("5856","5802","6053"))),
+    `AF, AL` = as.character(paste0("ONTX.1042.",c("5480","5468","5469","5775","5781","5780","10056","10606","5854")))
+    #`All` = as.character(finalTranscriptClassificationTranscript[finalTranscriptClassificationTranscript$associated_gene == "EIF2S3","isoform"]))
   )),
-  Category = rep(names(DAGLAIso), lengths(DAGLAIso))
+  Category = rep(names(EIF2S3Iso), lengths(EIF2S3Iso))
 )
-DAGLAIso$colour <- NA
-figPlots$DAGLAVis <- ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$glob_targ_SQ,
-                                isoList = c(as.character(DAGLAIso$Isoform)),
-                                selfDf = DAGLAIso, gene = "DAGLA")
+EIF2S3Iso$colour <- NA
+figPlots$EIF2S3IsoVis <- ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$glob_targ_SQ,
+                 isoList = c(as.character(EIF2S3Iso$Isoform)),
+                 selfDf = EIF2S3Iso, gene = "EIF2S3")
 
-##--- FOXP2 ---
-figPlots$FOXP2PDendro <- plot_dendro_Tgene(paste0(root_dir,"/ficle"),"FOXP2", cfiles = class.files$glob_targ_SQ)
-FOXP2Iso <- data.frame(
-  Isoform = unlist(FOXP2Iso <- list(
-    Reference = as.character(unique(gtf$ref[gtf$ref$gene_id == "FOXP2", "transcript_id"])),
-    `AP` = as.character(c("ONT7.4758.853", "ONT7.4758.46", "ONT7.4758.1615", "ONT7.4758.188", "ONT7.4758.194", "ONT7.4758.987")),
-    `AP, NE` = as.character(c("ONT7.4758.4670", "ONT7.4758.4597", "ONT7.4758.3486", "ONT7.4758.3496", "ONT7.4758.3122", "ONT7.4758.34", "ONT7.4758.3243")),
-    `AF, NE` = as.character(c("ONT7.4758.2928", "ONT7.4758.2695", "ONT7.4758.2801", "ONT7.4758.2809")),
-    `AF` = as.character(c("ONT7.4758.2661", "ONT7.4758.2859"))
-  )),
-  Category = rep(names(FOXP2Iso), lengths(FOXP2Iso))
-)
-FOXP2Iso$colour <- NA
-figPlots$FOXP2Vis <- ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$glob_targ_SQ,
-                        isoList = c(as.character(FOXP2Iso$Isoform)),
-                        selfDf = FOXP2Iso, gene = "FOXP2")
+figPlots$EIF2S3IsoVis
 
-##--- CACNA1G ---
-figPlots$CACNA1GPDendro <- plot_dendro_Tgene(paste0(root_dir,"/ficle"),"CACNA1G", cfiles = class.files$glob_targ_SQ)
-CACNA1GIso <- data.frame(
-  Isoform = unlist(CACNA1GIso <- list(
-    Reference = as.character(unique(gtf$ref[gtf$ref$gene_id == "CACNA1G", "transcript_id"])),
-    `ES` = c("ONT17.1148.1890", "ONT17.1148.1880", "ONT17.1148.1809", "ONT17.1148.1773", "ONT17.1148.1772"),
-    `IR` = c("ONT17.1148.1527", "ONT17.1148.1519", "ONT17.1148.1508", "ONT17.1148.1503", "ONT17.1148.1489"),
-    `IR, AF` = c("ONT17.1148.1394", "ONT17.1148.1383", "ONT17.1148.1329", "ONT17.1148.1373")
+##--- TCF4 ---
+figPlots$TCF4Dendro <- plot_dendro_Tgene(paste0(root_dir,"/ficle"),"TCF4", cfiles = class.files$glob_targ_SQ)
+TCF4Iso <- data.frame(
+  Isoform = unlist(TCF4Iso <- list(
+    Ref = as.character(unique(gtf$ref[gtf$ref$gene_id == "TCF4", "transcript_id"])),
+    `ES` = as.character(paste0("ONT18.3414.",c("9001","5493"))),
+    `AF, AL` = as.character(paste0("ONT18.3414.",c("9011","5489","5483","5394","5386","5404","31443","24439","24437","2323","671","5457")))
   )),
-  Category = rep(names(CACNA1GIso), lengths(CACNA1GIso))
+  Category = rep(names(TCF4Iso), lengths(TCF4Iso))
 )
-CACNA1GIso$colour <- NA
-figPlots$CACNA1Gvis <- ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$glob_targ_SQ,
-                          isoList = c(as.character(CACNA1GIso$Isoform)),
-                          selfDf = CACNA1GIso, gene = "CACNA1G")
+TCF4Iso$colour <- NA
+figPlots$TCF4IsoVis <- ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$glob_targ_SQ,
+                                   isoList = c(as.character(TCF4Iso$Isoform)),
+                                   selfDf = TCF4Iso, gene = "TCF4")
+
+figPlots$TCF4IsoVis
+
+##--- GRIA3 ---
+figPlots$GRIa3Dendro <- plot_dendro_Tgene(paste0(root_dir,"/ficle"),"GRIA3", cfiles = class.files$glob_targ_SQ)
+GRIA3Iso <- data.frame(
+  Isoform = unlist(GRIA3Iso <- list(
+    Ref = as.character(c(unique(gtf$ref[gtf$ref$gene_id == "GRIA3", "transcript_id"])[1],
+                               unique(gtf$ref[gtf$ref$gene_id == "GRIA3", "transcript_id"])[2])),
+    `ES` = as.character(paste0("ONTX.7320.",c("1086","1085","1051","4395","7694"))),
+    `AF, AL` = as.character(paste0("ONTX.7320.",c("8628","283","1152","1040","10119")))
+    #`All` = as.character(finalTranscriptClassificationTranscript[finalTranscriptClassificationTranscript$associated_gene == "GRIA3","isoform"])
+  )),
+  Category = rep(names(GRIA3Iso), lengths(GRIA3Iso))
+)
+GRIA3Iso$colour <- NA
+figPlots$GRIA3IsoVis <- ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$glob_targ_SQ,
+                                    isoList = c(as.character(GRIA3Iso$Isoform)),
+                                    selfDf = GRIA3Iso, gene = "GRIA3")
+
+figPlots$GRIA3IsoVis
 
 ##--- ERCC ---
 
@@ -446,15 +449,6 @@ pdf("SexDIU.pdf", width = 12, height = 10)
 plot_grid(GNAS_IF$vis, GNAS_IF$IF, ncol = 1, rel_heights = c(0.4,0.6))
 dev.off()
 
-# Figure 2
-pdf(paste0(output_dir, "Figure2A_DLGAP5.pdf"), width = 10, height = 6)
-figPlots$DLGAP5Vis
-dev.off()
-
-pdf(paste0(output_dir, "Figure2B_DLGAP5.pdf"), width = 5, height = 6)
-figPlots$DLGAP5Dendro
-dev.off()
-
 # Figure 4
 pdf(paste0(output_dir, "NovelTopRankedDevDiff_4b.pdf"), width = 10, height= 8)
 plot_grid(figPlots$Diff$topRankedGroup2Vis,figPlots$Diff$topRankedGroup2, ncol = 1, rel_widths = c(0.2,0.8))
@@ -477,18 +471,17 @@ pdf(paste0(output_dir, "Figure5A_SFARIDIU.pdf"), width = 30, height = 12)
 figPlots$SFARIDIU + theme(legend.position = "bottom", text=element_text(size=20))
 dev.off()
 
-pdf(paste0(output_dir,"DAGLA_Figure5A.pdf"), width = 10, height = 6)
-figPlots$DAGLAVis
+pdf(paste0(output_dir, "Figure5A_EIF2S3.pdf"), width = 8, height = 6)
+plot_grid(figPlots$EIF2S3Dendro, figPlots$EIF2S3IsoVis, ncol = 1, rel_widths = c(0.4,0.6))
 dev.off()
 
-pdf(paste0(output_dir,"FOXP2_Figure5B.pdf"), width = 10, height = 6)
-figPlots$FOXP2Vis
+pdf(paste0(output_dir, "Figure5B_TCF4.pdf"), width = 8, height = 6)
+plot_grid(figPlots$TCF4Dendro, figPlots$TCF4IsoVis, ncol = 1, rel_widths = c(0.4,0.6))
 dev.off()
 
-pdf(paste0(output_dir,"CACNA1G_Figure5C.pdf"), width = 10, height = 6)
-figPlots$CACNA1Gvis
+pdf(paste0(output_dir, "Figure5C_GRIA3.pdf"), width = 8, height = 6)
+plot_grid(figPlots$GRIa3Dendro, figPlots$GRIA3IsoVis, ncol = 1, rel_widths = c(0.4,0.6))
 dev.off()
-
 
 # supplementary figures
 pdf(paste0(output_dir,"FICLEASEventsPerGene.pdf"), width = 10, height = 6)
