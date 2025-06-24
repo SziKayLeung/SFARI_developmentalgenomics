@@ -231,6 +231,9 @@ figPlots$ASEvents <- finalTranscriptClassificationGeneDev  %>%
   theme(legend.position = "top") +
   theme_classic()
 
+# most highly expressed ES transcript
+ES <- finalTranscriptClassificationTranscript %>% filter(ES == 1) 
+class.files$glob_SQ[class.files$glob_SQ$isoform %in% ES$isoform,] %>% arrange(-whole_nreads) %>% filter(structural_category != "FSM",)
 
 ## ------ Targeted data ------ 
 
@@ -260,22 +263,24 @@ figPlots$EIF2S3IsoVis <- ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$
 
 figPlots$EIF2S3IsoVis
 
-##--- TCF4 ---
-figPlots$TCF4Dendro <- plot_dendro_Tgene(paste0(root_dir,"/ficle"),"TCF4", cfiles = class.files$glob_targ_SQ)
-TCF4Iso <- data.frame(
-  Isoform = unlist(TCF4Iso <- list(
-    Ref = as.character(unique(gtf$ref[gtf$ref$gene_id == "TCF4", "transcript_id"])),
-    `ES` = as.character(paste0("ONT18.3414.",c("9001","5493"))),
-    `AF, AL` = as.character(paste0("ONT18.3414.",c("9011","5489","5483","5394","5386","5404","31443","24439","24437","2323","671","5457")))
+##--- ZMYM2 ---
+figPlots$ZMYM2Dendro <- plot_dendro_Tgene(paste0(root_dir,"/ficle"),"ZMYM2", cfiles = class.files$glob_SQ)
+ZMYM2Iso <- data.frame(
+  Isoform = unlist(ZMYM2Iso <- list(
+    Ref = as.character(unique(gtf$ref[gtf$ref$gene_id == "ZMYM2", "transcript_id"])),
+    #`All` = as.character(finalTranscriptClassificationTranscript[finalTranscriptClassificationTranscript$associated_gene == "ZMYM2","isoform"])
+    `short` = as.character(paste0("ONT13.221.",c("14182","13982"))),
+    `A5, A3` = as.character(paste0("ONT13.221.",c("10867","9456","9499"))),
+    `AF, AL` = as.character(paste0("ONT13.221.",c("10705","10817","11735","13108")))
   )),
-  Category = rep(names(TCF4Iso), lengths(TCF4Iso))
+  Category = rep(names(ZMYM2Iso), lengths(ZMYM2Iso))
 )
-TCF4Iso$colour <- NA
-figPlots$TCF4IsoVis <- ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$glob_targ_SQ,
-                                   isoList = c(as.character(TCF4Iso$Isoform)),
-                                   selfDf = TCF4Iso, gene = "TCF4")
+ZMYM2Iso$colour <- NA
+figPlots$ZMYM2IsoVis <- ggTranPlots(inputgtf=gtf$merged,classfiles=class.files$glob_targ_SQ,
+                                    isoList = c(as.character(ZMYM2Iso$Isoform)),
+                                    selfDf = ZMYM2Iso, gene = "ZMYM2")
+figPlots$ZMYM2IsoVis
 
-figPlots$TCF4IsoVis
 
 ##--- GRIA3 ---
 figPlots$GRIa3Dendro <- plot_dendro_Tgene(paste0(root_dir,"/ficle"),"GRIA3", cfiles = class.files$glob_targ_SQ)
@@ -475,8 +480,8 @@ pdf(paste0(output_dir, "Figure5A_EIF2S3.pdf"), width = 8, height = 6)
 plot_grid(figPlots$EIF2S3Dendro, figPlots$EIF2S3IsoVis, ncol = 1, rel_widths = c(0.4,0.6))
 dev.off()
 
-pdf(paste0(output_dir, "Figure5B_TCF4.pdf"), width = 8, height = 6)
-plot_grid(figPlots$TCF4Dendro, figPlots$TCF4IsoVis, ncol = 1, rel_widths = c(0.4,0.6))
+pdf(paste0(output_dir, "Figure5B_ZMYM2.pdf"), width = 8, height = 6)
+plot_grid(figPlots$ZMYM2Dendro, figPlots$ZMYM2IsoVis, ncol = 1, rel_widths = c(0.4,0.6))
 dev.off()
 
 pdf(paste0(output_dir, "Figure5C_GRIA3.pdf"), width = 8, height = 6)

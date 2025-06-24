@@ -227,7 +227,8 @@ gtf$RPS27A <- as.data.frame(rtracklayer::import(paste0(root_dir,"sqanti/RPS27A.g
 gtf$EIF2S3 <- as.data.frame(rtracklayer::import(paste0(root_dir,"sqanti/EIF2S3.gtf"))) 
 gtf$TCF4 <- as.data.frame(rtracklayer::import(paste0(root_dir,"sqanti/TCF4.gtf"))) 
 gtf$HERC1 <- as.data.frame(rtracklayer::import(paste0(root_dir,"sqanti/HERC1.gtf"))) 
-gtf$GRIA3 <- as.data.frame(rtracklayer::import(paste0(root_dir,"sqanti/GRIA3.gtf"))) 
+gtf$GRIA3 <- as.data.frame(rtracklayer::import(paste0(root_dir,"sqanti/GRIA3.gtf")))
+gtf$ZMYM2 <- as.data.frame(rtracklayer::import(paste0(root_dir,"sqanti/ZMYM2.gtf")))
 
 gtf$ref <- data.table::fread(paste0(root_dir,"utils/refExons.gtf")) %>% dplyr::rename("gene_id" = "gene_name") %>% mutate(type = "exon")
 gtf <- lapply(gtf, function(x) x[,c("seqnames","strand","start","end","type","transcript_id","gene_id")])
@@ -247,10 +248,11 @@ gtf$merged <- rbind(gtf$ONT18.5258.1932[,c("seqnames","strand","start","end","ty
                     gtf$TCF4[,c("seqnames","strand","start","end","type","transcript_id","gene_id")],
                     gtf$HERC1[,c("seqnames","strand","start","end","type","transcript_id","gene_id")],
                     gtf$GRIA3[,c("seqnames","strand","start","end","type","transcript_id","gene_id")],
+                    gtf$ZMYM2[,c("seqnames","strand","start","end","type","transcript_id","gene_id")],
                     gtf$ref[,c("seqnames","strand","start","end","type","transcript_id","gene_id")])
 
 GI <- c("GRIN2A","GRIA3","SEPTIN4","RTN4","MBP","RPS4Y1","XIST","ADD3","CNTNAP2","ANKRD12","VXN","PKM","MORF4L2","GNAS","RSP27A","CHN1","GPM6A",
-        "TCF4","HERC1")
+        "TCF4","HERC1","ZMYM2")
 RefIsoforms <- lapply(GI, function(x) unique(gtf$ref[gtf$ref$gene_id == x & !is.na(gtf$ref$transcript_id), "transcript_id"]))
 names(RefIsoforms) <- GI
 

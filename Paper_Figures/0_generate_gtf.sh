@@ -12,6 +12,9 @@ grep -w ONTX.1042 ${input}/sqantifiltered_monoexonicfiltered_2reads2samples.filt
 grep -w ONT18.3414 ${input}/sqantifiltered_monoexonicfiltered_2reads2samples.filtered.gtf > ${output}/TCF4.gtf
 grep -w ONT15.1596 ${input}/sqantifiltered_monoexonicfiltered_2reads2samples.filtered.gtf > ${output}/HERC1.gtf
 grep -w ONTX.7320 ${input}/sqantifiltered_monoexonicfiltered_2reads2samples.filtered.gtf > ${output}/GRIA3.gtf
+grep -w ONT13.221 ${input}/sqantifiltered_monoexonicfiltered_2reads2samples.filtered.gtf > ${output}/ZMYM2.gtf
+grep -w ONT21.2369 ${input}/sqantifiltered_monoexonicfiltered_2reads2samples.filtered.gtf > ${output}/SON.gtf
+grep -w  ONT14.236 ${input}/sqantifiltered_monoexonicfiltered_2reads2samples.filtered.gtf > ${output}/CHD8.gtf
 grep -w ONT14.1780 ${input}/sqantifiltered_monoexonicfiltered_2reads2samples_whole_intergenicGenicIntron.filtered.gtf > ${output}/DLGAP5.gtf
 grep -w ONT4.13313 ${input}/sqantifiltered_monoexonicfiltered_2reads2samples_whole_intergenicGenicIntron.filtered.gtf > ${output}/GPM6A.gtf
 grep -w ONTX.6284 ${input}/sqantifiltered_monoexonicfiltered_2reads2samples_whole_intergenicGenicIntron.filtered.gtf > ${output}/MORF4L2.gtf
