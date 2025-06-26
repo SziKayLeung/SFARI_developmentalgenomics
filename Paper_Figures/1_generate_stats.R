@@ -462,6 +462,18 @@ class.files$glob_SQ_proteinGenes_NE %>% select(isoform, associated_gene, whole_n
 
 ## ---------- Proteogenomics ----------
 
+# high-level coding potential (cpat)
+cpat_glob_SQ <- merge(cpat, class.files$glob_SQ[,c("isoform","structural_category")], by.x = "seq_ID", by.y = "isoform")
+cpat_glob_SQ <- cpat_glob_SQ  %>% filter(seq_ID %in% class.files$glob_SQ$isoform)
+cpat_glob_SQ_high_coding <- cpat_glob_SQ %>% filter(Coding_prob >= 0.364)
+message("Number of transcripts with predicted CPAT score: ", length(unique(cpat_glob_SQ$seq_ID)))
+message("% of transcripts with predicted CPAT score: ", length(unique(cpat_glob_SQ$seq_ID))/nrow(class.files$glob_SQ))
+message("Number of transcripts with high prediction score: ", length(unique(cpat_glob_SQ_high_coding$seq_ID)))
+message("% of transcripts with high prediction score, NIC: ", 
+        nrow(cpat_glob_SQ_high_coding[cpat_glob_SQ_high_coding$structural_category == "NIC",])/length(unique(cpat_glob_SQ$seq_ID)) * 100)
+message("% of transcripts with high prediction score, NNC: ", 
+        nrow(cpat_glob_SQ_high_coding[cpat_glob_SQ_high_coding$structural_category == "NNC",])/length(unique(cpat_glob_SQ$seq_ID)) * 100)
+
 message("Number of RNA Transcripts to all genes:", nrow(class.files$glob_SQ))
 message("Number of coding RNA isoforms:", length(unique(proteinInput$t2p.collapse.refined$pb_acc)))
 message("Number of coding RNA isoforms:", length(unique(proteinInput$t2p.collapse.refined$corrected_acc)))
