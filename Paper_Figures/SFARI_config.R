@@ -15,15 +15,21 @@ suppressMessages(library("tidyr"))
 
 LOGEN <- "C:/Users/sl693/OneDrive - University of Exeter/ExeterPostDoc/2_Scripts/LOGen"
 root_dir <- "C:/Users/sl693/OneDrive - University of Exeter/ExeterPostDoc/1_Projects/SFARI/PaperZenodo/"
-output_dir <- "C:/Users/sl693/OneDrive - University of Exeter/ExeterPostDoc/1_Projects/SFARI/Output"
+output_dir <- "C:/Users/sl693/OneDrive - University of Exeter/ExeterPostDoc/1_Projects/SFARI/Output/"
+source(paste0(LOGEN, "miscellaneous/convert_ensembl_to_symbol.R")) # convert ensembl to gene symbol
 
 TargetGene <- read.table(paste0(root_dir, "metadata/Complete_TargetGenes_TargetedSequencing.txt"))[["V1"]]
+TargetGeneS2 <- read.table(paste0(root_dir, "utils/targetGenesSupplementaryTable2.txt"))
 ProteinCodingGenes <- read.table(paste0(root_dir, "/utils/protein-coding-genes.txt"))[["V1"]]
 message("Known protein coding genes: ", length(ProteinCodingGenes))
 
 MANEselectGenes <- fread(paste0(root_dir, "utils/MANE.GRCh38.v1.4.summary.txt"), data.table = F) %>% 
   filter(MANE_status == "MANE Select")
 length(unique(MANEselectGenes$symbol)) == nrow(MANEselectGenes)
+
+# check difference in TargetGeneLists
+setdiff(TargetGeneS2$V1,TargetGene)
+length(unique(TargetGeneS2$V1))
 
 ## ------------- Phenotype files -------------------
 
@@ -46,9 +52,41 @@ manifest <- fread(paste0(root_dir, "metadata/WholeTargetedphenotype_manifest.csv
 
 ## -------------- Final classification files ------------- 
 
-load(file = paste0(root_dir,"sqanti/sqantifiltered_monoexonicfiltered_2reads2samples.RData"))
-class.files$glob_SQ_annoGene <- class.files$glob_SQ %>% filter(!grepl("novelGene", associated_gene))
-class.files$glob_SQ_annoGene <- class.files$glob_SQ_annoGene %>% mutate(novelTranscript = ifelse(associated_transcript == "novel","Novel","Known"))
+# load glob_targ_SQ, glob_SQ, glob_SQ_annoGene, targ_SQ
+load(file = paste0(root_dir,"sqanti/sqantifiltered_monoexonicfiltered_2reads2samples_v2.RData"))
+class.files$glob_SQ_annoGene <- class.files$glob_SQ %>% filter(!grepl("novelGene", associated_gene)) %>% mutate(novelTranscript = ifelse(associated_transcript == "novel","Novel","Known"))
+class.files$glob_targ_SQ_default_annoGene <- class.files$glob_targ_SQ_default %>% filter(!grepl("novelGene", associated_gene)) %>% mutate(novelTranscript = ifelse(associated_transcript == "novel","Novel","Known"))
+
+# recount support 
+recountSupport <- fread(paste0(root_dir, "sqanti/sqanti_final_recount_support.txt.gz"))
+
+# further filtering of 10 reads, 10 samples 
+# more stringent filtering beyond 2 reads, 2 samples
+# whole+targeted, nreads, nsamples
+class.files$glob_targ_SQ <- class.files$glob_targ_SQ %>% filter(nreads >= 10 & nsamples >= 10)
+class.files$glob_targ_SQ_default <- class.files$glob_targ_SQ_default %>% filter(nreads >= 10 & nsamples >= 10)
+# glob_SQ: whole_nreads, whole_nsamples
+class.files$glob_SQ_default <- class.files$glob_targ_SQ_default %>% filter(whole_nreads >= 10 & whole_nsamples >= 10)
+class.files$glob_SQ_default_annoGene <- class.files$glob_targ_SQ_default_annoGene %>% filter(whole_nreads >= 10 & whole_nsamples >= 10) 
+class.files$glob_SQ_annoGene <- class.files$glob_SQ_annoGene %>% filter(whole_nreads >= 10 & whole_nsamples >= 10) 
+class.files$glob_SQ <- class.files$glob_SQ %>% filter(whole_nreads >= 10 & whole_nsamples >= 10)
+# targeted: targeted_nreads, targeted_nsamples
+class.files$targ_SQ <- class.files$glob_SQ_annoGene %>% filter(targeted_nreads >= 10 & targeted_nsamples >= 10)
+
+# only keep if full support
+recountSupport <- recountSupport %>% mutate(ToKeep = ifelse(propsupportedjunctions == 1, TRUE, FALSE))
+# To keep ISM and FSM regardless of recount support
+recountSupport <- recountSupport %>% mutate(ToKeep = ifelse(structural_category %in% c("FSM","ISM"), TRUE, ToKeep))
+# unique(recountSupport[recountSupport$structural_category == "FSM","ToKeep"])
+# unique(recountSupport[recountSupport$structural_category == "ISM","ToKeep"])
+# unique(recountSupport[!recountSupport$structural_category %in% c("FSM","ISM") & recountSupport$ToKeep == TRUE, "propsupportedjunctions"])
+supportedRecountSupport <- recountSupport[recountSupport$ToKeep == TRUE, ]
+class.files <- lapply(class.files, function(x) x %>% filter(isoform %in% supportedRecountSupport$isoform))
+
+# check all transcripts in glob_SQ_annoGene in glob_SQ
+if(length(setdiff(class.files$glob_SQ_annoGene$isoform, class.files$glob_SQ$isoform)) != 0){
+  message("Error: isoforms in class.files$glob_SQ_annoGene not in class.files$glob_SQ")
+}
 
 annoGenesStats <- list(
   novelTrans = class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$associated_transcript == "novel",],
@@ -59,6 +97,14 @@ annoGenesStats <- list(
 
 ## Protein level 
 class.files$protein_filtered = fread(paste0(root_dir,"/proteomics/Whole.sqanti_protein_classification.tsv"),data.table = F)
+# keep only 10 reads, 10 samples isoforms
+class.files$protein_filtered <- class.files$protein_filtered %>% filter(pb %in% class.files$glob_targ_SQ$isoform)
+# annotate ensembl to gene symbol
+class.files$protein_filtered$associated_gene <- class.files$protein_filtered$pr_gene
+class.files$protein_filtered <- convert_ensembl_to_genename(unique(class.files$protein_filtered))
+
+# cpat
+cpat <- fread(paste0(root_dir,"/proteomics/WholeTargeted_filtered_finalversion.ORF_prob.best.tsv"), stringsAsFactors = F, data.table = F)
 
 ## prenatal vs postnatal
 class.files$glob_SQ_annoGene_prenatal <- class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$preReads >= 1,]
@@ -68,13 +114,25 @@ class.files$glob_SQ_annoGene_postnatal <- class.files$glob_SQ_annoGene[class.fil
 class.files$glob_SQ_proteinGenes <- class.files$glob_SQ[class.files$glob_SQ$associated_gene %in% ProteinCodingGenes,]
 
 ## intergenic and fusion (from K.Chundru with strict filters)
-fusion <- read.csv(paste0(root_dir, "/sqanti/fusion.csv"))
-intergenic <- read.csv(paste0(root_dir, "/sqanti/intergenic.csv"))
+fusion <- read.csv(paste0(root_dir, "/sqanti/fusion.csv")) %>% filter(isoform %in% class.files$glob_SQ$isoform)
+intergenic <- read.csv(paste0(root_dir, "/sqanti/intergenic.csv")) %>% filter(isoform %in% class.files$glob_SQ$isoform)
 
 ## generate FL reads for QC report
 wholeTargetedDemux <- class.files$glob_targ_SQ %>% select(isoform, contains("Whole"), -whole_nreads, -whole_nsamples) 
 colnames(wholeTargetedDemux)[1] <- "id"
-write.csv(wholeTargetedDemux, paste0(output_dir, "/wholeTargeted_demux_fl_count.csv"), row.names = F)
+#write.csv(wholeTargetedDemux, paste0(output_dir, "/wholeTargeted_demux_fl_count.csv"), row.names = F)
+
+# write output
+#write.table(class.files$glob_SQ, paste0(root_dir, "sqanti/sqantifiltered_monoexonicfiltered_10reads10samplesRecount_whole_classification.txt"), sep = "\t", row.names = F, quote = F)
+#write.table(class.files$glob_targ_SQ, paste0(root_dir, "sqanti/sqantifiltered_monoexonicfiltered_10reads10samplesRecount_classification.txt"), sep = "\t", row.names = F, quote = F)
+
+# genrate gtf for recount
+write.table(class.files$glob_targ_SQ$isoform, paste0(root_dir, "sqanti/sqantifiltered_monoexonicfiltered_10reads10samplesRecount_isoform.txt"), 
+            sep = "\t", col.names = F, row.names = F, quote = F)
+# gtf 
+#originalGtf=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/C_Whole_Targeted/9_sqanti_final/sqantifiltered_monoexonicfiltered_2reads2samples.filtered.gtf
+#cd /lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI/C_Whole_Targeted/9_sqanti_final/
+#grep -f sqantifiltered_monoexonicfiltered_10reads10samplesRecount_isoform.txt ${originalGtf} > sqantifiltered_monoexonicfiltered_10reads10samplesRecount.gtf
 
 ## -------------- Bambu ---------------- 
 
@@ -111,13 +169,13 @@ WholeDTEAll$sex <- merge(WholeDTEAll$sex, class.files$glob_targ_SQ[,c("isoform",
 ## -------------- differential gene expression -------------
 
 WholeDESeqGeneSig <- list(
-  sex = as.data.frame(fread(paste0(root_dir,"DTE/DESeq2_whole_gene_sex_resSig.csv"))),
-  age = as.data.frame(fread(paste0(root_dir,"DTE/DESeq2_whole_gene_development_resSig.csv")))
+  sex = as.data.frame(fread(paste0(root_dir,"DGE/DESeq2_whole_gene_sex_resSig.csv"))),
+  age = as.data.frame(fread(paste0(root_dir,"DGE/DESeq2_whole_gene_development_resSig.csv")))
 )
 
 WholeDESeqGene <- list(
-  sex = as.data.frame(fread(paste0(root_dir,"DTE/DESeq2_whole_gene_sex_resSig.csv"))),
-  age = as.data.frame(fread(paste0(root_dir,"DTE/DESeq2_whole_gene_development_resSig.csv")))
+  sex = as.data.frame(fread(paste0(root_dir,"DGE/DESeq2_whole_gene_sex_resAll.csv"))),
+  age = as.data.frame(fread(paste0(root_dir,"DGE/DESeq2_whole_gene_development_resAll.csv")))
 )
 
 ## -------------- differential isoform usage ----------------
@@ -132,7 +190,8 @@ DIUSig <- lapply(DIUSig, function(x) x[complete.cases(x),])
 DIUnormExp = list(
   GNAS_sex = paste0(root_dir, "DIU/GNAS_normalised_expression.txt"),
   GMP6A_group = paste0(root_dir, "DIU/GPM6A_normalised_expression.txt"),
-  MORF4L2_group = paste0(root_dir, "DIU/MORF4L2_normalised_expression.txt")
+  MORF4L2_group = paste0(root_dir, "DIU/MORF4L2_normalised_expression.txt"),
+  HSP90AA1_sex = paste0(root_dir, "DIU/HSP90AA1_normalised_expression.txt")
 )
 
 ## -------------- normalized counts ----------------
@@ -169,6 +228,11 @@ gtf$FOXP2 <- as.data.frame(rtracklayer::import(paste0(root_dir,"sqanti/FOXP2.gtf
 gtf$DAGLA <- as.data.frame(rtracklayer::import(paste0(root_dir,"sqanti/DAGLA.gtf"))) 
 gtf$CACNA1G <- as.data.frame(rtracklayer::import(paste0(root_dir,"sqanti/CACNA1G.gtf"))) 
 gtf$RPS27A <- as.data.frame(rtracklayer::import(paste0(root_dir,"sqanti/RPS27A.gtf"))) 
+gtf$EIF2S3 <- as.data.frame(rtracklayer::import(paste0(root_dir,"sqanti/EIF2S3.gtf"))) 
+gtf$TCF4 <- as.data.frame(rtracklayer::import(paste0(root_dir,"sqanti/TCF4.gtf"))) 
+gtf$HERC1 <- as.data.frame(rtracklayer::import(paste0(root_dir,"sqanti/HERC1.gtf"))) 
+gtf$GRIA3 <- as.data.frame(rtracklayer::import(paste0(root_dir,"sqanti/GRIA3.gtf")))
+gtf$ZMYM2 <- as.data.frame(rtracklayer::import(paste0(root_dir,"sqanti/ZMYM2.gtf")))
 
 gtf$ref <- data.table::fread(paste0(root_dir,"utils/refExons.gtf")) %>% dplyr::rename("gene_id" = "gene_name") %>% mutate(type = "exon")
 gtf <- lapply(gtf, function(x) x[,c("seqnames","strand","start","end","type","transcript_id","gene_id")])
@@ -184,23 +248,17 @@ gtf$merged <- rbind(gtf$ONT18.5258.1932[,c("seqnames","strand","start","end","ty
                     gtf$DLGAP5[,c("seqnames","strand","start","end","type","transcript_id","gene_id")],
                     gtf$CACNA1G[,c("seqnames","strand","start","end","type","transcript_id","gene_id")],
                     gtf$RPS27A[,c("seqnames","strand","start","end","type","transcript_id","gene_id")],
+                    gtf$EIF2S3[,c("seqnames","strand","start","end","type","transcript_id","gene_id")],
+                    gtf$TCF4[,c("seqnames","strand","start","end","type","transcript_id","gene_id")],
+                    gtf$HERC1[,c("seqnames","strand","start","end","type","transcript_id","gene_id")],
+                    gtf$GRIA3[,c("seqnames","strand","start","end","type","transcript_id","gene_id")],
+                    gtf$ZMYM2[,c("seqnames","strand","start","end","type","transcript_id","gene_id")],
                     gtf$ref[,c("seqnames","strand","start","end","type","transcript_id","gene_id")])
 
-GI <- c("GRIN2A","GRIA3","SEPTIN4","RTN4","MBP","RPS4Y1","XIST","ADD3","CNTNAP2","ANKRD12","VXN","PKM","MORF4L2","GNAS","RSP27A","CHN1","GPM6A")
+GI <- c("GRIN2A","GRIA3","SEPTIN4","RTN4","MBP","RPS4Y1","XIST","ADD3","CNTNAP2","ANKRD12","VXN","PKM","MORF4L2","GNAS","RSP27A","CHN1","GPM6A",
+        "TCF4","HERC1","ZMYM2")
 RefIsoforms <- lapply(GI, function(x) unique(gtf$ref[gtf$ref$gene_id == x & !is.na(gtf$ref$transcript_id), "transcript_id"]))
 names(RefIsoforms) <- GI
-
-
-## -------------- disease list ----------------
-
-diseasegenelists <- "/gpfs/mrc0/projects/Research_Project-MRC148213/sl693/scripts/SFARI_developmentalgenomics/0_utilities/disease_list/"
-SFARI <- read.csv(paste0(diseasegenelists,"SFARI-Gene_genes_07-17-2023release_09-26-2023export.csv"),header=T)
-SFARI_CLASS_1_2_S <- subset(SFARI$gene.symbol, SFARI$gene.score == 1 | SFARI$gene.score == 2 |SFARI$syndromic == 1)
-SFARI_CLASS_1_2 <- subset(SFARI$gene.symbol, SFARI$gene.score == 1 | SFARI$gene.score == 2)
-disease_list <- list(
-  SCHEMA = read.table(paste0(diseasegenelists,"SCHEMA_Oct2023.csv"), sep=",", header=T, stringsAsFactors = F),
-  DDG2P = read.table(paste0(diseasegenelists,"DDG2P_26_9_2023.csv"), sep=",", header=T, stringsAsFactors = F) %>% filter(confidence.category != "limited")
-)
 
 
 ## -------------- long read proteoogenomics ----------------
@@ -211,7 +269,7 @@ load(paste0(root_dir,"proteomics/proteinInputWhole.RData"))
 # filter protein input to only the class files (pb_accs as this was the original pb_accs before being collapsed)
 proteinInput$t2p.collapse <- proteinInput$t2p.collapse %>% filter(pb_accs %in% class.files$glob_SQ$isoform)
 
-proteinInput$filtered <- read.table(paste0(root_dir,"proteomics/Whole.classification_filtered.tsv"), sep = "/t", header = T)
+proteinInput$filtered <- fread(paste0(root_dir,"proteomics/Whole.classification_filtered.tsv"), data.table = F)
 
 
 ## -------------- mass spectrometry ----------------
@@ -233,12 +291,12 @@ ercc.stats <- fread(paste0(root_dir,"ERCC/ERCC_Stats.csv"))
 # gffcompare output 
 gfftmapComparisons <- list(
   cellReports = data.table::fread(paste0(root_dir, "overlapDatasets/sfari_PacBio.HumanCTX.collapsed_classification.filtered_lite.gtf.tmap"), data.table = FALSE),
-  directRNA = data.table::fread(paste0(root_dir, "overlapDatasets/sfari_dRNA.sqantifiltered_monoexonicfiltered_2reads2samples.filtered.gtf.tmap"), data.table = FALSE),
-  BDRNatureComms = data.table::fread(paste0(root_dir, "overlapDatasets/sfari_BDR.ontBDR_collapsed.filtered_counts_filtered.gtf.tmap"), data.table = FALSE),
-  Patowary = data.table::fread(paste0(root_dir, "overlapDatasets/sfari_Patowary.cp_vz_0.75_min_7_recovery_talon_corrected.gtf.tmap"), data.table = FALSE),
-  PatowaryHerberle = data.table::fread(paste0(root_dir,"overlapDatasets/Heberle_Patowary.cp_vz_0.75_min_7_recovery_talon_corrected.gtf.tmap"), data.table = FALSE),
-  Herberle = data.table::fread(paste0(root_dir,"overlapDatasets/Bamford_Heberle.extended_annotations.gtf.tmap"), data.table = FALSE),
-  HerberleBamford = data.table::fread(paste0(root_dir,"overlapDatasets/Heberle_Bamford.sqantifiltered_monoexonicfiltered_2reads2samples_whole_intergenicGenicIntron.filtered.gtf.tmap"), data.table = FALSE)
+  directRNA = data.table::fread(paste0(root_dir, "overlapDatasets/sfari_dRNA.sqantifiltered_monoexonicfiltered_2reads2samples.filtered.gtf.tmap"), data.table = FALSE)#,
+  #BDRNatureComms = data.table::fread(paste0(root_dir, "overlapDatasets/sfari_BDR.ontBDR_collapsed.filtered_counts_filtered.gtf.tmap"), data.table = FALSE),
+  #Patowary = data.table::fread(paste0(root_dir, "overlapDatasets/sfari_Patowary.cp_vz_0.75_min_7_recovery_talon_corrected.gtf.tmap"), data.table = FALSE),
+  #PatowaryHerberle = data.table::fread(paste0(root_dir,"overlapDatasets/Heberle_Patowary.cp_vz_0.75_min_7_recovery_talon_corrected.gtf.tmap"), data.table = FALSE),
+  #Herberle = data.table::fread(paste0(root_dir,"overlapDatasets/Bamford_Heberle.extended_annotations.gtf.tmap"), data.table = FALSE),
+  #HerberleBamford = data.table::fread(paste0(root_dir,"overlapDatasets/Heberle_Bamford.sqantifiltered_monoexonicfiltered_2reads2samples_whole_intergenicGenicIntron.filtered.gtf.tmap"), data.table = FALSE)
 )
 
 # from zenodo
@@ -247,7 +305,7 @@ humanCTX$totalFL <- humanCTX %>% dplyr::select(contains("FL.")) %>% apply(.,1,su
 # copied from here: /lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/dRNA/Rosie/9_sqanti_final
 directRNA <- fread(paste0(root_dir, "overlapDatasets/sqantifiltered_monoexonicfiltered_2reads2samples_classification.txt"), data.table = FALSE)
 # copied from here: /lustre/projects/Research_Project-MRC148213/lsl693/AD_BDR/D_ONT/5_cupcake/7_sqanti3
-BDRNatureComms <- read.table(paste0(root_dir, "ontBDR_collapsed_RulesFilter_result_classification.targetgenes_counts_filtered.txt"), header = TRUE, sep = "/t", as.is = T)
+BDRNatureComms <- data.table::fread(paste0(root_dir, "overlapDatasets/ontBDR_collapsed_RulesFilter_result_classification.targetgenes_counts_filtered.txt"),data.table = FALSE)
 PatowaryCTX <- data.table::fread(paste0(root_dir, "overlapDatasets/cp_vz_0.75_min_7_recovery_talon_classification.txt"), data.table = FALSE)
 HerberleCTX <- data.table::fread(paste0(root_dir, "overlapDatasets/fullLengthCounts_transcript.txt"), data.table = FALSE) %>% mutate(isoform = TXNAME)
 
@@ -270,7 +328,7 @@ finalTranscriptClassificationTranscript$isoform <- as.factor(finalTranscriptClas
 finalTranscriptClassificationTranscript$associated_gene <- as.factor(finalTranscriptClassificationTranscript$associated_gene)
 finalTranscriptClassificationTranscript$DevStatus <- as.factor(finalTranscriptClassificationTranscript$DevStatus)
 finalTranscriptClassificationTranscript <- finalTranscriptClassificationTranscript %>% mutate_if(is.character, as.numeric)
-
+#length(unique(finalTranscriptClassificationGene$associated_gene))
 
 # aggregate the number of splicing events per column 
 finalTranscriptClassificationGene <- aggregate(. ~ associated_gene, finalTranscriptClassificationTranscript %>% select(-isoform, - DevStatus), sum)
@@ -293,3 +351,6 @@ schemaGenes <- read.table(paste0(root_dir, "metadata/schema_genes.txt"), col.nam
 
 selectedTargetGenes <- unique(c(as.character(monoAllelicDDP), as.character(SFARI), as.character(schemaGenes$Gene), as.character(biallelicDDP), GWAS))
 length(selectedTargetGenes)
+setdiff(selectedTargetGenes, TargetGene)
+setdiff(selectedTargetGenes, TargetGeneS2$V1)
+setdiff(TargetGeneS2$V1, selectedTargetGenes)

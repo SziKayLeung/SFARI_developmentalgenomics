@@ -162,6 +162,7 @@ if(opt$design == "development"){
 dds <- estimateSizeFactors(dds)
 norm <- counts(dds, normalized=TRUE) %>% reshape2::melt() %>% `colnames<-`(c("isoform", "sample", "normalised_counts"))
 
+cat("Threshold: ", opt$threshold, "\n")
 cat("Number of isoforms before filtering:", nrow(dds),"\n")
 cat("Filtering isoform on count threshold:", opt$threshold,"\n")
 dds <- dds[rowSums(counts(dds)) > opt$threshold, ] 

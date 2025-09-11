@@ -16,6 +16,9 @@ suppressMessages(library("tibble"))
 suppressMessages(library(gridExtra))
 suppressMessages(library(grid))
 suppressMessages(library(VennDiagram))
+suppressMessages(library("ggplot2"))
+suppressMessages(library("patchwork"))
+
 futile.logger::flog.threshold(futile.logger::ERROR, name = "VennDiagramLogger")
 
 ## ---------- Packages -----------------
@@ -53,6 +56,44 @@ label_group <- function(genotype){
 }
 
 ## ---------- numIso -----------------
+
+# adapted Kartik's scripts for Main Figure 1
+summary_plots <- function(){
+  
+  # whole_transcriptome dataset
+  
+  # cpat
+  dat <- left_join(class.files$glob_SQ, cpat, by=c('isoform'='seq_ID'))
+  dat <- dat[which(dat$structural_category%in%c('', 'Antisense', 'Intergenic')==F),]
+  
+  dat$structural_category <- factor(dat$structural_category, levels=c('FSM', 'ISM', 'NIC', 'NNC', 'Genic_Genomic', 'Fusion'))
+  levels(dat$structural_category)=c('FSM', 'ISM', 'NIC', 'NNC', 'Genic_Genomic', 'Fusion')
+  collist<-c('FSM'="#32cbcf", 'ISM'="#b5ebed", 'NIC'="#f99189", 'NNC'="#fcd6d3", 'Genic_Genomic'="#d9d9d9", 'Fusion'="#5d1f1f")
+  
+  p1 <- ggplot(dat, aes(x=Coding_prob, y=structural_category, fill=structural_category))+geom_boxplot()+
+    scale_fill_manual(values=collist)+scale_y_discrete(limits = rev(levels(dat$structural_category)))+theme_cowplot()+xlab('CPAT coding probability')+ylab('')+
+    theme(legend.position = 'na', axis.text.y = element_blank(), axis.ticks.y = element_blank())
+  
+  # number of isoforms per structural category 
+  dat2 <- class.files$glob_SQ
+  dat2$structural_category<-factor(dat2$structural_category, levels=c('FSM', 'ISM', 'NIC', 'NNC', 'Genic_Genomic', 'Fusion'))
+  levels(dat2$structural_category)=c('FSM', 'ISM', 'NIC', 'NNC', 'Genic_Genomic', 'Fusion')
+  
+  p2<-ggplot(dat2, aes(y=structural_category, fill=structural_category, x=after_stat(count / sum(count))*100))+geom_histogram(stat='count', colour='black')+
+    scale_fill_manual(values = collist)+theme_cowplot()+theme(legend.position='na', axis.text.y = element_blank(), axis.ticks.y=element_blank())+
+    ylab('')+xlab('Percentage of isoforms (%)')+scale_y_discrete(limits = rev(levels(dat$structural_category)))
+  
+  out1 <- p2+p1
+  
+  totalN <-dat2 %>% group_by(associated_gene) %>% summarise(Nisoforms=dplyr::n())
+  
+  # number of isoforms in known genic features
+  p3 <- ggplot(totalN, aes(x=Nisoforms))+geom_histogram(position='identity', colour='black', fill='grey')+scale_y_sqrt(breaks=c(10,100,1000,5000, 10000,20000))+
+    theme_cowplot()+theme(legend.title = element_blank())+xlab('Number of isoforms in known genic features')+ylab('Number of known genic features')
+  
+  output <- list(out1, p3)
+  return(output)
+}
 
 # Aim: plot the number of isoforms
 # Pre-requisite: SQANTI_gene_preparation() from LOGEN/read_sq_classification.R
@@ -518,7 +559,7 @@ plotIFWholebyGene <- function(gene, pathDIU,facetTranscriptsFeature,sexFeature){
   iExp <- fread(pathDIU, data.table = F)
   iExp <- iExp %>% tidyr::spread(sample,normalised_counts) %>% tibble::column_to_rownames(var = "isoform") %>% select(contains("Whole"))
   stats <- plotIF(gene=gene,ExpInput=iExp,pheno=phenotype,cfiles=class.files$glob_targ_SQ,design="case_control",rank=5,majorIso=NULL,facetTranscripts=facetTranscriptsFeature,sex=sexFeature, stats = TRUE)
-  p <- plotIF(gene=gene,ExpInput=iExp,pheno=phenotype,cfiles=class.files$glob_targ_SQ,design="case_control",rank=5,majorIso=NULL,facetTranscripts=facetTranscriptsFeature,sex=sexFeature)
+  p <- plotIF(gene=gene,ExpInput=iExp,pheno=phenotype,cfiles=class.files$glob_targ_SQ,design="case_control",rank=5,majorIso=NULL,facetTranscripts=facetTranscriptsFeature,sex=sexFeature)[[1]]
   return(list(p, stats))
   
 }

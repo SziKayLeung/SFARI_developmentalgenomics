@@ -5,12 +5,22 @@
 ##
 ## ---------------------------------
 
-source(paste0(LOGEN,"transcriptome_stats/summarise_classfiles.R"))
+source(paste0(LOGEN,"/transcriptome_stats/summarise_classfiles.R"))
 
 ## ------- whole transcriptome -------
 
 wholetarg_annotatedGenes_summary_table <- descriptives_summary(class.files$glob_SQ, class.files$glob_SQ_annoGene)
 wholecollapsed_annotatedGenes_summary_table <- descriptives_summary(class.files$glob_collapsed, class.files$glob_collapsed_annoGene)
+wholecollapsed_annotatedGenes_sqanti_default_summary_table <- descriptives_summary(class.files$glob_SQ_default, class.files$glob_SQ_default)
+
+View(class.files$glob_SQ_default %>% group_by(structural_category) %>% tally())
+View(class.files$glob_SQ %>% group_by(structural_category) %>% tally())
+View(class.files$glob_SQ %>% group_by(structural_category) %>% tally())
+
+
+# HNRPNK
+class.files$glob_SQ %>% group_by(associated_gene) %>% tally() %>% arrange(-n) %>% head(.)
+message("Number of isoforms annotated to HNRPNK: ", nrow(class.files$glob_SQ_annoGene %>% filter(associated_gene == "HNRNPK")))
 
 # abundance of novel transcripts vs known transcripts of known genes 
 # sum the mean of the counts across all the whole samples
@@ -39,10 +49,10 @@ class.files$glob_SQ_annoGene %>% filter(structural_category %in% c("NIC","NNC"))
 # protein-coding genes
 numProteinCodingGenes <- length(unique(class.files$glob_SQ_proteinGenes$associated_gene))
 message("Number of protein-coding genes detected:", numProteinCodingGenes)
-mostAbundantTranscript <- class.files$glob_SQ_proteinGenes %>% 
+mostAbundantTranscript <- as.data.frame(class.files$glob_SQ_proteinGenes) %>% 
   # select transcript with the highest number of nreads and supported by nsamples
   group_by(associated_gene) %>%
-  arrange(desc(whole_nreads), desc(whole_nsamples)) %>% slice(1)
+  arrange(desc(whole_nreads), desc(whole_nsamples)) %>% dplyr::slice(1) %>% ungroup()
 mostAbundantTranscript <- as.data.frame(mostAbundantTranscript)
 mostAbundantTranscript %>% group_by(structural_category) %>% tally(n = "numTranscripts") %>% mutate(perc = numTranscripts/sum(numTranscripts) * 100)
 numProteinCodingGenesFSMTranscript <- length(unique(mostAbundantTranscript[mostAbundantTranscript$structural_category == "FSM","associated_gene"]))
@@ -146,15 +156,20 @@ message("Number of transcripts unique to postnatal:", length(setdiff(class.files
 message("% of unique postnatal to all:", length(setdiff(class.files$glob_SQ_annoGene_postnatal$isoform, class.files$glob_SQ_annoGene_prenatal$isoform))/nrow(class.files$glob_SQ_annoGene) * 100)
 message("% of unique prenatal to all:",length(setdiff(class.files$glob_SQ_annoGene_prenatal$isoform, class.files$glob_SQ_annoGene_postnatal$isoform))/nrow(class.files$glob_SQ_annoGene) * 100)
 
+message("Number of transcripts in prenatal with more than 50 reads: ", length(unique(class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$preReads >= 50 & class.files$glob_SQ_annoGene$postReads == 0,"isoform"])))
+message("Number of transcripts in postnatal with more than 50 reads: ", length(unique(class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$postReads >= 50 & class.files$glob_SQ_annoGene$preReads == 0,"isoform"])))
+
 novelTranscripts <- class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$associated_transcript == "novel",]
 message("Number of novel transcripts detected in both prenatal and postnatal: ", nrow(novelTranscripts[novelTranscripts$DevStatus == "Both",]))
 message("%: ", nrow(novelTranscripts[novelTranscripts$DevStatus == "Both",])/nrow(novelTranscripts) * 100)
 
 genesPrenatal <- unique(class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$DevStatus == "prenatal","associated_gene"])
 genesPrePostnatal <- unique(class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$DevStatus == "Both","associated_gene"])
+# add RP11-1I2.1 with one transcript
+genesPrePostnatal <- c(genesPrePostnatal, "RP11-1I2.1")
 genesPostnatal <- unique(class.files$glob_SQ_annoGene[class.files$glob_SQ_annoGene$DevStatus == "postnatal","associated_gene"])
-genesPrenatalOnly <- setdiff(genesPrenatal, c(genesPrePostnatal, genesPostnatalOnly))
-genesPostnatalOnly <- setdiff(genesPostnatal,c(genesPrePostnatal, genesPrenatalOnly))
+genesPrenatalOnly <- setdiff(genesPrenatal, c(genesPrePostnatal, genesPostnatal))
+genesPostnatalOnly <- setdiff(genesPostnatal,c(genesPrePostnatal, genesPrenatal))
 
 message("Genes uniquely expressed in prenatal: ", length(genesPrenatalOnly))
 message("Genes unique expressed in prenatal and protein-coding: ", length(intersect(genesPrenatalOnly, unique(class.files$glob_SQ_proteinGenes$associated_gene))))
@@ -169,6 +184,7 @@ length(genesPrePostnatal)/length(unique(class.files$glob_SQ_annoGene$associated_
 
 # santiy check of genes capture correctly above
 length(genesPrenatalOnly) + length(genesPostnatalOnly) + length(genesPrePostnatal) == length(unique(class.files$glob_SQ_annoGene$associated_gene))
+setdiff(unique(class.files$glob_SQ_annoGene$associated_gene), c(genesPrenatalOnly, genesPostnatalOnly, genesPrePostnatal))
 genes <- c(genesPostnatalOnly, genesPrenatalOnly, genesPrePostnatal)
 setdiff(unique(class.files$glob_SQ_annoGene$associated_gene), genes)
 setdiff(genes, unique(class.files$glob_SQ_annoGene$associated_gene))
@@ -189,6 +205,14 @@ WholeDTE$age %>% group_by(structural_category) %>% tally()
 # ERCC
 ercc_usage <- plot_usage_persample(ercc.class.file, ercc.demux)
 
+# fusion
+message("Number of fusion transcripts: ", nrow(class.files$glob_SQ[class.files$glob_SQ$structural_category == "Fusion",]))
+message("% of fusion transcripts: ", nrow(class.files$glob_SQ[class.files$glob_SQ$structural_category == "Fusion",])/nrow(class.files$glob_SQ) * 100)
+message("Number of genes involved: ", length(unique(class.files$glob_SQ[class.files$glob_SQ$structural_category == "Fusion","associated_gene"])) * 2)
+message("% of genes involved: ", length(unique(class.files$glob_SQ[class.files$glob_SQ$structural_category == "Fusion","associated_gene"])) * 2/ length(unique(class.files$glob_SQ_annoGene$associated_gene)) * 100)
+message("number of transcripts from stringent filter fusion: ", nrow(fusion))
+message("Number of genes involved: ", length(unique(c(fusion$gene1, fusion$gene2))))
+
 ## ------- whole vs targeted dataset ---------
 
 # matchSumTargeted generated from function
@@ -197,6 +221,8 @@ message("Number of transcripts detected whole only: ", length(unique(matchedSumT
 message("Number of transcripts detected Targeted only: ", length(unique(matchedSumTargeted[matchedSumTargeted$dataset == "Targeted","isoform"])))
 message("Number of transcripts detected in both whole and targeted only: ", length(unique(matchedSumTargeted[matchedSumTargeted$dataset == "Both","isoform"])))
 
+message("Number of novel transcripts detected in Targeted only: ", length(unique(matchedSumTargeted[matchedSumTargeted$dataset == "Targeted" & !matchedSumTargeted$structural_category %in% c("FSM","ISM"),"isoform"])))
+              
 intersect(unique(matchedSumTargeted[matchedSumTargeted$dataset == "Targeted","isoform"]),
           unique(matchedSumTargeted[matchedSumTargeted$dataset == "Both","isoform"]))
 intersect(unique(matchedSumTargeted[matchedSumTargeted$dataset == "Whole","isoform"]),
@@ -216,6 +242,9 @@ length(unique(matchedSumTargeted[matchedSumTargeted$dataset == "Targeted" & !mat
 # number of overlaps between Leung et al. 2021 and whole dataset
 
 comparison_dataset <- function(gfftmap, classfiles, altDataset){
+  
+        # keep only those that are in the 10reads, 10samples classfiles
+        gfftmap <- gfftmap %>% filter(ref_id %in% classfiles$isoform)
 
         Detected_alt <- unique(gfftmap[gfftmap$class_code == "=","qry_id"])
         Detected_RB <- unique(gfftmap[gfftmap$qry_id %in% Detected_alt,"ref_id"])
@@ -235,7 +264,7 @@ comparison_dataset <- function(gfftmap, classfiles, altDataset){
         output <- list(Unique_RB, Common_RB)
         names(output) <- c("Unique_RB","Common_RB")
         return(output)
-w
+
 }
 
 cellReportFurther <- comparison_dataset(gfftmapComparisons$cellReports, class.files$glob_SQ, humanCTX)
@@ -244,7 +273,6 @@ comparison_dataset(gfftmapComparisons$BDRNatureComms, class.files$glob_targ_SQ_2
 comparison_dataset(gfftmapComparisons$Herberle, class.files$glob_SQ, HerberleCTX)
 comparison_dataset(gfftmapComparisons$Patowary, class.files$glob_SQ, PatowaryCTX)
 comparison_dataset(gfftmapComparisons$PatowaryHerbele, PatowaryCTX, HerberleCTX)
-
 
 # expression difference between CellReports and Bamford dataset for unique transcripts
 ExpressionDiffPacBio <- rbind(cellReportFurther$Unique_RB %>% mutate(dataset = "Unique") %>% select(whole_nreads, dataset),
@@ -261,7 +289,7 @@ ExpressionDiffcDNAdRNA <- rbind(directRNAFurther$Unique_RB %>% mutate(dataset = 
                                 directRNAFurther$Common_RB %>% mutate(dataset = "Common") %>% select(whole_nreads, dataset))
 ExpressionDiffcDNAdRNA %>% group_by(dataset) %>% summarise(median = median(whole_nreads))
 res <- wilcox.test(whole_nreads ~ dataset, ExpressionDiffcDNAdRNA, exact = FALSE)
-  res
+res
 res$p.value
 format(res$p.value, scientific = TRUE)
 
@@ -281,6 +309,10 @@ message("Number of genes with differentially expressed isoforms: ", length(uniqu
 message("Number of upregulated transcripts in postnatal vs prenatal: ", nrow(WholeDTE$age[WholeDTE$age$dirAcrossDev == "upregulated",]))
 message("top-ranked transcript differentially expressed across development")
 head(WholeDTE$age %>% arrange(padj))
+
+# number of upregulated
+message("Number of upregulated isoforms: ",nrow(WholeDTE$age %>% filter(dirAcrossDev == "upregulated")))
+message("Proportion upregulated isoforms: ",nrow(WholeDTE$age %>% filter(dirAcrossDev == "upregulated"))/nrow(WholeDTE$age))
 
 # binomial test of enrichment of upregulated transcripts in post-natal
 binom <- binom.test(nrow(WholeDTE$age[WholeDTE$age$dirAcrossDev == "upregulated",]), nrow(WholeDTE$age))
@@ -354,8 +386,9 @@ message("Number of genes with significant DIU across development and podium Chan
 message("Number of genes with significant DIU across development and not podium Change: ", nrow(DIUSig$wholeAge %>% filter(podiumChange == FALSE)))
 message("Number of genes with significant DIU across development and not DGE: ", nrow(DIUSig$wholeAge %>% filter(DGE_Dev == FALSE)))
 
-# GPM6A
-GPM6AStats <- plotIFWholebyGene("GPM6A",DIUnormExp$GMP6A_group,facetTranscriptsFeature=TRUE,sexFeature=FALSE)[[2]] 
+# GMP6A
+GMP6AStats <- plotIFWholebyGene("GMP6A",DIUnormExp$GMP6A_group,facetTranscriptsFeature=TRUE,sexFeature=FALSE)
+WholeDESeqGene$age[WholeDESeqGene$age$associated_gene == "GPM6A",]
 t.test(perc ~ group, GPM6AStats[GPM6AStats$isoform == "ONT4.13313.18545",])
 t.test(perc ~ group, GPM6AStats[GPM6AStats$isoform == "ONT4.13313.3469",])
 t.test(perc ~ group, GPM6AStats[GPM6AStats$isoform == "ONT4.13313.3457",])
@@ -428,6 +461,18 @@ class.files$glob_SQ_proteinGenes_NE %>% select(isoform, associated_gene, whole_n
 
 
 ## ---------- Proteogenomics ----------
+
+# high-level coding potential (cpat)
+cpat_glob_SQ <- merge(cpat, class.files$glob_SQ[,c("isoform","structural_category")], by.x = "seq_ID", by.y = "isoform")
+cpat_glob_SQ <- cpat_glob_SQ  %>% filter(seq_ID %in% class.files$glob_SQ$isoform)
+cpat_glob_SQ_high_coding <- cpat_glob_SQ %>% filter(Coding_prob >= 0.364)
+message("Number of transcripts with predicted CPAT score: ", length(unique(cpat_glob_SQ$seq_ID)))
+message("% of transcripts with predicted CPAT score: ", length(unique(cpat_glob_SQ$seq_ID))/nrow(class.files$glob_SQ))
+message("Number of transcripts with high prediction score: ", length(unique(cpat_glob_SQ_high_coding$seq_ID)))
+message("% of transcripts with high prediction score, NIC: ", 
+        nrow(cpat_glob_SQ_high_coding[cpat_glob_SQ_high_coding$structural_category == "NIC",])/length(unique(cpat_glob_SQ$seq_ID)) * 100)
+message("% of transcripts with high prediction score, NNC: ", 
+        nrow(cpat_glob_SQ_high_coding[cpat_glob_SQ_high_coding$structural_category == "NNC",])/length(unique(cpat_glob_SQ$seq_ID)) * 100)
 
 message("Number of RNA Transcripts to all genes:", nrow(class.files$glob_SQ))
 message("Number of coding RNA isoforms:", length(unique(proteinInput$t2p.collapse.refined$pb_acc)))
@@ -517,8 +562,15 @@ message("Mean number of exons, (sd): ", round(mean(class.files$bambu_annoGene$ex
 message("Number of transcripts detected to HNRNPK: ", nrow(class.files$bambu_annoGene[class.files$bambu_annoGene$associated_gene == "HNRNPK",]))
 
 # most isoformic novel transcript
-class.files$glob_targ_SQ_counts[class.files$glob_targ_SQ_counts$associated_transcript == "novel",] %>% arrange(-nreads) %>% select(isoform, structural_category, exons, associated_gene, associated_transcript, nreads, nsamples)
+class.files$glob_SQ[class.files$glob_SQ$associated_transcript == "novel",] %>% arrange(-whole_nreads) %>% select(isoform, structural_category, exons, associated_gene, associated_transcript, nreads, nsamples) %>% head(.)
 class.files$bambu[class.files$bambu$associated_gene == "RPS27A",]
+
+# isoform fraction of novel transcript
+tabulateIF(class.files$glob_SQ %>% filter(associated_gene %in% "RPS27A"), "Whole") %>% 
+  mutate(label = ifelse(perc > 10, isoform, NA), perc = perc / 100)  %>% filter(isoform == "ONT2.3331.23589")
+tabulateIF(class.files$glob_SQ %>% filter(associated_gene %in% "RPS27A"), "Whole") %>% 
+  mutate(label = ifelse(perc > 10, isoform, NA), perc = perc / 100)  %>% filter(isoform == "ONT2.3331.23546")
+
 
 novelPeptidesTranscripts <- read.table(paste0(dirnames$output,"novelTranscriptsPeptides.txt"))
 class.files$glob_targ_SQ_counts[class.files$glob_targ_SQ_counts$isoform %in% novelPeptidesTranscripts$isoform,] %>% arrange(-nreads) 

@@ -24,17 +24,17 @@ module load R/4.2.2-foss-2022b
 rootDir=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/SFARI
 deseqRscript=/lustre/projects/Research_Project-MRC148213/lsl693/scripts/SFARI_developmentalgenomics/3_differential_analysis/deseq_functions.R
 inputPhenotype=${rootDir}/0_metadata/Wholephenotype_fixedsex.csv
-inputExpression=${rootDir}/C_Whole_Targeted/9_sqanti_final/sqantifiltered_monoexonicfiltered_2reads2samples_whole_intergenicGenicIntron_classification.txt
-inputClassfile=${rootDir}/C_Whole_Targeted/9_sqanti_final/sqantifiltered_monoexonicfiltered_2reads2samples_whole_intergenicGenicIntron_classification.txt
+inputExpression=${rootDir}/C_Whole_Targeted/9_sqanti_final/sqantifiltered_monoexonicfiltered_10reads10samplesRecount_whole_classification.txt
+inputClassfile=${rootDir}/C_Whole_Targeted/9_sqanti_final/sqantifiltered_monoexonicfiltered_10reads10samplesRecount_whole_classification.txt
  
  
 mkdir -p ${rootDir}/C_Whole_Targeted/18_deseq/1_DGE ${rootDir}/C_Whole_Targeted/18_deseq/2_DTE
 
 ##-------------------------------------------------------------------------
 # gene level
-Rscript ${deseqRscript} --phenotype=${inputPhenotype} --classfile=${inputClassfile} --design="development" --level="gene" --dataset="whole" --directory=${rootDir}/C_Whole_Targeted/18_deseq/1_DGE
-Rscript ${deseqRscript} --phenotype=${inputPhenotype} --classfile=${inputClassfile} --design="sex" --level="gene" --dataset="whole" --directory=${rootDir}/C_Whole_Targeted/18_deseq/1_DGE
+Rscript ${deseqRscript} --phenotype=${inputPhenotype} --classfile=${inputClassfile} --design="development" --level="gene" --dataset="whole" --threshold=0 --directory=${rootDir}/C_Whole_Targeted/18_deseq/1_DGE
+Rscript ${deseqRscript} --phenotype=${inputPhenotype} --classfile=${inputClassfile} --design="sex" --level="gene" --dataset="whole" --threshold=0 --directory=${rootDir}/C_Whole_Targeted/18_deseq/1_DGE
 
 # transcript level
-Rscript ${deseqRscript} --phenotype=${inputPhenotype} --expression=${inputExpression} --classfile=${inputClassfile} --design="development" --level="transcript" --dataset="whole" --directory=${rootDir}/C_Whole_Targeted/18_deseq/2_DTE
-Rscript ${deseqRscript} --phenotype=${inputPhenotype} --expression=${inputExpression} --classfile=${inputClassfile} --design="sex" --level="transcript" --dataset="whole" --directory=${rootDir}/C_Whole_Targeted/18_deseq/2_DTE
+Rscript ${deseqRscript} --phenotype=${inputPhenotype} --expression=${inputExpression} --classfile=${inputClassfile} --design="development" --level="transcript" --dataset="whole" --threshold=0 --directory=${rootDir}/C_Whole_Targeted/18_deseq/2_DTE
+Rscript ${deseqRscript} --phenotype=${inputPhenotype} --expression=${inputExpression} --classfile=${inputClassfile} --design="sex" --level="transcript" --dataset="whole" --threshold=0 --directory=${rootDir}/C_Whole_Targeted/18_deseq/2_DTE
