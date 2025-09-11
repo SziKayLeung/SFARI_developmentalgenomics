@@ -16,6 +16,7 @@ suppressMessages(library("tidyr"))
 LOGEN <- "C:/Users/sl693/OneDrive - University of Exeter/ExeterPostDoc/2_Scripts/LOGen"
 root_dir <- "C:/Users/sl693/OneDrive - University of Exeter/ExeterPostDoc/1_Projects/SFARI/PaperZenodo/"
 output_dir <- "C:/Users/sl693/OneDrive - University of Exeter/ExeterPostDoc/1_Projects/SFARI/Output/"
+source(paste0(LOGEN, "miscellaneous/convert_ensembl_to_symbol.R")) # convert ensembl to gene symbol
 
 TargetGene <- read.table(paste0(root_dir, "metadata/Complete_TargetGenes_TargetedSequencing.txt"))[["V1"]]
 TargetGeneS2 <- read.table(paste0(root_dir, "utils/targetGenesSupplementaryTable2.txt"))
@@ -98,6 +99,9 @@ annoGenesStats <- list(
 class.files$protein_filtered = fread(paste0(root_dir,"/proteomics/Whole.sqanti_protein_classification.tsv"),data.table = F)
 # keep only 10 reads, 10 samples isoforms
 class.files$protein_filtered <- class.files$protein_filtered %>% filter(pb %in% class.files$glob_targ_SQ$isoform)
+# annotate ensembl to gene symbol
+class.files$protein_filtered$associated_gene <- class.files$protein_filtered$pr_gene
+class.files$protein_filtered <- convert_ensembl_to_genename(unique(class.files$protein_filtered))
 
 # cpat
 cpat <- fread(paste0(root_dir,"/proteomics/WholeTargeted_filtered_finalversion.ORF_prob.best.tsv"), stringsAsFactors = F, data.table = F)
